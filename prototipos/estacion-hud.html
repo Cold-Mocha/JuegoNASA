@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Michinautas — Vista previa: interior de la estación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  --space-900:#0e0b33;--space-800:#18144e;--space-700:#241d6b;--space-600:#322a8a;
+  --ink:#f5f5f2;--ink-muted:#c4c2e0;--ink-dark:#18144e;--line:#8a87c4;--constellation:#68668f;
+  --star-gold:#ffcb47;--star-gold-deep:#c98a12;--comet-cyan:#4cc3f5;--aurora-teal:#5ad6b2;
+  --nebula-violet:#9b7bff;--nebula-magenta:#ee5fd6;--solar-coral:#ff7a59;--danger:#ff6b7a;
+  --overlay:rgba(14,11,51,.72);
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;
+  --radius-sm:8px;--radius-md:14px;--radius-lg:22px;--radius-pill:999px;
+  --shadow-press:0 6px 0 #0e0b33;--shadow-panel:0 12px 32px rgba(14,11,51,.6);
+  --font-display:"Fredoka",system-ui,sans-serif;--font-mono:"Space Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--space-900);overflow:hidden;font-family:var(--font-display);color:var(--ink);user-select:none;-webkit-user-select:none}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+button{font-family:inherit}
+[hidden]{display:none!important}
+
+/* ---------- HUD ---------- */
+.hud{position:fixed;inset:0;pointer-events:none}
+.hud>*{pointer-events:auto}
+.tasks{position:absolute;left:var(--space-5);top:var(--space-5);width:300px;background:rgba(36,29,107,.92);border:2px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4)}
+.tasks__head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)}
+.tasks__title{font:600 14px/18px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.tasks__day{font:400 12px/16px var(--font-mono);color:var(--ink-muted)}
+.tasks ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tasks li{font:400 15px/20px var(--font-display);color:var(--ink-muted);display:flex;gap:8px;align-items:center}
+.tasks li::before{content:"";width:14px;height:14px;border-radius:4px;border:2px solid var(--line);flex:none}
+.tasks li.done{color:var(--aurora-teal);text-decoration:line-through}
+.tasks li.done::before{background:var(--aurora-teal);border-color:var(--aurora-teal)}
+.progress{margin-top:var(--space-3);height:10px;border-radius:var(--radius-pill);background:var(--space-600);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--aurora-teal);transition:width .3s}
+
+.tablet-btn{position:absolute;right:var(--space-5);top:var(--space-5);width:76px;height:76px;border-radius:var(--radius-lg);border:0;background:var(--star-gold);box-shadow:0 6px 0 var(--star-gold-deep);cursor:pointer;display:grid;place-items:center;transition:transform 90ms}
+.tablet-btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--star-gold-deep)}
+.tablet-btn:focus-visible{outline:4px solid var(--ink);outline-offset:4px}
+.tablet-btn .dot{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--danger);border:3px solid var(--space-900);display:none}
+.tablet-btn.alert .dot{display:block;animation:pulse 1s infinite}
+.tablet-btn small{position:absolute;bottom:-26px;font:600 12px/16px var(--font-display);letter-spacing:.06em;color:var(--ink);text-transform:uppercase}
+
+.minimap{position:absolute;right:var(--space-5);bottom:var(--space-5);width:220px;background:rgba(14,11,51,.9);border:2px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2)}
+.minimap canvas{width:100%;height:auto;border-radius:6px}
+.minimap span{display:block;font:400 11px/14px var(--font-mono);color:var(--ink-muted);margin-top:4px;letter-spacing:.04em}
+
+.mini-stats{position:absolute;left:50%;bottom:var(--space-5);transform:translateX(-50%);display:flex;gap:var(--space-3);background:rgba(14,11,51,.88);border:2px solid var(--line);border-radius:var(--radius-pill);padding:var(--space-2) var(--space-4)}
+.ms{display:flex;align-items:center;gap:6px;font:700 14px/18px var(--font-mono)}
+.ms b{width:12px;height:12px;border-radius:50%}
+
+.use-btn{position:absolute;right:260px;bottom:var(--space-5);min-width:120px;min-height:64px;border:0;border-radius:var(--radius-md);background:var(--star-gold);color:var(--ink-dark);font:600 20px/1 var(--font-display);text-transform:uppercase;box-shadow:0 6px 0 var(--star-gold-deep);cursor:pointer;padding:0 var(--space-5)}
+.use-btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--star-gold-deep)}
+.use-btn kbd{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-left:8px;border-radius:6px;background:var(--ink-dark);color:var(--ink);font:700 13px/1 var(--font-mono)}
+
+.toast{position:absolute;left:50%;top:var(--space-5);transform:translateX(-50%);display:flex;gap:var(--space-3);align-items:center;padding:var(--space-3) var(--space-5);border-radius:var(--radius-pill);background:var(--space-700);border:2px solid var(--nebula-magenta);box-shadow:var(--shadow-panel);font:600 18px/24px var(--font-display);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(4px)}
+.toast.warn{border-color:var(--danger)}
+.toast small{display:block;font:600 12px/16px var(--font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--nebula-magenta)}
+.toast.warn small{color:var(--danger)}
+
+.hint{position:absolute;left:50%;top:50%;transform:translate(-50%,120px);font:500 14px/20px var(--font-display);color:var(--ink-muted);background:rgba(14,11,51,.75);padding:6px 14px;border-radius:var(--radius-pill);transition:opacity .6s}
+
+/* ---------- Panel (tablet) ---------- */
+.modal{position:fixed;inset:0;background:var(--overlay);display:grid;place-items:center;z-index:5}
+.panel{width:min(640px,92vw);background:var(--space-700);border:3px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);padding:var(--space-5);position:relative;animation:pop .2s ease-out}
+.panel__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)}
+.panel__title{margin:0;font:600 28px/32px var(--font-display)}
+.close{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--space-600);color:var(--ink);font:700 22px/1 var(--font-display);cursor:pointer}
+.close:focus-visible,.tab:focus-visible{outline:4px solid var(--star-gold);outline-offset:3px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);background:var(--space-900);border-radius:var(--radius-md);padding:6px;margin-bottom:var(--space-5)}
+.tab{border:0;border-radius:10px;padding:var(--space-3);background:transparent;color:var(--ink-muted);font:600 16px/20px var(--font-display);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;gap:8px;justify-content:center;align-items:center}
+.tab[aria-selected="true"]{background:var(--star-gold);color:var(--ink-dark)}
+.page{display:grid;gap:var(--space-4)}
+.who{display:flex;gap:var(--space-4);align-items:center;background:var(--space-600);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4)}
+.who canvas{width:72px;height:72px}
+.who b{display:block;font:600 20px/26px var(--font-display);color:var(--star-gold)}
+.who span{font:400 15px/20px var(--font-display);color:var(--ink-muted)}
+.stat{display:grid;grid-template-columns:140px 1fr 64px;align-items:center;gap:var(--space-3)}
+.stat__label{display:flex;align-items:center;gap:8px;font:600 14px/18px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.stat__label svg{flex:none}
+.track{height:22px;border-radius:var(--radius-sm);background:var(--space-600);border:2px solid var(--line);overflow:hidden}
+.fill{height:100%;border-radius:4px;background:var(--c);background-image:repeating-linear-gradient(90deg,transparent 0 18px,rgba(14,11,51,.2) 18px 20px);transition:width .4s}
+.val{font:400 16px/22px var(--font-mono);text-align:right}
+.stat.crit .track{border-color:var(--danger)} .stat.crit .fill{background-color:var(--danger)} .stat.crit .val{color:var(--danger)}
+.note{margin:0;font:400 15px/22px var(--font-display);color:var(--ink-muted);background:var(--space-900);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4)}
+.note strong{color:var(--ink)}
+.radio{display:grid;grid-template-columns:auto 1fr;gap:var(--space-4);align-items:center;background:var(--space-900);border:2px solid var(--line);border-radius:var(--radius-md);padding:var(--space-4)}
+.radio__bars{display:flex;gap:6px;align-items:flex-end;height:56px}
+.radio__bars i{width:14px;border-radius:4px;background:var(--space-600)}
+.radio__bars i.on{background:var(--comet-cyan)}
+.radio__state{font:700 24px/28px var(--font-mono);color:var(--comet-cyan)}
+.radio__sub{font:400 13px/18px var(--font-mono);color:var(--ink-muted);letter-spacing:.03em}
+.radio.bad .radio__state{color:var(--danger)} .radio.bad .radio__bars i.on{background:var(--danger)}
+.chips{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;min-height:30px;padding:4px 12px;border-radius:var(--radius-sm);font:600 13px/18px var(--font-display);letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:var(--ink-dark)}
+.credit{font:400 11px/14px var(--font-mono);color:var(--ink-muted);letter-spacing:.04em;text-align:right;margin-top:-4px}
+
+@keyframes pulse{50%{transform:scale(1.2)}}
+@keyframes pop{from{transform:scale(.94);opacity:0}}
+@media (max-width:760px){.tasks{width:220px}.tasks li{font-size:13px}.minimap{width:150px}.use-btn{right:var(--space-5);bottom:110px}.mini-stats{bottom:auto;top:110px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Interior de la estación en órbita lunar. Muévete con WASD, flechas o tocando la pantalla."></canvas>
+
+<div class="hud">
+  <section class="tasks" aria-label="Tareas del día">
+    <div class="tasks__head"><span class="tasks__title">Tareas</span><span class="tasks__day">DÍA 1 · ÓRBITA LUNAR</span></div>
+    <ul id="taskList"></ul>
+    <div class="progress" aria-hidden="true"><i id="taskBar"></i></div>
+  </section>
+
+  <button class="tablet-btn" id="tabletBtn" aria-label="Abrir panel de estado (Tab)">
+    <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="3" width="28" height="34" rx="6" fill="#18144e"/><rect x="10" y="8" width="20" height="20" rx="3" fill="#4cc3f5"/><rect x="13" y="17" width="3" height="8" rx="1" fill="#18144e"/><rect x="18.5" y="12" width="3" height="13" rx="1" fill="#18144e"/><rect x="24" y="15" width="3" height="10" rx="1" fill="#18144e"/><circle cx="20" cy="32" r="2" fill="#ffcb47"/></svg>
+    <span class="dot"></span><small>Estado</small>
+  </button>
+
+  <div class="mini-stats" aria-label="Resumen de estado">
+    <span class="ms" title="Salud"><b style="background:var(--aurora-teal)"></b><span id="msHealth">100</span></span>
+    <span class="ms" title="Oxígeno/Energía de la nave"><b style="background:var(--star-gold)"></b><span id="msEnergy">80</span></span>
+    <span class="ms" title="Radiación"><b style="background:var(--nebula-magenta)"></b><span id="msRad">5</span></span>
+  </div>
+
+  <button class="use-btn" id="useBtn" hidden><span id="useLabel">Usar</span><kbd>E</kbd></button>
+
+  <div class="minimap"><canvas id="mini" width="400" height="260"></canvas><span id="roomName">HABITACIÓN</span></div>
+
+  <div class="toast" id="toast" role="status"><div><small id="toastKicker"></small><span id="toastText"></span></div></div>
+  <div class="hint" id="hint">WASD / flechas para moverte · toca para caminar · <b>Tab</b> abre el panel</div>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <div class="panel__top">
+      <h2 class="panel__title" id="panelTitle">Panel de estado</h2>
+      <button class="close" id="closeBtn" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabCrew" aria-selected="true" aria-controls="pageCrew">🐾 Tripulante</button>
+      <button class="tab" role="tab" id="tabShip" aria-selected="false" aria-controls="pageShip">🛰 Nave</button>
+    </div>
+
+    <div class="page" id="pageCrew" role="tabpanel" aria-labelledby="tabCrew">
+      <div class="who"><canvas id="portrait" width="144" height="144"></canvas><div><b>Miu</b><span>Ingeniera de vuelo · Cadete</span></div></div>
+      <div class="stat" data-stat="health" style="--c:var(--aurora-teal)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 17s-7-4.3-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 17 8c0 4.7-7 9-7 9z" fill="#5ad6b2"/></svg>Salud</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" data-stat="hunger" style="--c:var(--solar-coral)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="11" r="7" fill="#ff7a59"/><rect x="9" y="1" width="2" height="5" rx="1" fill="#5ad6b2"/></svg>Hambre</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" data-stat="thirst" style="--c:var(--comet-cyan)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" fill="#4cc3f5"/></svg>Sed</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" data-stat="rad" style="--c:var(--nebula-magenta)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="2.5" fill="#ee5fd6"/><path d="M10 2a8 8 0 0 1 6.9 4L12 8.8A2.5 2.5 0 0 0 10 7.5zM3.1 6A8 8 0 0 1 10 2v5.5a2.5 2.5 0 0 0-2 1.3zM6.5 17a8 8 0 0 1-3.4-6l5.5-.1a2.5 2.5 0 0 0 1 1.9z" fill="#ee5fd6"/></svg>Radiación</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <p class="note" id="crewNote"></p>
+    </div>
+
+    <div class="page" id="pageShip" role="tabpanel" aria-labelledby="tabShip" hidden>
+      <div class="radio" id="radioBox">
+        <div class="radio__bars" id="radioBars"><i style="height:20%"></i><i style="height:40%"></i><i style="height:60%"></i><i style="height:80%"></i><i style="height:100%"></i></div>
+        <div><div class="radio__sub">RADIO · ENLACE CON LA TIERRA</div><div class="radio__state" id="radioState">CONECTADA</div><div class="radio__sub" id="radioSub">Señal 92% · Demora ida 1,3 s</div></div>
+      </div>
+      <div class="stat" data-stat="energy" style="--c:var(--star-gold)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M11 1 4 11h5l-1 8 7-10h-5z" fill="#ffcb47"/></svg>Energía</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="stat" data-stat="signal" style="--c:var(--comet-cyan)"><span class="stat__label"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 11v7M5 6a7 7 0 0 1 10 0M7.5 8.5a3.5 3.5 0 0 1 5 0" stroke="#4cc3f5" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>Señal</span><div class="track"><div class="fill"></div></div><span class="val"></span></div>
+      <div class="chips" id="shipChips"></div>
+      <p class="note" id="shipNote"></p>
+      <div class="credit">VISTA PREVIA · VALORES SIMULADOS (SIN DATOS NASA AÚN)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ====================== Mapa de la estación (coordenadas en tiles) ======================
+const T = 48;                          // tamaño de tile en px
+const COLS = 40, ROWS = 27;
+const ROOMS = [
+  { id:'hab',   name:'Habitación',     r:[14,10,26,17], floor:'#2a2378', safe:true },
+  { id:'bridge',name:'Puente de mando',r:[16,1,25,7],   floor:'#262070', window:true },
+  { id:'comms', name:'Comunicaciones', r:[28,1,36,8],   floor:'#22306f' },
+  { id:'power', name:'Energía',        r:[2,2,10,9],    floor:'#2f2a5c' },
+  { id:'galley',name:'Cocina',         r:[2,13,10,20],  floor:'#33285f' },
+  { id:'med',   name:'Enfermería',     r:[30,11,38,18], floor:'#21386a' },
+  { id:'green', name:'Invernadero',    r:[15,20,26,26], floor:'#1f3d5a' },
+  { id:'lock',  name:'Esclusa',        r:[30,21,38,26], floor:'#2a2560', window:true },
+];
+const HALLS = [[19,7,22,10],[25,3,28,6],[5,9,8,13],[8,12,14,15],[26,12,30,15],[19,17,22,20],[33,18,36,21]];
+const walk = new Uint8Array(COLS*ROWS);
+const roomAt = new Int8Array(COLS*ROWS).fill(-1);
+const fillRect = ([x0,y0,x1,y1], v, ri) => { for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){ walk[y*COLS+x]=v; if(ri!==undefined) roomAt[y*COLS+x]=ri; } };
+ROOMS.forEach((rm,i)=>fillRect(rm.r,1,i));
+HALLS.forEach(h=>fillRect(h,1));
+const isWalk = (px,py) => { const x=Math.floor(px/T), y=Math.floor(py/T); return x>=0&&y>=0&&x<COLS&&y<ROWS&&walk[y*COLS+x]===1; };
+const roomIndexAt = (px,py) => { const x=Math.floor(px/T), y=Math.floor(py/T); return (x>=0&&y>=0&&x<COLS&&y<ROWS)?roomAt[y*COLS+x]:-1; };
+
+// Estaciones interactuables: cada acción tiene un costo (no hay opciones gratis)
+const STATIONS = [
+  { room:'galley', x:3.6, y:14.4, label:'Comer',          icon:'food',  act:s=>{ s.hunger=Math.min(100,s.hunger+35); s.energy-=3; return 'Comiste una ración (−3 energía para calentarla)'; }, task:'eat' },
+  { room:'galley', x:8.4, y:14.4, label:'Beber agua',     icon:'water', act:s=>{ s.thirst=Math.min(100,s.thirst+40); s.energy-=2; return 'Agua reciclada (−2 energía del purificador)'; }, task:'drink' },
+  { room:'med',    x:36.4,y:12.4, label:'Curarse',        icon:'med',   act:s=>{ s.health=Math.min(100,s.health+25); s.energy-=4; return 'Escáner médico (−4 energía)'; }, task:'med' },
+  { room:'comms',  x:34.4,y:2.4,  label:'Ajustar antena', icon:'radio', act:s=>{ s.signal=100; s.energy-=5; return 'Antena alineada con la Tierra (−5 energía)'; }, task:'radio' },
+  { room:'power',  x:3.6, y:3.4,  label:'Orientar paneles',icon:'power',act:s=>{ s.energy=Math.min(100,s.energy+22); s.rad=Math.min(100,s.rad+6); return 'Paneles orientados al Sol: +22 energía, pero +6 radiación (zona expuesta)'; }, task:'power' },
+  { room:'bridge', x:20.5,y:1.6,  label:'Revisar sensores',icon:'scan', act:s=>{ s.energy-=1; return 'Sensores: Sol activo. Podría venir una llamarada.'; }, task:'scan' },
+];
+const TASKS = [
+  { id:'scan',  text:'Revisar sensores en el Puente' },
+  { id:'radio', text:'Ajustar la antena (Comunicaciones)' },
+  { id:'power', text:'Orientar paneles (Energía)' },
+  { id:'eat',   text:'Comer en la Cocina' },
+  { id:'drink', text:'Beber agua' },
+];
+
+// ====================== Estado ======================
+const S = { health:100, hunger:78, thirst:70, rad:5, energy:80, signal:92 };
+const done = new Set();
+const discovered = new Set(['hab']);
+const P = { x:20*T, y:13.5*T, vx:0, vy:0, face:1, walkT:0, moving:false };
+let target = null, flare = 0, flareCooldown = 40, signalDip = 0;
+const keys = new Set();
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ====================== Canvas ======================
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+const fog = document.createElement('canvas'), fctx = fog.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; for(const c of [cv,fog]){ c.width=W*DPR; c.height=H*DPR; } ctx.setTransform(DPR,0,0,DPR,0,0); fctx.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize',resize); resize();
+
+// estrellas exteriores (paralaje)
+const STARS = Array.from({length:260},(_,i)=>({x:(i*7919)%(COLS*T*1.4)-200,y:(i*104729)%(ROWS*T*1.4)-200,r:i%9===0?1.8:1,a:.35+((i*31)%60)/100}));
+
+// ====================== Michi astronauta (diseño original) ======================
+const CREW = { fur:'#f2a65a', furDark:'#c4733a', suit:'#f5f5f2', accent:'#ffcb47' };
+function drawCat(c, x, y, face, t, moving, scale=1){
+  const bob = moving ? Math.sin(t*14)*2.5 : Math.sin(t*2)*1;
+  const step = moving ? Math.sin(t*14) : 0;
+  c.save(); c.translate(x,y); c.scale(face*scale,scale);
+  // sombra
+  c.fillStyle='rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(0,30,24,7,0,0,Math.PI*2); c.fill();
+  // cola
+  c.strokeStyle=CREW.fur; c.lineWidth=7; c.lineCap='round';
+  c.beginPath(); c.moveTo(-14,16); c.quadraticCurveTo(-34,10+Math.sin(t*4)*6,-30,-6+Math.sin(t*4)*4); c.stroke();
+  c.strokeStyle='#0e0b33'; c.lineWidth=2; c.stroke();
+  // piernas
+  c.fillStyle=CREW.suit; c.strokeStyle='#0e0b33'; c.lineWidth=3;
+  [[-8, step*4],[8,-step*4]].forEach(([lx,dy])=>{ c.beginPath(); c.ellipse(lx,26+dy*0.5,7,6,0,0,Math.PI*2); c.fill(); c.stroke(); });
+  c.translate(0,bob);
+  // mochila (soporte vital)
+  c.fillStyle='#c4c2e0'; roundRect(c,-24,-2,12,22,5); c.fill(); c.stroke();
+  // cuerpo / traje
+  c.fillStyle=CREW.suit; roundRect(c,-17,-4,34,30,12); c.fill(); c.stroke();
+  c.fillStyle=CREW.accent; roundRect(c,-17,10,34,6,3); c.fill();
+  c.fillStyle='#4cc3f5'; c.beginPath(); c.arc(8,4,3,0,Math.PI*2); c.fill();
+  // casco con orejas
+  c.fillStyle=CREW.suit;
+  c.beginPath(); c.moveTo(-17,-30); c.lineTo(-13,-50); c.lineTo(-3,-38); c.closePath(); c.fill(); c.stroke();
+  c.beginPath(); c.moveTo(17,-30); c.lineTo(13,-50); c.lineTo(3,-38); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle=CREW.fur;
+  c.beginPath(); c.moveTo(-13,-34); c.lineTo(-12,-44); c.lineTo(-7,-38); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(13,-34); c.lineTo(12,-44); c.lineTo(7,-38); c.closePath(); c.fill();
+  c.fillStyle=CREW.suit; c.beginPath(); c.arc(0,-22,22,0,Math.PI*2); c.fill(); c.stroke();
+  // visor con cara de michi
+  c.save(); c.beginPath(); c.arc(3,-21,15.5,0,Math.PI*2); c.clip();
+  c.fillStyle='#0e0b33'; c.fillRect(-14,-38,34,34);
+  c.fillStyle=CREW.fur; c.beginPath(); c.arc(4,-18,12,0,Math.PI*2); c.fill();
+  c.fillStyle='#0e0b33'; c.beginPath(); c.ellipse(0,-20,2.4,3.2,0,0,Math.PI*2); c.ellipse(9,-20,2.4,3.2,0,0,Math.PI*2); c.fill();
+  c.fillStyle='#ee5fd6'; c.beginPath(); c.moveTo(3,-15); c.lineTo(6,-15); c.lineTo(4.5,-13); c.fill();
+  c.strokeStyle='rgba(255,255,255,.7)'; c.lineWidth=3; c.beginPath(); c.arc(3,-21,11,-2.6,-1.6); c.stroke();
+  c.restore();
+  c.strokeStyle='#0e0b33'; c.lineWidth=3; c.beginPath(); c.arc(3,-21,15.5,0,Math.PI*2); c.stroke();
+  c.restore();
+}
+function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+
+// ====================== Dibujo del mundo ======================
+function drawStation(cam, t){
+  // espacio exterior con paralaje
+  ctx.fillStyle='#0e0b33'; ctx.fillRect(0,0,W,H);
+  for(const s of STARS){ ctx.globalAlpha=s.a; ctx.fillStyle='#c4c2e0'; ctx.beginPath(); ctx.arc(s.x-cam.x*0.3, s.y-cam.y*0.3, s.r, 0, Math.PI*2); ctx.fill(); }
+  ctx.globalAlpha=1;
+  // la Luna asomando
+  const mx = COLS*T*0.95-cam.x*0.5, my = ROWS*T*0.75-cam.y*0.5;
+  ctx.fillStyle='#c4c2e0'; ctx.beginPath(); ctx.arc(mx,my,260,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#9a98c8'; [[-80,-60,40],[60,30,55],[-20,110,30],[120,-110,26]].forEach(([dx,dy,r])=>{ctx.beginPath();ctx.arc(mx+dx,my+dy,r,0,Math.PI*2);ctx.fill();});
+
+  ctx.save(); ctx.translate(-cam.x,-cam.y);
+  // casco exterior de la nave (borde)
+  ctx.fillStyle='#8a87c4';
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(walk[y*COLS+x]){ ctx.fillRect(x*T-10,y*T-10,T+20,T+20); }
+  ctx.fillStyle='#0e0b33';
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(walk[y*COLS+x]){ ctx.fillRect(x*T-4,y*T-4,T+8,T+8); }
+  // pisos
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if(!walk[y*COLS+x]) continue;
+    const ri = roomAt[y*COLS+x];
+    const rm = ri>=0 ? ROOMS[ri] : null;
+    const known = !rm || discovered.has(rm.id);
+    ctx.fillStyle = rm ? rm.floor : '#1d1858';
+    ctx.fillRect(x*T,y*T,T,T);
+    if(known){ ctx.strokeStyle='rgba(138,135,196,.18)'; ctx.lineWidth=1; ctx.strokeRect(x*T+.5,y*T+.5,T-1,T-1); }
+  }
+  // detalles de sala (consolas, ventanas, plantas, camas)
+  ROOMS.forEach(rm=>{
+    const [x0,y0,x1,y1]=rm.r;
+    if(!discovered.has(rm.id)) return;
+    if(rm.window){ ctx.fillStyle='#0e0b33'; ctx.strokeStyle='#4cc3f5'; ctx.lineWidth=3; roundRect(ctx,(x0+1)*T,y0*T+6,(x1-x0-2)*T,18,8); ctx.fill(); ctx.stroke(); }
+    if(rm.id==='hab'){ for(let i=0;i<3;i++){ ctx.fillStyle='#322a8a'; roundRect(ctx,(x0+1+i*3.4)*T,(y1-2)*T,2.6*T,1.4*T,12); ctx.fill(); ctx.fillStyle='#9b7bff'; roundRect(ctx,(x0+1.2+i*3.4)*T,(y1-1.9)*T,.8*T,.8*T,8); ctx.fill(); } }
+    if(rm.id==='green'){ for(let i=0;i<5;i++) for(let j=0;j<2;j++){ const px=(x0+1.2+i*2)*T, py=(y0+1.4+j*2.4)*T; ctx.fillStyle='#3a2f2a'; roundRect(ctx,px,py,1.4*T,1.2*T,8); ctx.fill(); ctx.fillStyle='#5ad6b2'; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(px+14+k*20,py+24+Math.sin(t*2+k+i)*2,10,0,Math.PI*2); ctx.fill(); } } }
+    if(rm.id==='med'){ ctx.fillStyle='#f5f5f2'; roundRect(ctx,(x0+1)*T,(y0+3)*T,3*T,1.4*T,14); ctx.fill(); ctx.fillStyle='#ff6b7a'; ctx.fillRect((x0+2.3)*T,(y0+3.2)*T,8,40); ctx.fillRect((x0+2.08)*T,(y0+3.5)*T,40,8); }
+    if(rm.id==='power'){ for(let i=0;i<3;i++){ ctx.fillStyle='#0e0b33'; roundRect(ctx,(x0+3+i*1.6)*T,(y0+3)*T,1.1*T,3*T,10); ctx.fill(); const lv=S.energy/100; ctx.fillStyle=S.energy<25?'#ff6b7a':'#ffcb47'; roundRect(ctx,(x0+3.15+i*1.6)*T,(y0+3)*T+3*T*(1-lv)+6,0.8*T,3*T*lv-12,6); ctx.fill(); } }
+    if(rm.id==='lock'){ ctx.strokeStyle='#ffcb47'; ctx.lineWidth=6; ctx.setLineDash([16,12]); ctx.strokeRect((x0+1)*T,(y0+1)*T,(x1-x0-2)*T,(y1-y0-2)*T); ctx.setLineDash([]); }
+  });
+  // estaciones interactuables
+  STATIONS.forEach(st=>{
+    const rm = ROOMS.find(r=>r.id===st.room); if(!discovered.has(rm.id)) return;
+    const sx=st.x*T, sy=st.y*T, near=nearStation===st, isDone=done.has(st.task);
+    ctx.fillStyle='#0e0b33'; ctx.strokeStyle= near ? '#ffcb47' : '#8a87c4'; ctx.lineWidth= near?4:3;
+    roundRect(ctx,sx-26,sy-20,52,40,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = isDone ? '#5ad6b2' : (st.icon==='power'?'#ffcb47':st.icon==='med'?'#ff6b7a':st.icon==='food'?'#ff7a59':st.icon==='scan'?'#9b7bff':'#4cc3f5');
+    roundRect(ctx,sx-18,sy-12,36,20,5); ctx.fill();
+    if(!isDone && TASKS.some(tk=>tk.id===st.task)){ // indicador de tarea pendiente
+      const by = sy-38+Math.sin(t*4)*4; ctx.fillStyle='#ffcb47'; ctx.beginPath(); ctx.moveTo(sx,by-12); ctx.lineTo(sx+3,by-3); ctx.lineTo(sx+12,by); ctx.lineTo(sx+3,by+3); ctx.lineTo(sx,by+12); ctx.lineTo(sx-3,by+3); ctx.lineTo(sx-12,by); ctx.lineTo(sx-3,by-3); ctx.closePath(); ctx.fill();
+    }
+  });
+  // salas no descubiertas: niebla con "?"
+  ROOMS.forEach(rm=>{
+    if(discovered.has(rm.id)) return;
+    const [x0,y0,x1,y1]=rm.r;
+    ctx.fillStyle='rgba(14,11,51,.92)'; ctx.fillRect(x0*T,y0*T,(x1-x0)*T,(y1-y0)*T);
+    ctx.fillStyle='#68668f'; ctx.font='700 64px Fredoka, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('?',(x0+x1)/2*T,(y0+y1)/2*T);
+  });
+  // nombres de salas
+  ctx.font='600 16px Fredoka, sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ROOMS.forEach(rm=>{ if(!discovered.has(rm.id)) return; ctx.fillStyle='rgba(196,194,224,.85)'; ctx.fillText(rm.name.toUpperCase(), rm.r[0]*T+14, rm.r[1]*T+(rm.window?32:12)); });
+  // jugador
+  drawCat(ctx,P.x,P.y,P.face,t,P.moving,1.4);
+  // marcador de destino táctil
+  if(target){ ctx.strokeStyle='#ffcb47'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(target.x,target.y,10+Math.sin(t*8)*3,0,Math.PI*2); ctx.stroke(); }
+  ctx.restore();
+
+  // visión limitada (radio de luz alrededor del michi)
+  const sx=P.x-cam.x, sy=P.y-cam.y;
+  const vision = 400 * (flare>0 ? 0.8 : 1) * (S.energy<20 ? 0.75 : 1);
+  fctx.clearRect(0,0,W,H);
+  fctx.fillStyle = flare>0 ? 'rgba(60,8,40,.78)' : 'rgba(14,11,51,.82)';
+  fctx.fillRect(0,0,W,H);
+  fctx.globalCompositeOperation='destination-out';
+  const g=fctx.createRadialGradient(sx,sy,vision*0.55,sx,sy,vision);
+  g.addColorStop(0,'rgba(0,0,0,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  fctx.fillStyle=g; fctx.beginPath(); fctx.arc(sx,sy,vision,0,Math.PI*2); fctx.fill();
+  fctx.globalCompositeOperation='source-over';
+  ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(fog,0,0); ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+// ====================== Minimapa ======================
+const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
+function drawMini(){
+  const sx = mini.width/COLS, sy = mini.height/ROWS;
+  mctx.fillStyle='#0e0b33'; mctx.fillRect(0,0,mini.width,mini.height);
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if(!walk[y*COLS+x]) continue;
+    const ri=roomAt[y*COLS+x], rm=ri>=0?ROOMS[ri]:null;
+    mctx.fillStyle = !rm ? '#322a8a' : discovered.has(rm.id) ? '#8a87c4' : '#241d6b';
+    mctx.fillRect(x*sx,y*sy,sx+.5,sy+.5);
+  }
+  mctx.fillStyle='#ffcb47'; mctx.beginPath(); mctx.arc(P.x/T*sx,P.y/T*sy,6,0,Math.PI*2); mctx.fill();
+  mctx.strokeStyle='#0e0b33'; mctx.lineWidth=2; mctx.stroke();
+}
+
+// ====================== Entrada ======================
+addEventListener('keydown',e=>{
+  if(e.key==='Tab'){ e.preventDefault(); toggleModal(); return; }
+  if(!modal.hidden){ if(e.key==='Escape') toggleModal(false); return; }
+  keys.add(e.key.toLowerCase());
+  if(e.key.toLowerCase()==='e' && nearStation) useStation();
+  hideHint();
+});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+cv.addEventListener('pointerdown',e=>{ const cam=camera(); target={x:e.clientX+cam.x,y:e.clientY+cam.y}; hideHint(); });
+
+// ====================== HUD ======================
+const $=id=>document.getElementById(id);
+const modal=$('modal'), tabletBtn=$('tabletBtn'), useBtn=$('useBtn'), toastEl=$('toast');
+let nearStation=null, toastTimer=0, hintHidden=false, lastRoom=-1;
+function hideHint(){ if(!hintHidden){ hintHidden=true; $('hint').style.opacity=0; } }
+function toast(kicker,text,warn=false){ $('toastKicker').textContent=kicker; $('toastText').textContent=text; toastEl.classList.toggle('warn',warn); toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastEl.classList.remove('show'),3200); }
+function renderTasks(){
+  $('taskList').innerHTML = TASKS.map(t=>`<li class="${done.has(t.id)?'done':''}">${t.text}</li>`).join('');
+  $('taskBar').style.width = (done.size/TASKS.length*100)+'%';
+}
+function useStation(){
+  const st=nearStation; if(!st) return;
+  const msg = st.act(S); clampAll();
+  if(TASKS.some(t=>t.id===st.task) && !done.has(st.task)){ done.add(st.task); renderTasks(); if(done.size===TASKS.length) setTimeout(()=>toast('¡Día completado!','Todas las tareas listas, cadete'),1200); }
+  toast(st.label,msg);
+  renderPanel();
+}
+useBtn.addEventListener('click',useStation);
+
+function toggleModal(force){
+  const open = force ?? modal.hidden;
+  modal.hidden = !open; keys.clear();
+  if(open){ renderPanel(); drawPortrait(); $('closeBtn').focus(); } else tabletBtn.focus();
+}
+tabletBtn.addEventListener('click',()=>toggleModal(true));
+$('closeBtn').addEventListener('click',()=>toggleModal(false));
+modal.addEventListener('click',e=>{ if(e.target===modal) toggleModal(false); });
+function selectTab(which){
+  const crew = which==='crew';
+  $('tabCrew').setAttribute('aria-selected',crew); $('tabShip').setAttribute('aria-selected',!crew);
+  $('pageCrew').hidden=!crew; $('pageShip').hidden=crew;
+}
+$('tabCrew').addEventListener('click',()=>selectTab('crew'));
+$('tabShip').addEventListener('click',()=>selectTab('ship'));
+document.querySelector('.tabs').addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ const toShip=$('tabCrew').getAttribute('aria-selected')==='true'; selectTab(toShip?'ship':'crew'); (toShip?$('tabShip'):$('tabCrew')).focus(); } });
+
+function setStat(name,val,{invert=false,unit='%'}={}){
+  const row=document.querySelector(`[data-stat="${name}"]`); if(!row) return;
+  const v=Math.round(val);
+  row.querySelector('.fill').style.width=v+'%';
+  row.querySelector('.val').textContent=v+unit;
+  row.classList.toggle('crit', invert ? v>=70 : v<=20);
+}
+function renderPanel(){
+  setStat('health',S.health); setStat('hunger',S.hunger); setStat('thirst',S.thirst); setStat('rad',S.rad,{invert:true});
+  setStat('energy',S.energy); setStat('signal',S.signal);
+  const radLvl = S.rad<35?'baja':S.rad<70?'media':'ALTA';
+  $('crewNote').innerHTML = flare>0
+    ? '<strong>¡Llamarada solar!</strong> Ve a la Habitación: es la sala más protegida de la nave.'
+    : `Hambre y sed bajan con el tiempo. Radiación acumulada: <strong>${radLvl}</strong>. Las salas con ventana y la zona de paneles exponen más.`;
+  // radio
+  const bars = Math.ceil(S.signal/20), bad = S.signal<35;
+  [...$('radioBars').children].forEach((b,i)=>b.classList.toggle('on',i<bars));
+  $('radioBox').classList.toggle('bad',bad);
+  $('radioState').textContent = S.signal<15 ? 'SIN ENLACE' : bad ? 'INTERFERENCIA' : 'CONECTADA';
+  $('radioSub').textContent = `Señal ${Math.round(S.signal)}% · Demora ida 1,3 s`;
+  const chips=[];
+  chips.push(S.energy<25?['Energía baja','var(--danger)']:['Paneles OK','var(--star-gold)']);
+  chips.push(flare>0?['Tormenta solar','var(--nebula-magenta)']:['Sol estable','var(--aurora-teal)']);
+  chips.push(['Órbita lunar','var(--nebula-violet)']);
+  $('shipChips').innerHTML = chips.map(([t,c])=>`<span class="chip" style="--c:${c}">${t}</span>`).join('');
+  $('shipNote').innerHTML = `Cada acción gasta energía. <strong>Orientar los paneles</strong> recarga, pero te expone a radiación. Si la señal cae, no podrás pedir ayuda a la Tierra.`;
+  $('msHealth').textContent=Math.round(S.health); $('msEnergy').textContent=Math.round(S.energy); $('msRad').textContent=Math.round(S.rad);
+  const alert = S.health<=20||S.hunger<=20||S.thirst<=20||S.rad>=70||S.energy<=20||S.signal<35||flare>0;
+  tabletBtn.classList.toggle('alert',alert);
+}
+function drawPortrait(){
+  const p=$('portrait'), c=p.getContext('2d'); c.clearRect(0,0,p.width,p.height);
+  c.fillStyle='#322a8a'; c.beginPath(); c.arc(72,72,70,0,Math.PI*2); c.fill();
+  drawCat(c,72,84,1,performance.now()/1000,false,1.5);
+}
+function clampAll(){ for(const k in S) S[k]=Math.max(0,Math.min(100,S[k])); }
+
+// ====================== Simulación (1 tick = 1 s) ======================
+let acc=0;
+function simTick(){
+  const ri = roomIndexAt(P.x,P.y), rm = ri>=0?ROOMS[ri]:null;
+  S.hunger -= 0.35; S.thirst -= 0.5; S.energy -= 0.25;
+  S.rad += rm?.window ? 0.25 : 0.04;
+  if(flare>0){ flare--; S.rad += rm?.safe ? 0.1 : 1.6; if(flare===0) toast('Fin de la llamarada','El Sol se calmó. Revisa tu dosis en el panel'); }
+  else if(--flareCooldown<=0){ flare=18; flareCooldown=70+Math.floor(Math.random()*40); toast('⚠ Alerta solar','¡Llamarada! Refúgiate en la Habitación',true); }
+  if(--signalDip<=0){ S.signal -= 6+Math.random()*10; signalDip=12+Math.floor(Math.random()*10); } else S.signal -= 0.2;
+  if(S.hunger<15||S.thirst<15) S.health -= 0.6;
+  if(S.rad>70) S.health -= 0.5;
+  clampAll(); renderPanel();
+}
+
+// ====================== Bucle principal ======================
+function camera(){ return { x: Math.max(-200,Math.min(COLS*T-W+200, P.x-W/2)), y: Math.max(-200,Math.min(ROWS*T-H+200, P.y-H/2)) }; }
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; const t=now/1000;
+  // movimiento
+  let ix=0,iy=0;
+  if(modal.hidden){
+    if(keys.has('a')||keys.has('arrowleft')) ix--; if(keys.has('d')||keys.has('arrowright')) ix++;
+    if(keys.has('w')||keys.has('arrowup')) iy--; if(keys.has('s')||keys.has('arrowdown')) iy++;
+    if(ix||iy) target=null;
+    if(target){ const dx=target.x-P.x, dy=target.y-P.y, d=Math.hypot(dx,dy); if(d<8) target=null; else { ix=dx/d; iy=dy/d; } }
+  }
+  const len=Math.hypot(ix,iy)||1, speed=230*(S.energy<10?0.7:1);
+  const nx=P.x+ix/len*speed*dt, ny=P.y+iy/len*speed*dt, R=20;
+  const free=(x,y)=>isWalk(x-R,y)&&isWalk(x+R,y)&&isWalk(x,y-R)&&isWalk(x,y+R+14);
+  let moved=false;
+  if(free(nx,P.y)){ P.x=nx; moved=moved||ix!==0; } else if(target) target=null;
+  if(free(P.x,ny)){ P.y=ny; moved=moved||iy!==0; }
+  P.moving = moved && (ix!==0||iy!==0); if(ix) P.face = ix>0?1:-1;
+
+  // sala actual / descubrimiento
+  const ri=roomIndexAt(P.x,P.y);
+  if(ri>=0 && ri!==lastRoom){ lastRoom=ri; const rm=ROOMS[ri]; $('roomName').textContent=rm.name.toUpperCase(); if(!discovered.has(rm.id)){ discovered.add(rm.id); toast('Sala descubierta',rm.name); } }
+  else if(ri<0 && lastRoom!==-1){ lastRoom=-1; $('roomName').textContent='PASILLO'; }
+
+  // estación cercana
+  nearStation = STATIONS.find(st=>discovered.has(st.room) && Math.hypot(st.x*T-P.x, st.y*T-P.y) < 70) || null;
+  useBtn.hidden = !nearStation; if(nearStation) $('useLabel').textContent=nearStation.label;
+
+  acc+=dt; while(acc>=1){ acc-=1; simTick(); }
+  drawStation(camera(), reduced?0:t); drawMini();
+  requestAnimationFrame(frame);
+}
+renderTasks(); renderPanel();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

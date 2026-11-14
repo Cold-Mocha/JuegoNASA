@@ -1,0 +1,59 @@
+{
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "frameWidth@2x": 256,
+  "frameHeight@2x": 256,
+  "ancla_pies_1x": {
+    "x": 66,
+    "y": 112.5
+  },
+  "animaciones": {
+    "idle": {
+      "frames": 2,
+      "fps": 2,
+      "loop": true,
+      "descripcion": "Quieto, respira"
+    },
+    "blink": {
+      "frames": 3,
+      "fps": 12,
+      "loop": false,
+      "descripcion": "Parpadeo (insertar cada 2-4 s sobre idle)"
+    },
+    "walk": {
+      "frames": 2,
+      "fps": 6,
+      "loop": true,
+      "descripcion": "Caminar: balanceo de papel"
+    },
+    "use": {
+      "frames": 3,
+      "fps": 8,
+      "loop": false,
+      "descripcion": "Usar consola: se inclina y presiona"
+    },
+    "hurt": {
+      "frames": 3,
+      "fps": 10,
+      "loop": false,
+      "descripcion": "Recibir daño: sacudón rojo"
+    },
+    "smile": {
+      "frames": 2,
+      "fps": 4,
+      "loop": true,
+      "descripcion": "Sonreír: feliz, saltitos"
+    }
+  },
+  "variantes": [
+    "miu",
+    "tomas",
+    "luna",
+    "zib"
+  ],
+  "cascos": [
+    "casco",
+    "sin-casco"
+  ],
+  "ruta": "spritesheets/<variante>/<casco|sin-casco>/michi-<variante>-<casco>-<anim>[@2x].png"
+}

@@ -1,0 +1,202 @@
+{
+  "refugio-capsula": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      248,
+      198
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/refugio-capsula@2x.png"
+  },
+  "camilla-medica": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      238,
+      198
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/camilla-medica@2x.png"
+  },
+  "consola-antena": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      228,
+      218
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/consola-antena@2x.png"
+  },
+  "reciclador-aire": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      198,
+      248
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/reciclador-aire@2x.png"
+  },
+  "tanque-algas": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      218,
+      258
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/tanque-algas@2x.png"
+  },
+  "consola-puente": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      288,
+      208
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/consola-puente@2x.png"
+  },
+  "banco-baterias": {
+    "tipo": "interactivo",
+    "colocacion": "piso",
+    "tamano_1x": [
+      268,
+      228
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "interactivos/png/banco-baterias@2x.png"
+  },
+  "puerta-esclusa": {
+    "tipo": "interactivo",
+    "colocacion": "pared",
+    "tamano_1x": [
+      238,
+      268
+    ],
+    "ancla": "centro",
+    "archivo": "interactivos/png/puerta-esclusa@2x.png"
+  },
+  "casillero": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      138,
+      218
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/casillero@2x.png"
+  },
+  "casillero-trajes": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      178,
+      228
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/casillero-trajes@2x.png"
+  },
+  "planta": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      128,
+      178
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/planta@2x.png"
+  },
+  "extintor": {
+    "tipo": "decoracion",
+    "colocacion": "pared",
+    "tamano_1x": [
+      88,
+      148
+    ],
+    "ancla": "centro",
+    "archivo": "decoracion/png/extintor@2x.png"
+  },
+  "cuadro-tierra": {
+    "tipo": "decoracion",
+    "colocacion": "pared",
+    "tamano_1x": [
+      158,
+      128
+    ],
+    "ancla": "centro",
+    "archivo": "decoracion/png/cuadro-tierra@2x.png"
+  },
+  "mesa-comedor": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      228,
+      158
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/mesa-comedor@2x.png"
+  },
+  "cajas": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      188,
+      158
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/cajas@2x.png"
+  },
+  "bandeja-cultivo": {
+    "tipo": "decoracion",
+    "colocacion": "piso",
+    "tamano_1x": [
+      228,
+      148
+    ],
+    "ancla": "centro-inferior",
+    "archivo": "decoracion/png/bandeja-cultivo@2x.png"
+  },
+  "ventana-dia": {
+    "tipo": "cascaron",
+    "colocacion": "pared",
+    "tamano_1x": [
+      328,
+      198
+    ],
+    "ancla": "centro",
+    "archivo": "cascaron/png/ventana-dia@2x.png"
+  },
+  "ventana-atardecer": {
+    "tipo": "cascaron",
+    "colocacion": "pared",
+    "tamano_1x": [
+      328,
+      198
+    ],
+    "ancla": "centro",
+    "archivo": "cascaron/png/ventana-atardecer@2x.png"
+  },
+  "ventana-noche": {
+    "tipo": "cascaron",
+    "colocacion": "pared",
+    "tamano_1x": [
+      328,
+      198
+    ],
+    "ancla": "centro",
+    "archivo": "cascaron/png/ventana-noche@2x.png"
+  },
+  "puerta-lateral": {
+    "tipo": "cascaron",
+    "colocacion": "pared",
+    "tamano_1x": [
+      158,
+      228
+    ],
+    "ancla": "centro",
+    "archivo": "cascaron/png/puerta-lateral@2x.png"
+  }
+}

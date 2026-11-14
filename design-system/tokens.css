@@ -1,0 +1,98 @@
+/* Michinautas — generado desde design/tokens.json por scripts/build-tokens.mjs. NO EDITAR A MANO. */
+
+:root, [data-theme="deep-space"] {
+  --space-900: #0e0b33;
+  --space-800: #18144e;
+  --space-700: #241d6b;
+  --space-600: #322a8a;
+  --ink: #f5f5f2;
+  --ink-muted: #c4c2e0;
+  --ink-dark: #18144e;
+  --line: #8a87c4;
+  --constellation: #68668f;
+  --star-gold: #ffcb47;
+  --star-gold-deep: #c98a12;
+  --comet-cyan: #4cc3f5;
+  --aurora-teal: #5ad6b2;
+  --nebula-violet: #9b7bff;
+  --nebula-magenta: #ee5fd6;
+  --solar-coral: #ff7a59;
+  --danger: #ff6b7a;
+  --overlay: rgba(14, 11, 51, 0.72);
+  --shadow-press: 0 6px 0 #0e0b33;
+  --shadow-panel: 0 12px 32px rgba(14, 11, 51, 0.6);
+  --shadow-focus: 0 0 0 4px #ffcb47;
+  --glow-star: 0 0 18px rgba(255, 203, 71, 0.55);
+}
+
+[data-theme="high-contrast"] {
+  --space-900: #000000;
+  --space-800: #05050f;
+  --space-700: #0d0d26;
+  --space-600: #1a1a40;
+  --ink: #ffffff;
+  --ink-muted: #e8e8ff;
+  --ink-dark: #000000;
+  --line: #ffffff;
+  --constellation: #9a98c8;
+  --star-gold: #ffd84d;
+  --star-gold-deep: #ffffff;
+  --comet-cyan: #66d9ff;
+  --aurora-teal: #6effc8;
+  --nebula-violet: #b9a3ff;
+  --nebula-magenta: #ff85e8;
+  --solar-coral: #ff9a7f;
+  --danger: #ff8c99;
+  --overlay: rgba(0, 0, 0, 0.85);
+  --shadow-press: 0 6px 0 #ffffff;
+  --shadow-panel: 0 0 0 2px #ffffff;
+  --shadow-focus: 0 0 0 4px #ffd84d;
+  --glow-star: none;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+  --z-world: 0;
+  --z-hud: 100;
+  --z-dialog: 200;
+  --z-toast: 300;
+  --z-modal: 400;
+  --ease-spring: linear(0, 0.075 5%, 0.227 10%, 0.39 15%, 0.536 20%, 0.656 25%, 0.75 30%, 0.821 35%, 0.873 40%, 0.911 45%, 0.938 50%, 0.957 55%, 0.971 60%, 0.98 65%, 0.986 70%, 0.991 75%, 0.994 80%, 0.996 85%, 0.997 90%, 0.998 95%, 1 100%);
+  --dur-spring: 500ms;
+  --dur-press: 90ms;
+  --dur-fade: 160ms;
+  --font-display: "Fredoka", "Baloo 2", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, Menlo, monospace;
+}
+
+.display-xl { font-family: var(--font-display); font-size: 64px; line-height: 60px; font-weight: 700; letter-spacing: -0.01em; }
+
+.display-lg { font-family: var(--font-display); font-size: 44px; line-height: 46px; font-weight: 700; letter-spacing: -0.01em; }
+
+.title { font-family: var(--font-display); font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.005em; }
+
+.heading { font-family: var(--font-display); font-size: 20px; line-height: 26px; font-weight: 600; }
+
+.body { font-family: var(--font-display); font-size: 18px; line-height: 26px; font-weight: 400; }
+
+.body-sm { font-family: var(--font-display); font-size: 15px; line-height: 22px; font-weight: 500; }
+
+.label { font-family: var(--font-display); font-size: 14px; line-height: 18px; font-weight: 600; letter-spacing: 0.06em; }
+
+.readout-lg { font-family: var(--font-mono); font-size: 32px; line-height: 36px; font-weight: 700; }
+
+.readout { font-family: var(--font-mono); font-size: 16px; line-height: 22px; font-weight: 400; }
+
+.caption-mono { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0.04em; }
+

@@ -1,0 +1,61 @@
+{
+  "estilo": "papel recortado 2.5D",
+  "frame": {
+    "w": 128,
+    "h": 128
+  },
+  "mira": "derecha (voltear con scaleX para la izquierda)",
+  "ancla_pies_1x": {
+    "x": 66,
+    "y": 112.5
+  },
+  "ancla_pies_2x": {
+    "x": 132,
+    "y": 225.0
+  },
+  "orden_capas": [
+    "cola",
+    "pierna-trasera",
+    "mochila",
+    "cuerpo",
+    "pierna-delantera",
+    "cuello",
+    "cabeza",
+    "casco"
+  ],
+  "nota_casco": "El casco es una burbuja superpuesta: la cabeza y la cara son idénticas con y sin casco.",
+  "borde_papel": "Se agrega al rasterizar (blanco #faf8f0, 9 px @2x). Las capas sueltas no lo traen.",
+  "sombra": "No incluida: el motor dibuja una elipse en el piso bajo el ancla de pies.",
+  "variantes": {
+    "miu": {
+      "name": "Miu",
+      "fur": "#f2a65a",
+      "band": "#ffcb47",
+      "nose": "#ee5fd6",
+      "ear": "#ff9ad9"
+    },
+    "tomas": {
+      "name": "Tomás",
+      "fur": "#a7a9b8",
+      "band": "#4cc3f5",
+      "nose": "#ee5fd6",
+      "ear": "#ff9ad9"
+    },
+    "luna": {
+      "name": "Luna",
+      "fur": "#f1e4c8",
+      "band": "#ee5fd6",
+      "nose": "#ff7fb8",
+      "ear": "#ff9ad9"
+    },
+    "zib": {
+      "name": "Zib",
+      "fur": "#7ed957",
+      "band": "#9b7bff",
+      "nose": "#2f8f3a",
+      "ear": "#c6f28a",
+      "antennae": "#ffcb47",
+      "eyes": 1.45
+    }
+  }
+}

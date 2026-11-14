@@ -1,0 +1,35 @@
+{
+  "name": "michinautas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Michinautas — entrenador de misiones para astronautas junior (NASA Space Apps Challenge 2026)",
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "predev": "npm run tokens",
+    "dev": "vite",
+    "prebuild": "npm run tokens",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run --coverage",
+    "test:e2e": "npm run build && playwright test",
+    "data:donki": "node scripts/fetch-donki.mjs",
+    "check:sources": "node scripts/check-sources.mjs",
+    "assets": "python3 ../herramientas/exportar_juego.py"
+  },
+  "dependencies": {
+    "@fontsource/fredoka": "5.3.0",
+    "@fontsource/space-mono": "5.3.0",
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "^5.1.0"
+  }
+}

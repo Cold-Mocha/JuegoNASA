@@ -1,0 +1,251 @@
+{
+  "nombre": "Estación Central",
+  "version": 2,
+  "tipo": "Puesto avanzado en la superficie lunar (ficticio)",
+  "basado_en": "Silueta y distribución de Lunar Palace 1 (Universidad de Beihang): un módulo integrado y dos cilindros. Solo se conservan las salas que tienen una acción en el diseño v2.",
+  "spawn": {
+    "sala": "refugio"
+  },
+  "recursos": {
+    "principales": [
+      "energia",
+      "oxigeno",
+      "comida"
+    ],
+    "tripulante": [
+      "salud",
+      "radiacion"
+    ],
+    "componentes": [
+      "antena",
+      "paneles",
+      "propulsores"
+    ],
+    "meta": "ciencia (10 puntos)"
+  },
+  "consumo_pasivo_por_jornada": {
+    "energia": -8,
+    "oxigeno": -12,
+    "comida": -10
+  },
+  "calendario": [
+    {
+      "jornadas": "1-3",
+      "luz": 1.0
+    },
+    {
+      "jornadas": "4",
+      "luz": 0.5
+    },
+    {
+      "jornadas": "5-7",
+      "luz": 0.0
+    }
+  ],
+  "modulos": [
+    {
+      "id": "integrado",
+      "nombre": "Módulo habitacional",
+      "referencia": "Cabina integral",
+      "salas": [
+        "refugio",
+        "enfermeria",
+        "comunicaciones",
+        "soporte"
+      ]
+    },
+    {
+      "id": "invernadero",
+      "nombre": "Invernadero",
+      "referencia": "Cabina de vegetación 1",
+      "salas": [
+        "cultivo"
+      ]
+    },
+    {
+      "id": "mando",
+      "nombre": "Módulo de mando",
+      "referencia": "Cabina de vegetación 2 (reconvertida)",
+      "salas": [
+        "puente",
+        "energia"
+      ]
+    },
+    {
+      "id": "nodo",
+      "nombre": "Nodo / esclusa",
+      "referencia": "Añadido",
+      "salas": [
+        "esclusa"
+      ]
+    }
+  ],
+  "salas": [
+    {
+      "id": "refugio",
+      "nombre": "Refugio",
+      "modulo": "integrado",
+      "referencia": "Dormitorio (Bedroom)",
+      "accion": "Blindaje activo",
+      "efecto": "Radiación ×0,1 mientras dure",
+      "costo": "−8 Energía y no se hace nada más",
+      "prop": "refugio-capsula",
+      "deco": [
+        "casillero",
+        "planta"
+      ],
+      "piso": "#2a2378",
+      "pared": "#322a8a",
+      "nota": "La sala más protegida: aquí se espera la tormenta solar."
+    },
+    {
+      "id": "enfermeria",
+      "nombre": "Enfermería",
+      "modulo": "integrado",
+      "referencia": "Baño (Washroom)",
+      "accion": "Curar",
+      "efecto": "+25 Salud",
+      "costo": "−4 Energía",
+      "prop": "camilla-medica",
+      "deco": [
+        "extintor",
+        "cuadro-tierra"
+      ],
+      "piso": "#21386a",
+      "pared": "#2b4683",
+      "nota": "Muestra una ficha real de salud espacial (OSDR), por ejemplo sobre pérdida ósea."
+    },
+    {
+      "id": "comunicaciones",
+      "nombre": "Comunicaciones",
+      "modulo": "integrado",
+      "referencia": "Comedor y Comunicaciones",
+      "accion": "Alinear antena",
+      "efecto": "Enlace 100 %",
+      "costo": "−5 Energía",
+      "prop": "consola-antena",
+      "deco": [
+        "mesa-comedor",
+        "cajas"
+      ],
+      "piso": "#33285f",
+      "pared": "#3d3175",
+      "nota": "La antena es un componente físico: se desalinea con el tiempo y puede dañarse."
+    },
+    {
+      "id": "soporte",
+      "nombre": "Soporte vital",
+      "modulo": "integrado",
+      "referencia": "Reciclaje de residuos (Waste disposal)",
+      "accion": "Reciclar aire",
+      "efecto": "+15 Oxígeno",
+      "costo": "−6 Energía",
+      "prop": "reciclador-aire",
+      "deco": [
+        "cajas",
+        "extintor"
+      ],
+      "piso": "#2f2a5c",
+      "pared": "#3a3470",
+      "nota": "Recicla el CO₂ exhalado en oxígeno."
+    },
+    {
+      "id": "cultivo",
+      "nombre": "Cultivo de algas",
+      "modulo": "invernadero",
+      "referencia": "Sala de cultivo 1 (Planting room 1)",
+      "accion": "Encender luces de cultivo",
+      "efecto": "+10 Comida, +4 Oxígeno al cierre",
+      "costo": "−7 Energía",
+      "prop": "tanque-algas",
+      "deco": [
+        "bandeja-cultivo",
+        "bandeja-cultivo",
+        "planta"
+      ],
+      "piso": "#1f3d5a",
+      "pared": "#244a6a",
+      "nota": "La sala de cultivo 2 de la referencia queda como decoración (bandejas de huerto)."
+    },
+    {
+      "id": "puente",
+      "nombre": "Puente",
+      "modulo": "mando",
+      "referencia": "Cabina de vegetación 2 (reconvertida)",
+      "accion": "Pronóstico y diagnóstico",
+      "efecto": "Ve eventos de las 2 jornadas siguientes y el estado de antena, paneles y propulsores",
+      "costo": "−1 Energía",
+      "prop": "consola-puente",
+      "deco": [
+        "casillero",
+        "cuadro-tierra"
+      ],
+      "piso": "#262070",
+      "pared": "#2e2786",
+      "nota": "Desde aquí se ve la ventana principal: la luz cambia con el calendario lunar."
+    },
+    {
+      "id": "energia",
+      "nombre": "Energía",
+      "modulo": "mando",
+      "referencia": "Cabina de vegetación 2 (reconvertida)",
+      "accion": "Orientar paneles / Limpiar polvo",
+      "efecto": "+20 Energía (×0,5 al atardecer, 0 de noche) / recupera rendimiento",
+      "costo": "+5 Radiación / tiempo",
+      "prop": "banco-baterias",
+      "deco": [
+        "cajas"
+      ],
+      "piso": "#2f2a5c",
+      "pared": "#3a3470",
+      "nota": "La batería tiene tope 100: no se puede guardar energía infinita para la noche."
+    },
+    {
+      "id": "esclusa",
+      "nombre": "Esclusa",
+      "modulo": "nodo",
+      "referencia": "Añadida (no está en la referencia)",
+      "accion": "Salida al exterior",
+      "efecto": "Minijuego de 60 s: muestras de hielo, reparar componente o instalar instrumento",
+      "costo": "Oxígeno y Energía según la misión",
+      "prop": "puerta-esclusa",
+      "deco": [
+        "casillero-trajes"
+      ],
+      "piso": "#2a2560",
+      "pared": "#353080",
+      "nota": "Casco obligatorio. Máximo 1 salida por jornada; pausa el reloj."
+    }
+  ],
+  "conexiones": [
+    [
+      "refugio",
+      "enfermeria"
+    ],
+    [
+      "enfermeria",
+      "comunicaciones"
+    ],
+    [
+      "comunicaciones",
+      "soporte"
+    ],
+    [
+      "comunicaciones",
+      "esclusa"
+    ],
+    [
+      "esclusa",
+      "cultivo"
+    ],
+    [
+      "esclusa",
+      "puente"
+    ],
+    [
+      "puente",
+      "energia"
+    ]
+  ],
+  "decoracion_regla": "La decoración no tiene acción ni efecto: solo da vida a la sala. No se le puede hacer clic."
+}

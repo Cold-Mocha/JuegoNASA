@@ -1,0 +1,229 @@
+{
+  "personaje": "michi-astronauta",
+  "frame": {
+    "width": 128,
+    "height": 128,
+    "origen": {
+      "x": 64,
+      "y": 88
+    },
+    "escala": 1.1,
+    "mira": "derecha (voltear para izquierda)"
+  },
+  "pies": {
+    "x": 64,
+    "y": 121
+  },
+  "capas": [
+    {
+      "orden": 0,
+      "nombre": "sombra",
+      "pivote_local": {
+        "x": 0,
+        "y": 30
+      },
+      "pivote_frame": {
+        "x": 64.0,
+        "y": 121.0
+      },
+      "recoloreable": false,
+      "grupo": "base"
+    },
+    {
+      "orden": 1,
+      "nombre": "cola",
+      "pivote_local": {
+        "x": -14,
+        "y": 14
+      },
+      "pivote_frame": {
+        "x": 48.6,
+        "y": 103.4
+      },
+      "recoloreable": true,
+      "grupo": "torso"
+    },
+    {
+      "orden": 2,
+      "nombre": "brazo-trasero",
+      "pivote_local": {
+        "x": -10,
+        "y": 2
+      },
+      "pivote_frame": {
+        "x": 53.0,
+        "y": 90.2
+      },
+      "recoloreable": false,
+      "grupo": "torso"
+    },
+    {
+      "orden": 3,
+      "nombre": "pierna-trasera",
+      "pivote_local": {
+        "x": -7,
+        "y": 16
+      },
+      "pivote_frame": {
+        "x": 56.3,
+        "y": 105.6
+      },
+      "recoloreable": false,
+      "grupo": "base"
+    },
+    {
+      "orden": 4,
+      "nombre": "mochila",
+      "pivote_local": {
+        "x": -18,
+        "y": 8
+      },
+      "pivote_frame": {
+        "x": 44.2,
+        "y": 96.8
+      },
+      "recoloreable": true,
+      "grupo": "torso"
+    },
+    {
+      "orden": 5,
+      "nombre": "cuerpo",
+      "pivote_local": {
+        "x": 0,
+        "y": 10
+      },
+      "pivote_frame": {
+        "x": 64.0,
+        "y": 99.0
+      },
+      "recoloreable": false,
+      "grupo": "torso"
+    },
+    {
+      "orden": 6,
+      "nombre": "franja",
+      "pivote_local": {
+        "x": 0,
+        "y": 12
+      },
+      "pivote_frame": {
+        "x": 64.0,
+        "y": 101.2
+      },
+      "recoloreable": true,
+      "grupo": "torso"
+    },
+    {
+      "orden": 7,
+      "nombre": "pierna-delantera",
+      "pivote_local": {
+        "x": 7,
+        "y": 16
+      },
+      "pivote_frame": {
+        "x": 71.7,
+        "y": 105.6
+      },
+      "recoloreable": false,
+      "grupo": "base"
+    },
+    {
+      "orden": 8,
+      "nombre": "casco",
+      "pivote_local": {
+        "x": 0,
+        "y": -22
+      },
+      "pivote_frame": {
+        "x": 64.0,
+        "y": 63.8
+      },
+      "recoloreable": false,
+      "grupo": "cabeza"
+    },
+    {
+      "orden": 9,
+      "nombre": "orejas",
+      "pivote_local": {
+        "x": 0,
+        "y": -40
+      },
+      "pivote_frame": {
+        "x": 64.0,
+        "y": 44.0
+      },
+      "recoloreable": true,
+      "grupo": "cabeza"
+    },
+    {
+      "orden": 10,
+      "nombre": "cara",
+      "pivote_local": {
+        "x": 3,
+        "y": -21
+      },
+      "pivote_frame": {
+        "x": 67.3,
+        "y": 64.9
+      },
+      "recoloreable": true,
+      "grupo": "cabeza"
+    },
+    {
+      "orden": 11,
+      "nombre": "visor",
+      "pivote_local": {
+        "x": 3,
+        "y": -21
+      },
+      "pivote_frame": {
+        "x": 67.3,
+        "y": 64.9
+      },
+      "recoloreable": false,
+      "grupo": "cabeza"
+    },
+    {
+      "orden": 12,
+      "nombre": "brazo-delantero",
+      "pivote_local": {
+        "x": 10,
+        "y": 2
+      },
+      "pivote_frame": {
+        "x": 75.0,
+        "y": 90.2
+      },
+      "recoloreable": false,
+      "grupo": "torso"
+    }
+  ],
+  "colores_recoloreables": {
+    "fur": "pelaje (cola, orejas, cara)",
+    "furDark": "pelaje oscuro (rayas)",
+    "accent": "franja del traje y luz de mochila"
+  },
+  "variantes": {
+    "miu": {
+      "name": "Miu",
+      "fur": "#f2a65a",
+      "furDark": "#c4733a",
+      "accent": "#ffcb47",
+      "nose": "#ee5fd6"
+    },
+    "tomas": {
+      "name": "Tomás",
+      "fur": "#a7a9b8",
+      "furDark": "#6e7085",
+      "accent": "#4cc3f5",
+      "nose": "#ee5fd6"
+    },
+    "luna": {
+      "name": "Luna",
+      "fur": "#4a4466",
+      "furDark": "#2a2540",
+      "accent": "#ee5fd6",
+      "nose": "#ff9ad9"
+    }
+  }
+}

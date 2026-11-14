@@ -1,0 +1,39 @@
+{
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "frameWidth@2x": 256,
+  "frameHeight@2x": 256,
+  "animaciones": {
+    "idle": {
+      "frames": 8,
+      "fps": 8,
+      "loop": true
+    },
+    "walk": {
+      "frames": 8,
+      "fps": 12,
+      "loop": true
+    },
+    "interact": {
+      "frames": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "hurt": {
+      "frames": 4,
+      "fps": 10,
+      "loop": false
+    },
+    "celebrate": {
+      "frames": 8,
+      "fps": 12,
+      "loop": false
+    }
+  },
+  "archivos": "animaciones/spritesheets/<variante>/michi-<variante>-<anim>[@2x].png (tira horizontal)",
+  "variantes": [
+    "miu",
+    "tomas",
+    "luna"
+  ]
+}

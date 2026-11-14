@@ -1,0 +1,376 @@
+{
+  "proyeccion": {
+    "ancho": 960,
+    "alto": 600,
+    "sala": [
+      12,
+      6
+    ],
+    "y_fondo": 250,
+    "y_frente": 560,
+    "escala_fondo": 0.72,
+    "escala_frente": 1.12,
+    "px_por_unidad": 66,
+    "nota": "x: 0–12 (izq→der), z: 0–6 (fondo→frente). escala(z) interpola entre escala_fondo y escala_frente."
+  },
+  "salas": {
+    "refugio": {
+      "nombre": "Refugio",
+      "piso": "#2a2378",
+      "pared": "#322a8a",
+      "fondo_vacio": "fondos/refugio/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "enfermeria",
+          "pared_x": 725,
+          "escala": 0.62
+        },
+        {
+          "asset": "ventana-<dia|atardecer|noche>",
+          "tipo": "cascaron",
+          "pared_x": 520,
+          "pared_y": 150,
+          "escala": 0.72
+        },
+        {
+          "asset": "casillero",
+          "tipo": "decoracion",
+          "x": 2.6,
+          "z": 0.8,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "refugio-capsula",
+          "tipo": "interactivo",
+          "x": 6.4,
+          "z": 1.6,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "planta",
+          "tipo": "decoracion",
+          "x": 10.7,
+          "z": 4.8,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "enfermeria": {
+      "nombre": "Enfermería",
+      "piso": "#21386a",
+      "pared": "#2b4683",
+      "fondo_vacio": "fondos/enfermeria/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "refugio",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "comunicaciones",
+          "pared_x": 725,
+          "escala": 0.62
+        },
+        {
+          "asset": "cuadro-tierra",
+          "tipo": "decoracion",
+          "pared_x": 480,
+          "pared_y": 150,
+          "escala": 0.8
+        },
+        {
+          "asset": "extintor",
+          "tipo": "decoracion",
+          "pared_x": 600,
+          "pared_y": 205,
+          "escala": 0.8
+        },
+        {
+          "asset": "camilla-medica",
+          "tipo": "interactivo",
+          "x": 5.6,
+          "z": 1.7,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "comunicaciones": {
+      "nombre": "Comunicaciones",
+      "piso": "#33285f",
+      "pared": "#3d3175",
+      "fondo_vacio": "fondos/comunicaciones/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "enfermeria",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "esclusa",
+          "pared_x": 335,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "soporte",
+          "pared_x": 725,
+          "escala": 0.62
+        },
+        {
+          "asset": "ventana-<dia|atardecer|noche>",
+          "tipo": "cascaron",
+          "pared_x": 520,
+          "pared_y": 150,
+          "escala": 0.72
+        },
+        {
+          "asset": "consola-antena",
+          "tipo": "interactivo",
+          "x": 7.6,
+          "z": 1.4,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "mesa-comedor",
+          "tipo": "decoracion",
+          "x": 3.0,
+          "z": 3.8,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "cajas",
+          "tipo": "decoracion",
+          "x": 10.6,
+          "z": 4.7,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "soporte": {
+      "nombre": "Soporte vital",
+      "piso": "#2f2a5c",
+      "pared": "#3a3470",
+      "fondo_vacio": "fondos/soporte/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "comunicaciones",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "extintor",
+          "tipo": "decoracion",
+          "pared_x": 690,
+          "pared_y": 205,
+          "escala": 0.8
+        },
+        {
+          "asset": "reciclador-aire",
+          "tipo": "interactivo",
+          "x": 6.2,
+          "z": 1.3,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "cajas",
+          "tipo": "decoracion",
+          "x": 9.6,
+          "z": 3.9,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "cultivo": {
+      "nombre": "Cultivo de algas",
+      "piso": "#1f3d5a",
+      "pared": "#244a6a",
+      "fondo_vacio": "fondos/cultivo/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "esclusa",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "ventana-<dia|atardecer|noche>",
+          "tipo": "cascaron",
+          "pared_x": 640,
+          "pared_y": 150,
+          "escala": 0.72
+        },
+        {
+          "asset": "tanque-algas",
+          "tipo": "interactivo",
+          "x": 6.0,
+          "z": 1.2,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "bandeja-cultivo",
+          "tipo": "decoracion",
+          "x": 2.6,
+          "z": 3.4,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "bandeja-cultivo",
+          "tipo": "decoracion",
+          "x": 9.5,
+          "z": 3.4,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "planta",
+          "tipo": "decoracion",
+          "x": 10.9,
+          "z": 5.2,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "puente": {
+      "nombre": "Puente",
+      "piso": "#262070",
+      "pared": "#2e2786",
+      "fondo_vacio": "fondos/puente/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "esclusa",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "energia",
+          "pared_x": 725,
+          "escala": 0.62
+        },
+        {
+          "asset": "ventana-<dia|atardecer|noche>",
+          "tipo": "cascaron",
+          "pared_x": 480,
+          "pared_y": 140,
+          "escala": 0.72
+        },
+        {
+          "asset": "cuadro-tierra",
+          "tipo": "decoracion",
+          "pared_x": 345,
+          "pared_y": 100,
+          "escala": 0.8
+        },
+        {
+          "asset": "casillero",
+          "tipo": "decoracion",
+          "x": 3.2,
+          "z": 0.8,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "consola-puente",
+          "tipo": "interactivo",
+          "x": 6.0,
+          "z": 2.4,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "energia": {
+      "nombre": "Energía",
+      "piso": "#2f2a5c",
+      "pared": "#3a3470",
+      "fondo_vacio": "fondos/energia/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "puente",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "ventana-<dia|atardecer|noche>",
+          "tipo": "cascaron",
+          "pared_x": 470,
+          "pared_y": 150,
+          "escala": 0.72
+        },
+        {
+          "asset": "banco-baterias",
+          "tipo": "interactivo",
+          "x": 6.2,
+          "z": 1.4,
+          "escala_base": 0.9
+        },
+        {
+          "asset": "cajas",
+          "tipo": "decoracion",
+          "x": 10.4,
+          "z": 4.0,
+          "escala_base": 0.9
+        }
+      ]
+    },
+    "esclusa": {
+      "nombre": "Esclusa",
+      "piso": "#2a2560",
+      "pared": "#353080",
+      "fondo_vacio": "fondos/esclusa/fondo-vacio@2x.png",
+      "objetos": [
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "comunicaciones",
+          "pared_x": 235,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "puente",
+          "pared_x": 335,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-lateral",
+          "tipo": "puerta",
+          "destino": "cultivo",
+          "pared_x": 725,
+          "escala": 0.62
+        },
+        {
+          "asset": "puerta-esclusa",
+          "tipo": "interactivo",
+          "pared_x": 520,
+          "pared_y": "apoyada en el piso",
+          "escala": 0.72
+        },
+        {
+          "asset": "casillero-trajes",
+          "tipo": "decoracion",
+          "x": 9.8,
+          "z": 3.6,
+          "escala_base": 0.9
+        }
+      ]
+    }
+  }
+}

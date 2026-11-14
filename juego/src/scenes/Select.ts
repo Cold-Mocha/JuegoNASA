@@ -25,6 +25,10 @@ const PREVIEW_ACTIONS: { anim: MichiAnim; sec: number }[] = [
   { anim: 'walk', sec: 2.4 }, { anim: 'use', sec: 2.4 }, { anim: 'smile', sec: 2.4 }, { anim: 'blink', sec: 1.5 },
 ];
 
+/** «Casa» se desbloquea al ganar las tres jornadas. */
+const casaUnlocked = (): boolean => MISSIONS.every((m) => (state.progress.best[m.id]?.stars ?? 0) >= 1);
+const CASA_ART = '<svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="70" fill="#4cc3f5" opacity=".18"/><circle cx="96" cy="108" r="44" fill="#3a8de0" stroke="#0e0b33" stroke-width="4"/><path d="M80 96 q12 -10 24 2 q-4 14 -16 10Z" fill="#5ad6b2" stroke="#0e0b33" stroke-width="3"/><path d="M52 24 C62 36 64 52 62 68 L72 80 L56 76 L52 86 L48 76 L32 80 L42 68 C40 52 42 36 52 24Z" fill="#f5f5f2" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/></svg>';
+
 /** Selector en 3 pasos: Tripulante → Jornada científica → Dificultad. */
 export class SelectScene extends Phaser.Scene {
   private step = 0;
@@ -58,7 +62,7 @@ export class SelectScene extends Phaser.Scene {
       },
       {
         key: 'mission', label: 'Jornada científica', heading: 'Jornadas científicas',
-        options: MISSIONS.map((m) => {
+        options: [...MISSIONS.map((m) => {
           const best = state.progress.best[m.id];
           const flares = archiveFor(m).flares.length;
           return {
@@ -67,6 +71,11 @@ export class SelectScene extends Phaser.Scene {
             chips: [`${m.tasks.length} tareas`, `Nuevo: ${m.newObject}`, `${flares} llamarada${flares === 1 ? '' : 's'} real${flares === 1 ? '' : 'es'}`, ...(best ? ['★'.repeat(best.stars)] : [])],
           };
         }),
+          ...(casaUnlocked() ? [{
+            id: 'casa', title: 'Casa', subtitle: 'Vuelve a la Tierra', body: 'Gira, frena, reingresa y planea.',
+            art: CASA_ART, chips: ['4 fases', ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
+          }] : []),
+        ],
       },
       {
         key: 'difficulty', label: 'Dificultad', heading: '¿Qué tan difícil?',
@@ -222,6 +231,8 @@ export class SelectScene extends Phaser.Scene {
   }
 
   private next(): void {
+    // la misión final no pide dificultad: va directo a sus 4 fases
+    if (this.steps[this.step].key === 'mission' && this.picks.mission === 'casa') return fadeTo(this, SCENES.reentry);
     if (this.step < this.steps.length - 1) return this.render(this.step + 1);
     const { mission, character, difficulty } = this.picks;
     if (!mission || !character || !difficulty) return;

@@ -18,6 +18,7 @@ import { LaunchLoadingScene } from './scenes/LaunchLoading';
 import { StationScene } from './scenes/Station';
 import { EncyclopediaScene } from './scenes/Encyclopedia';
 import { ReturnTripScene } from './scenes/ReturnTrip';
+import { ReentryScene } from './scenes/Reentry';
 import { MissionReportScene } from './scenes/MissionReport';
 import { audio } from './core/audio';
 import { state } from './core/state';
@@ -38,7 +39,7 @@ const game = new Phaser.Game({
   // GPU integrada: pedir el modo de bajo consumo y sin buffers extra
   render: { powerPreference: 'low-power', antialias: true, clearBeforeRender: true },
   banner: false,
-  scene: [BootScene, MainMenuScene, StoryScene, SelectScene, LaunchLoadingScene, StationScene, EncyclopediaScene, ReturnTripScene, MissionReportScene],
+  scene: [BootScene, MainMenuScene, StoryScene, SelectScene, LaunchLoadingScene, StationScene, EncyclopediaScene, ReturnTripScene, ReentryScene, MissionReportScene],
 });
 
 // El audio solo puede arrancar tras un gesto del jugador (política de autoplay de los navegadores).

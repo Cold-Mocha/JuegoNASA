@@ -10,5 +10,6 @@ export const SCENES = {
   station: 'Station',
   archive: 'Encyclopedia',
   returnTrip: 'ReturnTrip',
+  reentry: 'Reentry',
   report: 'MissionReport',
 } as const;

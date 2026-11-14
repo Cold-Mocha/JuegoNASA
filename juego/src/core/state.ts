@@ -32,6 +32,8 @@ export interface Progress {
   achievements: AchievementId[];
   readEntries: string[];
   tutorialDone: boolean;
+  /** Mejor resultado de la misión final «Casa». */
+  casa?: { score: number; stars: number };
 }
 
 export interface LastResult {

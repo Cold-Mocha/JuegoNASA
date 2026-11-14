@@ -11,17 +11,26 @@ export function michiSvg(c: Character, visor: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="${c.name}">
   <circle cx="80" cy="84" r="66" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5"/>
   ${c.antennae ? antennaeSvg(c) : ''}
-  <path d="M38 52 L48 18 L70 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M122 52 L112 18 L90 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
+  ${c.spots
+    ? `<path d="M38 56 C30 36 40 18 54 20 C66 22 72 34 70 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M122 56 C130 36 120 18 106 20 C94 22 88 34 90 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>`
+    : `<path d="M38 52 L48 18 L70 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M122 52 L112 18 L90 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>`}
   <circle cx="80" cy="88" r="46" fill="${c.fur}" stroke="#0e0b33" stroke-width="4"/>
+  ${c.spots ? spotsSvg(c.spots) : ''}
   <path d="M50 70 Q80 54 110 70" fill="none" stroke="${c.furDark}" stroke-width="6" stroke-linecap="round"/>
   <ellipse cx="64" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/>
   <circle cx="${64 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/><circle cx="${96 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/>
   <path d="M76 102 L84 102 L80 107 Z" fill="#ee5fd6"/>
   <path d="M80 107 Q74 114 68 110 M80 107 Q86 114 92 110" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>
+  <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>
   <path d="M30 60 A60 60 0 0 1 130 60" fill="none" stroke="${visor}" stroke-width="6" stroke-linecap="round" opacity=".9"/>
 </svg>`;
 }
+
+/** Manchas de la cara del leopardo de las nieves (frente y mejillas). */
+const spotsSvg = (color: string): string => [[62, 62, 5, 3.4], [80, 58, 4.6, 3.6], [98, 62, 5, 3.4], [71, 70, 3.6, 2.6], [89, 70, 3.6, 2.6], [45, 90, 4, 3], [115, 90, 4, 3], [48, 102, 3.4, 2.8], [112, 102, 3.4, 2.8]]
+  .map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${color}"/>`).join('');
 
 /** Carita de michi pequeña (marcador del mapa): orejas, cara y ojos con los colores del tripulante. */
 export function michiFaceSvg(c: Character): string {

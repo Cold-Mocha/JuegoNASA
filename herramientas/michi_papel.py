@@ -20,7 +20,8 @@ FEET = (66, 84 + 31 * 0.92)            # ancla de los pies en el frame 1x  (≈ 
 
 VARIANTS = {
     'miu':   {'name': 'Miu',   'fur': '#f2a65a', 'band': '#ffcb47', 'nose': '#ee5fd6', 'ear': '#ff9ad9'},
-    'tomas': {'name': 'Tomás', 'fur': '#a7a9b8', 'band': '#4cc3f5', 'nose': '#ee5fd6', 'ear': '#ff9ad9'},
+    # leopardo de las nieves: pelaje gris humo claro, orejas redondas, manchas oscuras y cola gruesa moteada
+    'tomas': {'name': 'Tomás', 'fur': '#cdd0dc', 'band': '#4cc3f5', 'nose': '#e58fa6', 'ear': '#b9bdd0', 'spots': '#4a4c63', 'round_ears': True},
     'luna':  {'name': 'Luna',  'fur': '#8f7bd6', 'band': '#ee5fd6', 'nose': '#ff7fb8', 'ear': '#ff9ad9'},
     # marciano: pelaje verde y antenitas (caben dentro de la burbuja del casco)
     'zib':   {'name': 'Zib',   'fur': '#7ed957', 'band': '#9b7bff', 'nose': '#2f8f3a', 'ear': '#c6f28a', 'antennae': '#ffcb47', 'eyes': 1.45},
@@ -50,6 +51,11 @@ def rot(a, x, y):
 # ------------------------------------------------------------------ capas
 def l_tail(p, v):
     d = 'M-16 16 Q-44 16 -42 -6 Q-41 -16 -33 -17'
+    if 'spots' in v:  # cola gruesa de leopardo de las nieves, con manchas
+        return (f'<g id="cola" transform="{rot(p.tail, -16, 16)}">'
+                f'<path d="{d}" fill="none" stroke="{OUT}" stroke-width="16" stroke-linecap="round"/>'
+                f'<path d="{d}" fill="none" stroke="{v["fur"]}" stroke-width="11" stroke-linecap="round"/>'
+                f'<path d="{d}" fill="none" stroke="{v["spots"]}" stroke-width="4.2" stroke-linecap="round" stroke-dasharray="0.1 8.5" stroke-dashoffset="-3"/></g>')
     return (f'<g id="cola" transform="{rot(p.tail, -16, 16)}">'
             f'<path d="{d}" fill="none" stroke="{OUT}" stroke-width="11" stroke-linecap="round"/>'
             f'<path d="{d}" fill="none" stroke="{v["fur"]}" stroke-width="6" stroke-linecap="round"/></g>')
@@ -113,14 +119,30 @@ def l_head(p, v):
             f'<path d="M{sg * -3.5} -37 Q{sg * -3} -45 {sg * -6.5} -49" fill="none" stroke="{v["fur"]}" stroke-width="2.2" stroke-linecap="round"/>'
             f'<circle cx="{sg * -6.5}" cy="-49.5" r="3.6" fill="{v["antennae"]}" stroke="{OUT}" stroke-width="2.2"/></g>'
             for sg in (1, -1))
+    if v.get('round_ears'):  # orejitas redondas (leopardo de las nieves)
+        ear_l, ear_r = 'M-18 -29 C-22 -41 -17 -49 -10.5 -48 C-5 -47 -2.5 -42 -3 -37 Z', 'M18 -29 C22 -41 17 -49 10.5 -48 C5 -47 2.5 -42 3 -37 Z'
+        inner_l, inner_r = 'M-14.5 -33 C-15.5 -39 -13.5 -43 -11 -42.5 C-8.5 -42 -7.5 -39 -8 -36.5 Z', 'M14.5 -33 C15.5 -39 13.5 -43 11 -42.5 C8.5 -42 7.5 -39 8 -36.5 Z'
+    else:
+        ear_l, ear_r = 'M-18 -30 L-14 -48 L-3 -38 Z', 'M18 -30 L14 -48 L3 -38 Z'
+        inner_l, inner_r = 'M-14.5 -33 L-13.5 -42 L-8 -37 Z', 'M14.5 -33 L13.5 -42 L8 -37 Z'
+    spots = ''
+    if 'spots' in v:  # manchas: frente, mejillas y borde oscuro de las orejas
+        c = v['spots']
+        spots = (''.join(f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}" fill="{c}"/>' for x, y, rx, ry in
+                         [(-8, -33, 2.4, 1.6), (0, -35, 2.2, 1.7), (8, -33, 2.4, 1.6), (-4, -29.5, 1.7, 1.2), (4, -29.5, 1.7, 1.2),
+                          (-15.5, -19, 1.9, 1.5), (15.5, -19, 1.9, 1.5), (-14, -14.5, 1.6, 1.3), (14, -14.5, 1.6, 1.3)]))
+    # bigotes de gato: tres por lado, salen de las mejillas (quedan dentro de la burbuja del casco)
+    whiskers = f'<g stroke="{OUT}" stroke-width="1.7" stroke-linecap="round" fill="none">' + ''.join(
+        f'<path d="M{sg * 7.5} {y0} Q{sg * 16} {y0 + dy * 0.35} {sg * 25} {y0 + dy}"/>'
+        for sg in (-1, 1) for y0, dy in ((-16.5, -5), (-14, 0.5), (-11.5, 5.5))) + '</g>'
     return (f'<g id="cabeza">'
-            f'<path transform="{rot(-e,-11,-34)}" d="M-18 -30 L-14 -48 L-3 -38 Z" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<path transform="{rot(e,11,-34)}" d="M18 -30 L14 -48 L3 -38 Z" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<path transform="{rot(-e,-11,-34)}" d="M-14.5 -33 L-13.5 -42 L-8 -37 Z" fill="{v["ear"]}"/>'
-            f'<path transform="{rot(e,11,-34)}" d="M14.5 -33 L13.5 -42 L8 -37 Z" fill="{v["ear"]}"/>'
+            f'<path transform="{rot(-e,-11,-34)}" d="{ear_l}" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3" stroke-linejoin="round"/>'
+            f'<path transform="{rot(e,11,-34)}" d="{ear_r}" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3" stroke-linejoin="round"/>'
+            f'<path transform="{rot(-e,-11,-34)}" d="{inner_l}" fill="{v["ear"]}"/>'
+            f'<path transform="{rot(e,11,-34)}" d="{inner_r}" fill="{v["ear"]}"/>'
             f'{antennae}'
             f'<ellipse cx="0" cy="-22" rx="19.5" ry="17.5" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3"/>'
-            f'{eyes}{nose}{mouth}</g>')
+            f'{spots}{eyes}{nose}{mouth}{whiskers}</g>')
 
 
 def l_helmet(p, v):

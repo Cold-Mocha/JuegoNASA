@@ -86,6 +86,8 @@ class GameState {
   settings: Settings = { ...defaults, ...safeRead<Settings>(SETTINGS_KEY) };
   progress: Progress = { ...emptyProgress, ...safeRead<Progress>(PROGRESS_KEY) };
   loadout: Loadout | null = null;
+  /** Sesión de entrenamiento (tutorial aparte, la primera vez): usa una estación de práctica y al terminar lleva al selector de misión. */
+  training = false;
   lastResult: LastResult | null = null;
 
   saveSettings(patch: Partial<Settings>): void {

@@ -91,7 +91,7 @@ describe('ninguna decisión es gratis', () => {
 });
 
 describe('límite por día de las acciones de cada investigación', () => {
-  it('las luces de las algas y las muestras de hielo se hacen una vez por jornada; las normales no tienen límite', () => {
+  it('las luces de las algas, la cosecha y las muestras de hielo se hacen una vez por jornada', () => {
     const sim = makeSim({ drain: 0 });
     goTo(sim, 'invernadero');
     sim.act('growLights');
@@ -100,9 +100,10 @@ describe('límite por día de las acciones de cada investigación', () => {
     sim.res.energy = 90;
     sim.act('harvest');
     sim.tick(ACTION_COOLDOWN_SEC + 0.1);
-    expect(sim.canAct('harvest').ok).toBe(true); // la cosecha es normal: sin límite diario
+    expect(sim.canAct('harvest').reason).toBe('doneToday'); // la cosecha también es una vez por jornada
     sim.tick(DAY); // jornada siguiente
     expect(sim.canAct('growLights').ok).toBe(true);
+    expect(sim.canAct('harvest').ok).toBe(true);
   });
 
   it('el panel de pruebas se mide una vez por jornada y no limpia los paneles de la estación', () => {

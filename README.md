@@ -72,7 +72,7 @@ JuegoNASA/
 - **Diseño propio** (no se parece al tripulante de Among Us): cabeza de gato con orejas, traje blanco con banda de color, mochila de soporte vital y cola separada del cuerpo. Cara simple: dos ojos, nariz y sonrisa.
 - **Estilo recorte de papel:** contorno oscuro, borde blanco alrededor de la silueta y pocos frames con poses claras. Al cambiar de dirección gira como una hoja, y la sombra la dibuja el motor sobre el piso. Elegido porque se lee bien a cualquier tamaño, es barato de animar y le da identidad al juego en 2.5D.
 - **Casco como burbuja de vidrio** sobre la misma cabeza: la cara es idéntica con y sin casco. Cada variante tiene ambas versiones. Propuesta: sin casco dentro de la nave, con casco en la esclusa, afuera o en una llamarada solar. Así el casco enseña cuándo se necesita.
-- **3 variantes:** Miu (naranja, banda dorada), Tomás (gris, banda cyan) y Luna (crema, banda magenta). Una gata negra se descartó porque su cara se perdía contra el fondo azul marino.
+- **3 variantes:** Miu (naranja, banda dorada), Tomás (leopardo de las nieves, banda cyan) y Güiña (felino chileno amarillo con manchas negras, banda magenta). Una gata negra se descartó porque su cara se perdía contra el fondo azul marino.
 - **6 animaciones:** idle, blink (parpadeo), walk (2 frames con balanceo), use (usar consola), hurt (recibir daño) y smile (sonreír).
 - **Generado por código** (`herramientas/michi_papel.py`): se pueden agregar animales o animaciones sin redibujar.
 - Prototipo jugable: `prototipos/estacion-2-5d-papel.html`.

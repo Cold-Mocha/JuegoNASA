@@ -503,16 +503,18 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .pedal__wheel i { position: absolute; left: 50%; top: 6px; width: 6px; height: 48px; margin-left: -3px; background: #0e0b33; border-radius: 3px; transform-origin: 3px 48px; }
 .pedal__wheel i:nth-child(2) { transform: rotate(90deg); } .pedal__wheel i:nth-child(3) { transform: rotate(180deg); } .pedal__wheel i:nth-child(4) { transform: rotate(270deg); }
 @keyframes pedal-spin { to { transform: rotate(360deg); } }
-.pedal__lane { position: absolute; top: 160px; bottom: 100px; width: 120px; background: rgba(245, 245, 242, .06); border-radius: var(--radius-md); overflow: visible; }
-.pedal__lane--l { left: 50px; } .pedal__lane--r { right: 50px; }
-.pedal__line { position: absolute; left: 40px; right: 40px; height: 6px; margin-top: 22px; border-radius: 3px; background: var(--star-gold); box-shadow: 0 0 14px rgba(255, 203, 71, .7); }
-.pedal__note { position: absolute; left: 20px; top: 0; width: 80px; height: 56px; border-radius: 28px; display: grid; place-items: center; font-style: normal; font: 700 26px/1 var(--font-display); color: #0e0b33; background: var(--aurora-teal); border: 4px solid #0e0b33; margin-top: 106px; }
+.pedal__lane { position: absolute; top: 156px; height: 200px; width: 120px; background: rgba(245, 245, 242, .06); border-radius: var(--radius-md); overflow: hidden; }
+.pedal__lane--l { left: 60px; } .pedal__lane--r { right: 60px; }
+.pedal__line { position: absolute; left: 50px; right: 50px; height: 6px; margin-top: -3px; border-radius: 3px; background: var(--star-gold); box-shadow: 0 0 14px rgba(255, 203, 71, .7); }
+.pedal__note { position: absolute; left: 20px; top: 0; width: 80px; height: 52px; border-radius: 26px; display: grid; place-items: center; font-style: normal; font: 700 24px/1 var(--font-display); color: #0e0b33; background: var(--aurora-teal); border: 4px solid #0e0b33; box-sizing: border-box; }
 .pedal__note--r { background: var(--comet-cyan); }
 .pedal__note.is-hit { opacity: 0; transition: opacity .2s; } .pedal__note.is-miss { background: var(--danger); opacity: .25; }
-.pedal__meter { position: absolute; left: 24px; right: 24px; bottom: 112px; height: 12px; border-radius: 6px; background: rgba(14, 11, 51, .6); border: 1px solid var(--line); overflow: hidden; }
+.pedal__meter { position: absolute; left: 24px; right: 24px; top: 372px; height: 14px; border-radius: 7px; background: rgba(14, 11, 51, .6); border: 1px solid var(--line); overflow: hidden; }
+.pedal__meter.is-pass i { background: var(--aurora-teal); }
+.pedal__goal { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--ink-light, #f5f5f2); }
 .pedal__meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--solar-coral), var(--star-gold)); }
-.pedal__btn { position: absolute; bottom: 14px; width: 150px; height: 84px; border-radius: 42px; border: 4px solid #0e0b33; font: 700 34px/1 var(--font-display); color: #0e0b33; background: var(--metal, #c4c2e0); box-shadow: 0 6px 0 #0e0b33; cursor: pointer; }
-.pedal__btn--l { left: 26px; } .pedal__btn--r { right: 26px; }
+.pedal__btn { position: absolute; top: 402px; width: 140px; height: 76px; border-radius: 38px; border: 4px solid #0e0b33; box-sizing: border-box; font: 700 30px/1 var(--font-display); color: #0e0b33; background: var(--metal, #c4c2e0); box-shadow: 0 6px 0 #0e0b33; cursor: pointer; }
+.pedal__btn--l { left: 36px; } .pedal__btn--r { right: 36px; }
 .pedal__btn.is-pressed { animation: pedal-press .18s ease-out; }
 @keyframes pedal-press { 50% { transform: translateY(5px); box-shadow: 0 1px 0 #0e0b33; } }
 .msg__tower { position: absolute; top: 24px; left: 50%; width: 150px; height: 150px; margin-left: -75px; }

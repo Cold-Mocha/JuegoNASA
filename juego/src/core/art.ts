@@ -19,8 +19,12 @@ export function michiSvg(c: Character, visor: string): string {
   <circle cx="80" cy="88" r="46" fill="${c.fur}" stroke="#0e0b33" stroke-width="4"/>
   ${c.spots ? spotsSvg(c.spots) : ''}
   <path d="M50 70 Q80 54 110 70" fill="none" stroke="${c.furDark}" stroke-width="6" stroke-linecap="round"/>
-  <ellipse cx="64" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/>
-  <circle cx="${64 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/><circle cx="${96 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/>
+  ${c.eyes
+    ? `<ellipse cx="64" cy="90" rx="9.5" ry="11" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/><ellipse cx="96" cy="90" rx="9.5" ry="11" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/>
+  <ellipse cx="64" cy="90" rx="3.6" ry="9" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="3.6" ry="9" fill="#0e0b33"/>
+  <circle cx="68" cy="85" r="2.6" fill="#fff"/><circle cx="100" cy="85" r="2.6" fill="#fff"/>`
+    : `<ellipse cx="64" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/>
+  <circle cx="${64 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/><circle cx="${96 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/>`}
   <path d="M76 102 L84 102 L80 107 Z" fill="#ee5fd6"/>
   <path d="M80 107 Q74 114 68 110 M80 107 Q86 114 92 110" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>
   <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>
@@ -41,7 +45,9 @@ export function michiFaceSvg(c: Character): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${antennae}
   <path d="M5 13 L7 3 L14 9 Z M27 13 L25 3 L18 9 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
   <circle cx="16" cy="18" r="11" fill="${c.fur}" stroke="#0e0b33" stroke-width="2"/>
-  <ellipse cx="12" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/><ellipse cx="20" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/>
+  ${c.eyes
+    ? `<ellipse cx="12" cy="18" rx="2.6" ry="3" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="20" cy="18" rx="2.6" ry="3" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="12" cy="18" rx="1" ry="2.4" fill="#0e0b33"/><ellipse cx="20" cy="18" rx="1" ry="2.4" fill="#0e0b33"/>`
+    : `<ellipse cx="12" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/><ellipse cx="20" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/>`}
   <path d="M14.8 22 h2.4 l-1.2 1.4 z" fill="#ee5fd6"/></svg>`;
 }
 
@@ -75,14 +81,39 @@ export function missionArtSvg(id: MissionId, accent: string): string {
   <circle cx="80" cy="80" r="70" fill="${accent}" opacity=".18"/>${art[id]}</svg>`;
 }
 
-/** Cohete pequeño (pantalla de carga). Apunta hacia arriba; 64×128. */
+/**
+ * Cohete de la pantalla de carga: un Saturn V en versión cartoon (el de las misiones Apolo a la Luna). Apunta hacia arriba; 52×210.
+ * Muy esbelto, como el real (unas 11 veces más alto que ancho): torre de escape, cápsula, módulo de servicio, tres etapas con el patrón
+ * blanco y negro, cuatro aletas negras y los motores asomando por debajo de ellas. Dibujo simple y propio, sin emblemas ni texto.
+ */
 export function rocketSvg(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="128" viewBox="0 0 64 128">
-  <path d="M32 4 C50 22 52 52 50 86 L14 86 C12 52 14 22 32 4 Z" fill="#f5f5f2" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M32 4 C40 12 45 22 47 32 L17 32 C19 22 24 12 32 4 Z" fill="#ff6b7a" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
-  <circle cx="32" cy="52" r="9" fill="#4cc3f5" stroke="#0e0b33" stroke-width="4"/>
-  <path d="M14 66 L2 96 L14 92 Z M50 66 L62 96 L50 92 Z" fill="#9b7bff" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
-  <rect x="20" y="86" width="24" height="10" rx="3" fill="#68668f" stroke="#0e0b33" stroke-width="4"/>
+  const O = 'stroke="#0e0b33" stroke-width="2.6" stroke-linejoin="round"';
+  const W = '#f5f5f2';
+  const SH = '#dedded'; // sombra suave del lado derecho de cada etapa
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="210" viewBox="0 0 52 210">
+  <path d="M26 196 L20 209 H32Z" fill="#68668f" ${O}/>
+  <path d="M15 192 L12 207 H20 L21 192Z M31 192 L32 207 H40 L37 192Z" fill="#68668f" ${O}/>
+  <path d="M26 192 L21 207 H31Z" fill="#9a98c8" ${O}/>
+  <path d="M10 158 L1 190 L1 197 L10 189Z M42 158 L51 190 L51 197 L42 189Z" fill="#0e0b33" ${O}/>
+  <rect x="10" y="150" width="32" height="44" rx="4" fill="${W}" ${O}/>
+  <path d="M26 151 H38 Q41 151 41 154 V190 Q41 193 38 193 H26Z" fill="#0e0b33"/>
+  <rect x="10" y="150" width="32" height="44" rx="4" fill="none" ${O}/>
+  <path d="M10 160 H42" stroke="#0e0b33" stroke-width="2.6"/>
+  <path d="M10 116 L16 108 H36 L42 116 V120 H10Z" fill="${W}" ${O}/>
+  <rect x="10" y="118" width="32" height="34" rx="3" fill="${W}" ${O}/>
+  <rect x="30" y="120" width="10" height="30" fill="${SH}"/>
+  <rect x="10" y="132" width="32" height="8" fill="#0e0b33"/>
+  <rect x="16" y="78" width="20" height="32" rx="3" fill="${W}" ${O}/>
+  <rect x="29" y="80" width="6" height="28" fill="${SH}"/>
+  <rect x="16" y="92" width="20" height="7" fill="#0e0b33"/>
+  <path d="M20 64 H32 L36 80 H16Z" fill="${W}" ${O}/>
+  <rect x="20" y="52" width="12" height="13" rx="2" fill="${W}" ${O}/>
+  <rect x="20" y="57" width="12" height="4" fill="#0e0b33"/>
+  <path d="M20 52 L24 36 H28 L32 52Z" fill="#c4c2e0" ${O}/>
+  <circle cx="26" cy="45" r="2.2" fill="#4cc3f5" stroke="#0e0b33" stroke-width="1.4"/>
+  <rect x="23" y="26" width="6" height="11" rx="2" fill="#ff6b7a" ${O}/>
+  <path d="M26 26 V3" stroke="#0e0b33" stroke-width="5" stroke-linecap="round"/><path d="M26 26 V3" stroke="${W}" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M23 13 L26 5 L29 13Z" fill="#ff6b7a" ${O}/>
 </svg>`;
 }
 

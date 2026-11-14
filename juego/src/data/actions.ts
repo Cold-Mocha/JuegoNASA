@@ -4,7 +4,7 @@ import type { ActionCheck, ActionId } from '../sim/types';
 export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
   repairAntenna: { label: 'Reparar la antena', why: 'La antena se desajusta con los días y la señal con la Tierra se debilita. Conecta los cables en el minijuego para repararla. La Tierra tarda casi 3 segundos en responder.' },
   growLights: { label: 'Encender luces de las algas', why: 'Minijuego: mantén la luz, los nutrientes y la temperatura de las algas en la franja verde. La luz calienta el tanque, así que subirla te obliga a compensar. Cuanto mejor lo hagas, más O₂ y comida dan las algas.' },
-  harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas.' },
+  harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas. Una vez por día.' },
   cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'Las tormentas de polvo lunar tapan las celdas de los paneles cuando menos lo esperas. Solo se puede limpiar cuando llega una: se hace a mano con un cepillo (minijuego) y al terminar la energía vuelve a renovarse sola.' },
   cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuando una tormenta de polvo lo ensucia, límpialo con el cepillo y oriéntalo hacia el Sol para medir cuánta energía da. Afuera hay radiación y el traje gasta oxígeno. Una vez por día.' },
   eva: { label: 'Recoger muestras de hielo', why: 'Muestras para la ciencia. Afuera hay más radiación y el traje gasta oxígeno. Una vez por día.' },

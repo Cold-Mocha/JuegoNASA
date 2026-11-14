@@ -102,8 +102,8 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
 };
 
 /** Las algas siguen creciendo: más oxígeno y comida al terminar la jornada. */
-/** Acciones propias de cada investigación: solo se pueden hacer una vez por jornada (no tiene sentido repetirlas el mismo día). Las normales, que están en todos los escenarios, no tienen este límite. */
-export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva']);
+/** Acciones que solo se pueden hacer una vez por jornada: las propias de cada investigación y la cosecha (no tiene sentido repetirlas el mismo día). */
+export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva', 'harvest']);
 /** Otras acciones con tope diario mayor que uno (la bicicleta cansa: 3 por jornada). */
 export const MAX_PER_DAY: Partial<Record<ActionId, number>> = { pedal: 3 };
 

@@ -225,7 +225,10 @@ const PEDAL_BEATS = 14;
 const PEDAL_GAP = 640;      // ms entre notas
 const PEDAL_WINDOW = 240;   // ms de margen para acertar
 const PEDAL_LEAD = 1100;    // ms antes de la primera nota
-const PEDAL_LINE = 392;     // altura (px) de la línea de pedaleo
+const PEDAL_LINE = 330;     // altura (px) de la línea de pedaleo (las notas la cruzan al compás)
+const PEDAL_SPEED = 0.24;   // px por ms que caen las notas
+/** Hay que llenar MÁS que esta fracción de la barra para ganar energía. */
+export const PEDAL_PASS = 0.75;
 
 /**
  * Bicicleta de energía (sin texto): caen notas por dos carriles, izquierdo y derecho; hay que tocar el pedal del mismo lado cuando
@@ -237,7 +240,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     <div class="pedal__wheel" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div class="pedal__lane pedal__lane--l"></div><div class="pedal__lane pedal__lane--r"></div>
     <div class="pedal__line" style="top:${PEDAL_LINE}px"></div>
-    <div class="pedal__meter" aria-hidden="true"><i data-meter></i></div>
+    <div class="pedal__meter" aria-hidden="true"><i data-meter></i><b class="pedal__goal" style="left:${PEDAL_PASS * 100}%"></b></div>
     <button class="pedal__btn pedal__btn--l" data-side="L" aria-label="Pedal izquierdo">◀</button>
     <button class="pedal__btn pedal__btn--r" data-side="R" aria-label="Pedal derecho">▶</button></div>`;
   const wheel = root.querySelector<HTMLElement>('.pedal__wheel')!;
@@ -261,6 +264,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     n.el.classList.add(hit ? 'is-hit' : 'is-miss');
     if (hit) hits++;
     meter.style.width = `${(hits / PEDAL_BEATS) * 100}%`;
+    meter.classList.toggle('is-pass', hits / PEDAL_BEATS > PEDAL_PASS);
     wheel.style.setProperty('--spin', `${Math.max(0.25, 1.6 - (hits / PEDAL_BEATS) * 1.35)}s`);
     cb.onProgress(hits / PEDAL_BEATS);
     if (judged === PEDAL_BEATS && !over) {
@@ -283,7 +287,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     const now = performance.now() - t0;
     for (const n of notes) {
       if (n.judged) continue;
-      n.el.style.transform = `translateY(${PEDAL_LINE - (n.t - now) * 0.42 - 30}px)`;
+      n.el.style.transform = `translateY(${PEDAL_LINE - 156 - (n.t - now) * PEDAL_SPEED - 26}px)`; // 156 = alto donde empieza el carril; la nota (52 px) queda centrada en la línea a su hora
       if (now - n.t > PEDAL_WINDOW) settle(n, false); // se pasó sin tocarla
     }
     if (!over) raf = requestAnimationFrame(frame);

@@ -26,6 +26,8 @@ export interface Mission {
   archiveId: string;
   tasks: ResearchTask[];
   newObject: string;     // objeto interactivo que solo aparece con esta jornada
+  /** Paso del tutorial que lleva al objeto propio de la jornada. `handsOn`: se exige usarlo; si no, solo se explica (p. ej. el panel de pruebas necesita una tormenta de polvo). */
+  tutorial: { asset: string; action: ActionId; text: string; handsOn: boolean };
 }
 
 /** Plazo de cada jornada científica (días lunares comprimidos). */
@@ -37,6 +39,7 @@ const act = (id: string, action: ActionId, count: number, label: string, stage?:
 export const MISSIONS: Mission[] = [
   {
     id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Cultivo de algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    tutorial: { asset: 'tanque-algas', action: 'growLights', handsOn: true, text: 'Tu investigación: ve al Cultivo de algas, en el invernadero, y úsalo. Es un minijuego: mantén luz, nutrientes y temperatura en la franja verde.' },
     question: '¿Pueden las algas darnos aire y comida en la Luna?',
     brief: 'Cultiva algas con luz. El Sol está tranquilo.',
     tasks: [
@@ -48,6 +51,7 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    tutorial: { asset: 'panel-solar', action: 'cleanTestPanel', handsOn: false, text: 'Tu investigación: el Panel de pruebas, afuera. Cuando una tormenta de polvo lo ensucie, límpialo y oriéntalo al Sol para medir su energía.' },
     question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
     brief: 'Mantén limpios los paneles solares.',
     tasks: [
@@ -59,6 +63,7 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 'hielo-lunar', name: 'Hielo en la Luna', level: 3, newObject: 'Taladro de hielo', accent: 'comet-cyan', archiveId: 'oct-2024', tagline: 'Sol de octubre de 2024',
+    tutorial: { asset: 'roca-hielo', action: 'eva', handsOn: true, text: 'Tu investigación: ve al Taladro de hielo, afuera, y úsalo. Es un minijuego: empareja cada pico del espectro con su huella.' },
     question: '¿Hay agua congelada cerca de la estación?',
     brief: 'Busca hielo en la roca de afuera.',
     tasks: [

@@ -106,7 +106,11 @@ export class StoryScene extends Phaser.Scene {
 
   private finish(): void {
     this.input.keyboard?.removeAllListeners();
-    fadeTo(this, SCENES.select);
+    if (state.progress.tutorialDone) return fadeTo(this, SCENES.select);
+    // primera vez: antes de elegir misión, una sesión de entrenamiento aparte (estación de práctica con el Huerto lunar)
+    state.training = true;
+    state.loadout = { mission: 'huerto-lunar', character: 'miu', difficulty: 'cadete' };
+    fadeTo(this, SCENES.launch);
   }
 
   private fitCover(img: Phaser.GameObjects.Image): void {

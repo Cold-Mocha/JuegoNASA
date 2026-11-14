@@ -17,6 +17,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    state.training = false; // volver al menú cancela un entrenamiento a medias
     fadeIn(this);
     drawStarfield(this, 'menu', !state.calm);
     this.drawPlanet();

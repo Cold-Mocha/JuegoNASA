@@ -34,7 +34,7 @@ import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
 import { mountTestPanel } from '../core/testPanelGame';
 import {
-  mountAlgae, mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
+  mountAlgae, mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, PEDAL_PASS, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
@@ -53,7 +53,8 @@ const CAMERA_LOOK_DOWN = -90;     // px de mapa que la cámara mira bajo los pie
 const CAMERA_MARGIN = 450;       // la cámara puede pasar un poco del borde del mapa para que el michi no se quede arriba cerca de los bordes
 
 interface Machine { room: RoomId; at: Point; sprite: Phaser.GameObjects.Image; prop: RoomProp; active?: boolean; }
-interface TutorialStep { text: string; done: () => boolean; }
+/** Paso del tutorial: `guide` es el objeto al que apunta la flecha; `manual` pide pulsar «Entendido» (si no, avanza solo al cumplirse). */
+interface TutorialStep { text: string; done: () => boolean; guide?: string; manual?: boolean; cta?: string; }
 
 type Overlay = 'none' | 'pause' | 'settings' | 'map' | 'actions' | 'intro' | 'controls' | 'minigame';
 /** Paneles que detienen el reloj de la misión. */
@@ -260,6 +261,8 @@ export class StationScene extends Phaser.Scene {
     const add = (asset: string, label: string): void => void needs.set(asset, [...(needs.get(asset) ?? []), label]);
     for (const key of this.sim.criticals) if (key !== 'radiation') add(GUIDE_ASSET[key], RESOURCE_TEXT[key].label);
     if (this.sim.breach) add(BREACH_GUIDE, 'Fractura');
+    const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
+    if (guide) add(guide, 'Tutorial');
     const incoming = this.sim.incomingFlare;
     const outside = !this.sim.sheltered;
     if (outside && this.sim.flareActive) add(DOOR_ASSET, 'Llamarada');
@@ -352,7 +355,7 @@ export class StationScene extends Phaser.Scene {
     if (!this.sim || this.ending) return;
     const dt = deltaMs / 1000;
     const paused = PAUSING.has(this.overlay);
-    const simPaused = paused && !(this.overlay === 'minigame' && this.miniOutdoor); // afuera el tiempo corre aunque se juegue
+    const simPaused = this.tutorialIndex >= 0 || (paused && !(this.overlay === 'minigame' && this.miniOutdoor)); // afuera el tiempo corre aunque se juegue; en el tutorial el reloj está detenido
     if (!simPaused) {
       this.sim.tick(dt * this.timescale);
       for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
@@ -712,7 +715,7 @@ export class StationScene extends Phaser.Scene {
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
   /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void }): void {
+  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
@@ -724,10 +727,16 @@ export class StationScene extends Phaser.Scene {
     this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: () => undefined,
       onDone: (result) => {
-        audio.play('achievement');
-        this.ui.q('[data-dust-result]').hidden = false;
-        this.ui.q('.mini-full').classList.add('is-done');
-        cfg.finish(result);
+        const failure = cfg.failed?.(result) ?? null; // no se alcanzó la meta: no hay marca de listo ni efecto
+        if (failure) {
+          audio.play('error');
+          this.alert(failure, 'danger');
+        } else {
+          audio.play('achievement');
+          this.ui.q('[data-dust-result]').hidden = false;
+          this.ui.q('.mini-full').classList.add('is-done');
+          cfg.finish(result);
+        }
         for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
         this.time.delayedCall(1100, () => {
           if (this.overlay !== 'minigame') return;
@@ -777,7 +786,11 @@ export class StationScene extends Phaser.Scene {
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
   private openPedalGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountPedal(root, cb), finish: (r) => void this.sim.act('pedal', quality(r ?? 1)) });
+    this.openFullMini({
+      mount: (root, cb) => mountPedal(root, cb),
+      finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
+      failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : `No pedaleaste lo suficiente: hay que llenar más del ${PEDAL_PASS * 100} % de la barra.`),
+    });
   }
 
   /** Curarse: tratar cada herida manteniendo apretado. */
@@ -1145,13 +1158,13 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ---------- tutorial ----------
-  /** Al empezar la primera misión: muestra los controles y deja elegir si hacer el tutorial guiado. */
+  /** Entrenamiento de la primera vez (sesión aparte): muestra los controles y deja elegir entre el tutorial guiado o saltarlo. */
   private startTutorial(): void {
-    if (state.progress.tutorialDone) return;
+    if (!state.training) return;
     this.openModal(`
-      <h2 class="mn-panel__title">Controles de la estación</h2>
+      <h2 class="mn-panel__title">Entrenamiento en la estación</h2>
       ${controlsHtml()}
-      <p class="mn-panel__body">¿Quieres que la Comandante Nébula te guíe en tu primera jornada? El reloj está detenido.</p>
+      <p class="mn-panel__body">Esta es una estación de práctica: aquí no se pierde nada y el reloj está detenido. ¿Quieres que la Comandante Nébula te enseñe cómo se juega?</p>
       <div class="mn-panel__footer">
         <button class="mn-btn mn-btn--secondary" data-action="tutorial-decline">${icon('skip')}Saltar tutorial</button>
         <button class="mn-btn" data-action="tutorial-start">${icon('play')}Empezar tutorial</button>
@@ -1170,19 +1183,25 @@ export class StationScene extends Phaser.Scene {
       </div>`, 'controls', 'modal__panel--wide');
   }
 
-  /** Tutorial guiado en 6 pasos que avanzan solos al cumplirse (en cualquier dificultad, si el jugador lo elige). */
+  /**
+   * Tutorial guiado, rápido y con el reloj detenido: el juego lleva al jugador a usar una vez el objeto de su investigación y la cosecha,
+   * y explica en una frase los eventos y cómo se completa la jornada. Las acciones son reales y cuentan para las tareas.
+   */
   private runTutorial(): void {
     this.closeOverlay();
-    const t0 = this.time.now;
     this.flags = { ...this.flags, moved: false, opened: false, map: false };
+    const done = (action: ActionId): boolean => (this.sim.stats.actionsBy[action] ?? 0) >= 1;
+    const own = this.mission.tutorial;
     this.tutorial = [
-      { text: '¡Bienvenido a la Estación Central, en la Luna! Camina con WASD o las flechas, o toca el piso. Prueba el impulso con Shift y el salto con Espacio.', done: () => this.flags.moved },
-      { text: 'Arriba a la derecha está tu investigación. Cumple sus tareas, en el orden que quieras, y volverás a la Tierra.', done: () => this.time.now - t0 > 10000 },
-      { text: 'Acércate a una máquina y presiona E (o tócala). Verás cuánto cuesta antes de usarla; E otra vez la confirma.', done: () => this.flags.opened },
-      { text: 'Arriba a la izquierda hay 5 barras: Energía, O₂, Comida, Salud y Radiación. Si falta O₂ o comida, baja la Salud. ¡Ninguna acción es gratis!', done: () => this.time.now - t0 > 24000 },
-      { text: 'Los paneles solares y el invernadero están afuera: sal por la Esclusa. Afuera tu traje gasta oxígeno; en el invernadero hay aire.', done: () => this.time.now - t0 > 36000 },
-      { text: 'A veces llega una tormenta de polvo y cubre los paneles: cuando pase, límpialos o rendirán menos. Si te sientes mal, ve a la Enfermería.', done: () => this.time.now - t0 > 48000 },
-      { text: 'Las llamaradas de esta misión pasaron de verdad. Cuando venga una, quédate dentro de la nave. ¡Suerte!', done: () => false },
+      { text: 'Camina con WASD o las flechas, o toca el piso. Shift es un impulso y Espacio, un salto.', done: () => this.flags.moved },
+      { text: 'Cada acción cuesta: mira tus barras arriba a la izquierda. Abajo están el aire de la nave, los paneles y la radio.', done: () => false, manual: true },
+      { text: own.text, done: () => own.handsOn && done(own.action), guide: own.asset, manual: !own.handsOn },
+      { text: 'La cosecha: ve al Rack de plantas del invernadero y úsalo. Sales por la Esclusa; afuera el traje gasta oxígeno. Se cosecha una vez al día.', done: () => done('harvest'), guide: 'rack-plantas' },
+      { text: 'Eventos: una tormenta de polvo cubre los paneles y los limpias afuera. Si viene una llamarada, vuelve a la nave.', done: () => false, manual: true },
+      { text: 'Cumple las tareas de arriba a la derecha (algunas, una vez al día). Al terminar, repara la antena en Comunicaciones y vuelves a la Tierra.', done: () => false, guide: 'consola-antena', manual: true },
+      state.training
+        ? { text: '¡Entrenamiento completo, michinauta! Ahora elige tu tripulante y tu primera misión.', done: () => false, manual: true, cta: 'Elegir mi misión' }
+        : { text: '¡Listo! Sigue con tus tareas. ¡Suerte!', done: () => false, manual: true },
     ];
     this.tutorialIndex = 0;
     this.showTutorial();
@@ -1192,6 +1211,9 @@ export class StationScene extends Phaser.Scene {
     const step = this.tutorial[this.tutorialIndex];
     this.setText('[data-tip-text]', step.text);
     this.ui.q('[data-tip-actions]').hidden = false;
+    const next = this.ui.q('[data-action="tutorial-next"]');
+    next.hidden = !step.manual; // los pasos con tarea avanzan solos
+    next.innerHTML = `${icon('check')}${esc(step.cta ?? 'Entendido')}`;
     this.ui.q('[data-tip]').hidden = false;
   }
 
@@ -1202,7 +1224,7 @@ export class StationScene extends Phaser.Scene {
 
   private nextTutorial(manual: boolean): void {
     if (this.tutorialIndex < 0) return;
-    if (manual || this.tutorialIndex < this.tutorial.length - 1) this.tutorialIndex++;
+    if (manual || this.tutorialIndex < this.tutorial.length) this.tutorialIndex++;
     if (this.tutorialIndex >= this.tutorial.length) return this.endTutorial();
     this.showTutorial();
   }
@@ -1211,6 +1233,12 @@ export class StationScene extends Phaser.Scene {
     this.tutorialIndex = -1;
     this.ui.q('[data-tip]').hidden = true;
     state.saveProgress({ tutorialDone: true });
+    if (!state.training) return;
+    // fin del entrenamiento: se descarta la estación de práctica y se elige la primera misión
+    state.training = false;
+    state.loadout = null;
+    this.ending = true;
+    fadeTo(this, SCENES.select);
   }
 
   // ---------- entrada ----------

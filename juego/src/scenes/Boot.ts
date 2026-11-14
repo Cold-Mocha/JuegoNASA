@@ -22,7 +22,7 @@ export class BootScene extends Phaser.Scene {
 
     const tex = this.textures;
     await Promise.all([
-      addSvgTexture(tex, 'rocket', rocketSvg(), 64, 128),
+      addSvgTexture(tex, 'rocket', rocketSvg(), 52, 210),
       ...CHARACTERS.map((c) => addSvgTexture(tex, `michi-${c.id}`, michiSvg(c, tokenCss(c.accent)), 160, 160)),
     ]);
     this.scene.start(SCENES.menu);

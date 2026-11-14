@@ -480,3 +480,11 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .hud__tab { appearance: none; flex: 1; border: 2px solid var(--line); border-radius: var(--radius-pill); background: transparent; color: var(--ink-muted); font: 600 13px/16px var(--font-display); padding: 5px 10px; cursor: pointer; }
 .hud__tab[hidden] { display: none; }
 .hud__tab.is-current { background: var(--star-gold); border-color: var(--star-gold); color: var(--ink-dark); }
+
+/* Oxígeno del traje dentro del minijuego de afuera (sin texto) */
+.mini-suit { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 360px; display: flex; align-items: center; gap: 10px; color: var(--stat-suit); }
+.mini-suit .mn-icon { width: 28px; height: 28px; flex: none; }
+.mini-suit__track { flex: 1; height: 14px; border-radius: var(--radius-pill); background: var(--space-600); border: 2px solid var(--line); overflow: hidden; }
+.mini-suit__fill { height: 100%; background: var(--stat-suit); transition: width .2s linear; }
+.mini-suit__track.is-critical { border-color: var(--danger); }
+.mini-suit__track.is-critical .mini-suit__fill { background: var(--danger); }

@@ -97,6 +97,8 @@ export class StationScene extends Phaser.Scene {
   private flags = { moved: false, opened: false, map: false, archive: false };
   private ending = false;
   private miniGame?: DustGame | SealGame | MiniGameHandle;
+  /** El minijuego se juega afuera (superficie): el reloj no se detiene y el traje sigue gastando oxígeno. */
+  private miniOutdoor = false;
   private breachProp?: Machine;
   private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
   private pulses = new Map<Machine, Phaser.Tweens.Tween>();
@@ -134,7 +136,7 @@ export class StationScene extends Phaser.Scene {
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, pulses: new Map(), taskTab: 1 });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1 });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -347,7 +349,8 @@ export class StationScene extends Phaser.Scene {
     if (!this.sim || this.ending) return;
     const dt = deltaMs / 1000;
     const paused = PAUSING.has(this.overlay);
-    if (!paused) {
+    const simPaused = paused && !(this.overlay === 'minigame' && this.miniOutdoor); // afuera el tiempo corre aunque se juegue
+    if (!simPaused) {
       this.sim.tick(dt * this.timescale);
       for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
       tickDash(this.dash, dt);
@@ -643,6 +646,7 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'suitEmpty':
         audio.play('hurt');
+        if (this.overlay === 'minigame') this.closeOverlay(); // se acabó el oxígeno limpiando: se cancela, sin costo ni efecto
         this.rescue();
         this.alert(`Se acabó el oxígeno del traje: la tripulación te rescató (−${ev.oxygenLost} O₂ de la estación).`, 'danger');
         this.tip('Afuera el traje dura poco. Mira la barra de oxígeno y vuelve antes de que se vacíe.');
@@ -702,13 +706,15 @@ export class StationScene extends Phaser.Scene {
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
   /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void }): void {
+  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean }): void {
     this.closeOverlay();
+    this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
       <div class="mini-full" aria-label="Minijuego">
         <div class="mini-full__stage" data-dust-root></div>
         <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
-      </div>`, 'minigame', 'modal__panel--full');
+      </div>
+      ${cfg.outdoor ? `<div class="mini-suit" aria-label="Oxígeno del traje">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
     this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: () => undefined,
       onDone: (result) => {
@@ -728,6 +734,7 @@ export class StationScene extends Phaser.Scene {
     this.openFullMini({
       mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
       finish: () => void this.sim.act(action),
+      outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
     });
   }
 
@@ -877,6 +884,7 @@ export class StationScene extends Phaser.Scene {
     this.setText('[data-light]', s.light >= 1 ? '☀ Día' : s.light > 0 ? '◐ Atardecer' : '☾ Noche');
     (this.ui.q('[data-daybar]') as HTMLElement).style.width = `${Math.round(s.dayProgress * 100)}%`;
     this.renderSuit();
+    this.renderMiniSuit();
     const incoming = s.incomingFlare;
     const countdown = this.ui.q('[data-countdown]');
     countdown.hidden = !incoming;
@@ -895,6 +903,16 @@ export class StationScene extends Phaser.Scene {
   }
 
   /** Barra del traje: aparece al salir de la nave y se esconde cuando vuelve a estar llena adentro. */
+  /** Barra de oxígeno del traje dentro del minijuego de afuera (el HUD queda tapado), sin texto: se ve cuánto aire queda mientras limpias. */
+  private renderMiniSuit(): void {
+    if (this.overlay !== 'minigame' || !this.miniOutdoor) return;
+    const fill = this.ui.el.querySelector<HTMLElement>('[data-mini-suit]');
+    if (!fill) return;
+    const v = Math.max(0, Math.min(100, this.sim.suit));
+    fill.style.width = `${v}%`;
+    fill.parentElement!.classList.toggle('is-critical', v <= SUIT_LOW);
+  }
+
   /**
    * Barra de Oxígeno debajo de las stats: afuera muestra el del traje; adentro solo aparece si el oxígeno de la nave está bajo
    * o hay una fractura, y entonces muestra el de la nave. Sin textos.
@@ -1057,6 +1075,7 @@ export class StationScene extends Phaser.Scene {
   private closeOverlay(): void {
     this.miniGame?.destroy();
     this.miniGame = undefined;
+    this.miniOutdoor = false;
     this.overlay = 'none';
     this.ui.q('[data-overlay]').hidden = true;
     this.ui.q('[data-actions]').hidden = true;

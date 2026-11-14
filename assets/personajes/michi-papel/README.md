@@ -9,7 +9,7 @@ Personaje jugable en estilo **recorte de papel 2.5D**: dibujo plano con contorno
 |---|---|---|---|
 | `miu` | Miu | naranja | dorada |
 | `tomas` | Tomás | gris | cyan |
-| `luna` | Luna | crema | magenta |
+| `luna` | Güiña | amarillo ocre con manchas negras | magenta |
 
 Cada una existe **con casco** (`casco`) y **sin casco** (`sin-casco`). Sugerencia de uso: sin casco dentro de la nave; con casco en la esclusa, afuera o durante una llamarada solar.
 

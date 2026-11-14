@@ -44,11 +44,14 @@
       "round_ears": true
     },
     "luna": {
-      "name": "Luna",
-      "fur": "#8f7bd6",
+      "name": "Güiña",
+      "fur": "#e9b949",
       "band": "#ee5fd6",
-      "nose": "#ff7fb8",
-      "ear": "#ff9ad9"
+      "nose": "#c9707f",
+      "ear": "#c98a2e",
+      "spots": "#1f1812",
+      "round_ears": true,
+      "eye": "#2ad0c6"
     },
     "zib": {
       "name": "Zib",

@@ -250,6 +250,14 @@ button { font-family: inherit; }
 @keyframes dash-denied { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @media (prefers-reduced-motion: reduce) { .hud__dash.is-denied .mn-bar__track { animation: none; } }
 
+/* estado de los equipos: debajo de las stats */
+.hud__systems { padding: var(--space-3); display: grid; gap: 6px; }
+.hud__sys { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font: 500 13px/16px var(--font-display); }
+.hud__sys-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.hud__sys-label .mn-icon { width: 15px; height: 15px; }
+.hud__sys-state { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--aurora-teal); }
+.hud__sys.is-bad .hud__sys-state { color: var(--solar-coral); }
+
 /* oxígeno del traje: aparece bajo el reloj al salir de la nave */
 .hud__suit { padding: var(--space-3); display: grid; gap: 4px; text-align: center; }
 .hud__suit .mn-bar { grid-template-columns: auto 1fr 40px; gap: var(--space-2); }

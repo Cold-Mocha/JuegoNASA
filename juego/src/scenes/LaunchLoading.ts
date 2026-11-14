@@ -8,7 +8,7 @@ import { LAYERS, CISLUNAR, type Layer } from '../data/atmosphere';
 import { audio } from '../core/audio';
 import { queueStationAssets } from '../data/preload';
 import { addSvgTexture } from '../core/art';
-import { MAP_TEXTURE, stationSvg } from '../core/stationArt';
+import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
 import { MAP_W, MAP_H } from '../sim/stationMap';
 
@@ -58,7 +58,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     let files = 0;
     let map = this.textures.exists(MAP_TEXTURE) && drawnPropsReady(this.textures);
     const sync = (): void => void (this.loadProgress = Math.min(files, map ? 1 : 0.95));
-    void Promise.all([addSvgTexture(this.textures, MAP_TEXTURE, stationSvg(), MAP_W, MAP_H, 1), addDrawnProps(this.textures)]).then(() => {
+    void Promise.all([addSvgTexture(this.textures, MAP_TEXTURE, stationSvg(), MAP_W, MAP_H, MAP_RASTER), addDrawnProps(this.textures)]).then(() => {
       map = true;
       sync();
     });

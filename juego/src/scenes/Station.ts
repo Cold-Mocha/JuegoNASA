@@ -7,7 +7,7 @@ import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { settingsHtml, bindSettings } from '../core/settingsPanel';
 import { michiSvg, michiFaceSvg, addSvgTexture } from '../core/art';
-import { MAP_TEXTURE, stationSvg } from '../core/stationArt';
+import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
 import { MISSIONS, MISSION_DAYS, missionEvents, realDate, type Mission } from '../data/missions';
 import { DIFFICULTIES, type Difficulty } from '../data/difficulties';
@@ -17,7 +17,7 @@ import { ACTION_TEXT, BLOCK_REASON, MACHINE_INFO, RESOURCE_TEXT } from '../data/
 import { CONTROLS, POINTER_HINT } from '../data/controls';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
-import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED, quality } from '../sim/rules';
+import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED, WORLD_SCALE, quality } from '../sim/rules';
 import {
   GRAVITY, PX_PER_METER, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, type DashState,
 } from '../sim/physics';
@@ -29,22 +29,23 @@ import { Pool } from '../sim/pool';
 import { computeScore } from '../sim/score';
 import { earnedAchievements } from '../sim/achievements';
 import type { ActionId, Resources, RoomId, SimEvent, Zone } from '../sim/types';
-import { icon } from '../core/icons';
+import { icon, type IconName } from '../core/icons';
 import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
+import { mountTestPanel } from '../core/testPanelGame';
 import {
-  mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
+  mountAlgae, mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
-const PROP_SIZE = 0.46;          // tamaño en el mapa respecto del dibujo 1x
+const PROP_SIZE = 0.95;          // tamaño en el mapa respecto del dibujo 1x (un casillero mide ~1,6 michis de alto)
 const PROP_PAPER_MARGIN = 17.5;  // px de textura bajo el objeto (borde de papel de 14 px a 1x, exportado a 1,25×)
 const MICHI_SCALE = 0.6;
 const JUMP_V0 = 1.8;             // m/s: con g lunar sube ~1 m (en la Tierra serían ~16 cm)
-const INTERACT_RADIUS = 110;     // px de mapa entre los pies del michi y los de la máquina
-const OBSTACLE_R = { interactive: 42, deco: 26 } as const; // los adornos de pared no tienen
-const MACHINE_FRONT = 64;        // el michi camina solo hasta este punto frente a la máquina
+const INTERACT_RADIUS = 210;     // px de mapa entre los pies del michi y los de la máquina
+const OBSTACLE_R = { interactive: 85, deco: 52 } as const; // los adornos de pared no tienen
+const MACHINE_FRONT = 130;        // el michi camina solo hasta este punto frente a la máquina
 const HUD_HZ = 10;
 const GHOSTS = 4;                // estela del impulso (pool)
 const CAMERA_ZOOM = 0.8;         // cámara alejada: se ve más estación alrededor del michi
@@ -119,7 +120,7 @@ export class StationScene extends Phaser.Scene {
     }
     if (!this.textures.exists(MAP_TEXTURE) || !drawnPropsReady(this.textures)) {
       // normalmente los rasteriza la pantalla del cohete; esto cubre entradas directas (recarga en desarrollo)
-      void Promise.all([addSvgTexture(this.textures, MAP_TEXTURE, stationSvg(), MAP_W, MAP_H, 1), addDrawnProps(this.textures)])
+      void Promise.all([addSvgTexture(this.textures, MAP_TEXTURE, stationSvg(), MAP_W, MAP_H, MAP_RASTER), addDrawnProps(this.textures)])
         .then(() => this.scene.restart());
       return;
     }
@@ -194,13 +195,14 @@ export class StationScene extends Phaser.Scene {
 
   // ======================================================== mundo (un solo plano continuo)
   private buildWorld(): void {
-    this.add.image(0, 0, MAP_TEXTURE).setOrigin(0).setDepth(-1000);
+    this.add.image(0, 0, MAP_TEXTURE).setOrigin(0).setScale(1 / MAP_RASTER).setDepth(-1000);
     const k = PROP_SIZE / PROP_TEXTURE_SCALE;
     for (const room of ROOM_IDS) {
       for (const p of roomProps(room, this.mission.id)) {
         let at = propPosition(room, p);
         // el PNG trae un margen de papel bajo el objeto: se baja ese margen para que quede apoyado en el piso
-        const img = this.add.image(at.x, at.y + PROP_PAPER_MARGIN * k, propKey(textureAsset(p, !!p.missions))).setOrigin(0.5, 1) // los objetos de la jornada siempre llevan contorno.setScale(k).setDepth(at.y);
+        // los objetos de la jornada siempre llevan contorno
+        const img = this.add.image(at.x, at.y + PROP_PAPER_MARGIN * k, propKey(textureAsset(p, !!p.missions))).setOrigin(0.5, 1).setScale(k).setDepth(at.y);
         // el objeto no se sale de su sala: su dibujo (sin el margen transparente) queda dentro del piso, sin montarse sobre las paredes
         const r = ROOM_RECTS[room];
         const half = img.displayWidth / 2 - PROP_PAPER_MARGIN * k;
@@ -211,7 +213,6 @@ export class StationScene extends Phaser.Scene {
           img.setDepth(at.y - 500); // colgado de la pared: siempre detrás del michi
           continue;
         }
-        this.add.ellipse(at.x, at.y - 2, img.displayWidth * 0.72, 16, 0x000000, 0.22).setDepth(at.y - 1);
         this.obstacles.push({ x: at.x, y: at.y, r: OBSTACLE_R[p.kind] });
         if (p.kind === 'interactive') this.addMachine(room, p, img, at);
       }
@@ -289,7 +290,7 @@ export class StationScene extends Phaser.Scene {
       const label = el.querySelector<HTMLElement>('.hud__guide-label [data-text]')!;
       if (label.textContent !== text) label.textContent = text;
       const sx = (m.at.x - view.x) * cam.zoom; // de mapa a pantalla (la cámara está alejada)
-      const sy = (m.at.y - 150 - view.y) * cam.zoom;
+      const sy = (m.at.y - 290 - view.y) * cam.zoom;
       const onScreen = sx > margin.left && sx < margin.right && sy > margin.top && sy < margin.bottom;
       let x = sx;
       let y = sy;
@@ -593,7 +594,6 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'actionResolved':
         audio.play('radio');
-        this.alert('Antena reparada: la señal con la Tierra es fuerte.', 'ok');
         break;
       case 'stageUnlocked':
         audio.play('achievement');
@@ -628,7 +628,11 @@ export class StationScene extends Phaser.Scene {
       case 'breachRepaired':
         this.removeBreach();
         audio.play('confirm');
-        this.alert('Reciclador reparado: el oxígeno de la nave vuelve a regenerarse.', 'ok');
+        break;
+      case 'dustStorm':
+        audio.play('error');
+        this.alert('⚠ ¡Tormenta de polvo! El polvo lunar cubrió los paneles solares.', 'danger');
+        this.tip('Sal a la superficie y limpia los paneles con el cepillo antes de que la energía baje.');
         break;
       case 'panelsFailing':
         audio.play('error');
@@ -637,7 +641,6 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'panelsRestored':
         audio.play('confirm');
-        this.alert('Paneles arreglados: la energía vuelve a renovarse.', 'ok');
         break;
       case 'suitLow':
         audio.play('error');
@@ -693,7 +696,9 @@ export class StationScene extends Phaser.Scene {
       this.alert(BLOCK_REASON[check.reason!], 'danger');
       return;
     }
-    if (id === 'cleanDust' || id === 'cleanTestPanel') return this.openDustGame(id); // limpiar a mano: el costo se cobra al terminar
+    if (id === 'cleanDust') return this.openDustGame(id); // limpiar a mano: el costo se cobra al terminar
+    if (id === 'cleanTestPanel') return this.openTestPanelGame();
+    if (id === 'growLights') return this.openAlgaeGame();
     if (id === 'repair') return this.openSealGame();
     if (id === 'repairAntenna') return this.openAntennaFlow();
     if (id === 'pedal') return this.openPedalGame();
@@ -733,12 +738,22 @@ export class StationScene extends Phaser.Scene {
     });
   }
 
-  private openDustGame(action: 'cleanDust' | 'cleanTestPanel'): void {
+  private openDustGame(action: 'cleanDust'): void {
     this.openFullMini({
       mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
       finish: () => void this.sim.act(action),
       outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
     });
+  }
+
+  /** Panel de pruebas (Energía del Sol): limpiarlo y orientarlo al Sol. Se juega afuera: el traje sigue gastando. */
+  private openTestPanelGame(): void {
+    this.openFullMini({ mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
+  }
+
+  /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja. */
+  private openAlgaeGame(): void {
+    this.openFullMini({ mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
   }
 
   private openSealGame(): void {
@@ -817,6 +832,11 @@ export class StationScene extends Phaser.Scene {
         <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
         <span class="mn-bar__value" data-value>0</span>
       </div>`;
+    const system = (key: string, ic: IconName, label: string): string => `
+      <div class="hud__sys" data-sys="${key}">
+        <span class="hud__sys-label">${icon(ic)}${label}</span>
+        <span class="hud__sys-state" data-sys-state></span>
+      </div>`;
     this.ui = new UiLayer(this, /* html */ `
       <div class="hud" data-hud>
         <div class="hud__clock mn-panel">
@@ -834,6 +854,9 @@ export class StationScene extends Phaser.Scene {
               <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
               <span class="mn-bar__value" data-value></span>
             </div>
+          </section>
+          <section class="hud__systems mn-panel" aria-label="Estado de los equipos">
+            ${system('oxygen', 'oxygen', 'Aire de la nave')}${system('panels', 'panel', 'Paneles solares')}${system('radio', 'antenna', 'Radio')}
           </section>
         </div>
         <div class="hud__top-right">
@@ -902,6 +925,7 @@ export class StationScene extends Phaser.Scene {
     this.setText('[data-light]', s.light >= 1 ? '☀ Día' : s.light > 0 ? '◐ Atardecer' : '☾ Noche');
     (this.ui.q('[data-daybar]') as HTMLElement).style.width = `${Math.round(s.dayProgress * 100)}%`;
     this.renderSuit();
+    this.renderSystems();
     this.renderMiniSuit();
     const incoming = s.incomingFlare;
     const countdown = this.ui.q('[data-countdown]');
@@ -919,6 +943,26 @@ export class StationScene extends Phaser.Scene {
     if (this.overlay === 'actions') this.renderActions();
     if (this.overlay === 'map') this.renderMapMarker();
     this.checkTutorial();
+  }
+
+  /** Estado de los equipos bajo las stats: aire de la nave, paneles solares y radio. */
+  private renderSystems(): void {
+    const s = this.sim;
+    const night = s.light === 0;
+    const rows: Record<string, { text: string; bad: boolean }> = {
+      oxygen: s.breach ? { text: 'Fuga', bad: true } : { text: `${Math.round(s.res.oxygen)}%`, bad: s.res.oxygen <= 20 },
+      panels: { text: night ? 'Sin sol' : `${Math.round(s.panelEfficiency * 100)}%`, bad: !s.panelsOk },
+      radio: { text: s.radioOk ? 'Señal buena' : 'Señal débil', bad: !s.radioOk },
+    };
+    for (const [key, row] of Object.entries(rows)) {
+      const id = `sys-${key}`;
+      const sig = `${row.text}|${row.bad}`;
+      if (this.hudCache.get(id) === sig) continue;
+      this.hudCache.set(id, sig);
+      const el = this.ui.q(`[data-sys="${key}"]`);
+      el.classList.toggle('is-bad', row.bad);
+      (el.querySelector('[data-sys-state]') as HTMLElement).textContent = row.text;
+    }
   }
 
   /** Barra del traje: aparece al salir de la nave y se esconde cuando vuelve a estar llena adentro. */
@@ -1137,7 +1181,7 @@ export class StationScene extends Phaser.Scene {
       { text: 'Acércate a una máquina y presiona E (o tócala). Verás cuánto cuesta antes de usarla; E otra vez la confirma.', done: () => this.flags.opened },
       { text: 'Arriba a la izquierda hay 5 barras: Energía, O₂, Comida, Salud y Radiación. Si falta O₂ o comida, baja la Salud. ¡Ninguna acción es gratis!', done: () => this.time.now - t0 > 24000 },
       { text: 'Los paneles solares y el invernadero están afuera: sal por la Esclusa. Afuera tu traje gasta oxígeno; en el invernadero hay aire.', done: () => this.time.now - t0 > 36000 },
-      { text: 'Los paneles se llenan de polvo con los días: límpialos o rendirán menos. Si te sientes mal, ve a la Enfermería.', done: () => this.time.now - t0 > 48000 },
+      { text: 'A veces llega una tormenta de polvo y cubre los paneles: cuando pase, límpialos o rendirán menos. Si te sientes mal, ve a la Enfermería.', done: () => this.time.now - t0 > 48000 },
       { text: 'Las llamaradas de esta misión pasaron de verdad. Cuando venga una, quédate dentro de la nave. ¡Suerte!', done: () => false },
     ];
     this.tutorialIndex = 0;
@@ -1249,5 +1293,5 @@ const flareName = (classType: string): string => classType;
 /** Oscuridad según la energía: con 60 o más, luz plena; sin energía, casi a oscuras. */
 const darknessFor = (energy: number): number => (Math.min(60, Math.max(0, 60 - energy)) / 60) * 0.72;
 /** Escala del plano dentro del mapa (M). */
-const MAP_SCALE = 0.2;
+const MAP_SCALE = 0.2 / WORLD_SCALE; // el mapa del menú mide lo mismo aunque el plano sea más grande
 const f = (n: number): string => n.toFixed(1);

@@ -339,11 +339,11 @@ export class LaunchLoadingScene extends Phaser.Scene {
       { y: 690, s: 0.46, x0: 252, n: 14, dx: 23 },
       { y: 680, s: 0.42, x0: 246, n: 15, dx: 22 },
     ];
-    // pancarta principal entre dos postes, sobre el público
+    // pancarta principal entre dos postes, bien por encima del público (letra grande, tinta oscura sobre dorado)
     const banner = this.add.graphics().setDepth(11);
-    banner.lineStyle(4, 0x5a5880, 1).lineBetween(236, 560, 236, 690).lineBetween(566, 560, 566, 690);
-    banner.fillStyle(0xffcb47, 1).lineStyle(3, INK, 1).fillRoundedRect(236, 560, 330, 44, 8).strokeRoundedRect(236, 560, 330, 44, 8);
-    this.add.text(401, 582, '¡BUEN VIAJE, MICHINAUTAS!', { fontFamily: FONT_DISPLAY, fontSize: '25px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(11);
+    banner.lineStyle(4, 0x5a5880, 1).lineBetween(222, 520, 222, 690).lineBetween(656, 520, 656, 690);
+    banner.fillStyle(0xffcb47, 1).lineStyle(3.5, INK, 1).fillRoundedRect(210, 516, 458, 58, 10).strokeRoundedRect(210, 516, 458, 58, 10);
+    this.add.text(439, 546, '¡BUEN VIAJE, MICHINAUTAS!', { fontFamily: FONT_DISPLAY, fontSize: '34px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(11).setResolution(2);
 
     for (const row of rows) {
       for (let i = 0; i < row.n; i++) {
@@ -351,13 +351,13 @@ export class LaunchLoadingScene extends Phaser.Scene {
       }
     }
 
-    // carteles en alto, sostenidos por el público
+    // carteles en alto, sostenidos por el público: blancos, letra grande y sin solaparse entre sí
     const signs = this.add.graphics().setDepth(12.9);
-    const boards: Array<[number, number, string]> = [[270, 84, '¡VAMOS!'], [404, 150, 'RUMBO A LA LUNA'], [530, 112, `¡${this.crew.name.toUpperCase()}!`]];
+    const boards: Array<[number, number, string]> = [[318, 184, `¡VAMOS, ${this.crew.name.toUpperCase()}!`], [522, 212, 'RUMBO A LA LUNA']];
     boards.forEach(([x, w, text]) => {
-      signs.lineStyle(3, 0x5a5880, 1).lineBetween(x, 648, x, 672);
-      signs.fillStyle(0xf5f5f2, 1).lineStyle(2.6, INK, 1).fillRoundedRect(x - w / 2, 618, w, 30, 6).strokeRoundedRect(x - w / 2, 618, w, 30, 6);
-      this.add.text(x, 633, text, { fontFamily: FONT_DISPLAY, fontSize: '19px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(13);
+      signs.lineStyle(3, 0x5a5880, 1).lineBetween(x, 650, x, 674);
+      signs.fillStyle(0xf5f5f2, 1).lineStyle(3, INK, 1).fillRoundedRect(x - w / 2, 596, w, 38, 8).strokeRoundedRect(x - w / 2, 596, w, 38, 8);
+      this.add.text(x, 615, text, { fontFamily: FONT_DISPLAY, fontSize: '24px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(13).setResolution(2);
     });
 
     // prensa: tres camarógrafos y dos reporteros (más pequeños que el cohete, como el resto del público)
@@ -375,9 +375,9 @@ export class LaunchLoadingScene extends Phaser.Scene {
     });
     // cartel «EN VIVO»
     const live = this.add.graphics().setDepth(13);
-    live.fillStyle(0xff4d5e, 1).lineStyle(2.4, INK, 1).fillRoundedRect(606, 622, 86, 24, 8).strokeRoundedRect(606, 622, 86, 24, 8);
-    const dot = this.add.circle(620, 634, 5, 0xffffff).setDepth(13);
-    this.add.text(658, 634, 'EN VIVO', { fontFamily: FONT_MONO, fontSize: '13px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5).setDepth(13);
+    live.fillStyle(0xff4d5e, 1).lineStyle(2.4, INK, 1).fillRoundedRect(640, 622, 86, 24, 8).strokeRoundedRect(640, 622, 86, 24, 8);
+    const dot = this.add.circle(654, 634, 5, 0xffffff).setDepth(13);
+    this.add.text(692, 634, 'EN VIVO', { fontFamily: FONT_MONO, fontSize: '14px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5).setDepth(13).setResolution(2);
     if (!this.calm) this.tweens.add({ targets: dot, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
 
     // valla de seguridad al frente

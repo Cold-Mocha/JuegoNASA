@@ -50,7 +50,8 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   puente: {
     id: 'puente', name: 'Puente',
-    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8), deco('casillero', 450, 62),
+    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
+      machine('bicicleta-estatica', 455, 120, ['pedal'], 'Bicicleta de energía'),
       deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
       deco('cajas', 520, 235), deco('cajas', 520, 305), deco('planta', 525, 352)],
   },

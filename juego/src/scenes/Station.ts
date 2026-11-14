@@ -17,7 +17,7 @@ import { ACTION_TEXT, BLOCK_REASON, MACHINE_INFO, RESOURCE_TEXT } from '../data/
 import { CONTROLS, POINTER_HINT } from '../data/controls';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
-import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED } from '../sim/rules';
+import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED, quality } from '../sim/rules';
 import {
   GRAVITY, PX_PER_METER, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, type DashState,
 } from '../sim/physics';
@@ -32,7 +32,9 @@ import type { ActionId, Resources, RoomId, SimEvent, Zone } from '../sim/types';
 import { icon } from '../core/icons';
 import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
-import { mountAntennaGame, mountHarvestGame, mountHealGame, type MiniCallbacks, type MiniGameHandle } from '../core/miniGames';
+import {
+  mountAntennaGame, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
+} from '../core/miniGames';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
@@ -696,7 +698,8 @@ export class StationScene extends Phaser.Scene {
     }
     if (id === 'cleanDust' || id === 'cleanTestPanel') return this.openDustGame(id); // limpiar a mano: el costo se cobra al terminar
     if (id === 'repair') return this.openSealGame();
-    if (id === 'repairAntenna') return this.openAntennaGame();
+    if (id === 'repairAntenna') return this.openAntennaFlow();
+    if (id === 'pedal') return this.openPedalGame();
     if (id === 'harvest') return this.openHarvestGame();
     if (id === 'heal') return this.openHealGame();
     this.sim.act(id);
@@ -706,7 +709,7 @@ export class StationScene extends Phaser.Scene {
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
   /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean }): void {
+  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
@@ -724,7 +727,9 @@ export class StationScene extends Phaser.Scene {
         cfg.finish(result);
         for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
         this.time.delayedCall(1100, () => {
-          if (this.overlay === 'minigame') this.closeOverlay();
+          if (this.overlay !== 'minigame') return;
+          if (cfg.next) cfg.next(); // minijuego encadenado (p. ej. cables y después el mensaje)
+          else this.closeOverlay();
         });
       },
     });
@@ -742,17 +747,28 @@ export class StationScene extends Phaser.Scene {
     this.openFullMini({ mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
   }
 
-  private openAntennaGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => void this.sim.act('repairAntenna') });
+  /**
+   * Avisar a la Tierra: si la señal está floja primero se conectan los cables; después se recupera el mensaje dañado por la estática.
+   * El aviso (la acción) se cobra al terminar el mensaje; su calidad cuenta para la ganancia.
+   */
+  private openAntennaFlow(): void {
+    const message = (): void => this.openFullMini({ mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
+    if (this.sim.comp.antenna < 0.7) this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
+    else message();
+  }
+
+  /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
+  private openPedalGame(): void {
+    this.openFullMini({ mount: (root, cb) => mountPedal(root, cb), finish: (r) => void this.sim.act('pedal', quality(r ?? 1)) });
   }
 
   /** Curarse: tratar cada herida manteniendo apretado. */
   private openHealGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHealGame(root, cb), finish: () => void this.sim.act('heal') });
+    this.openFullMini({ mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
   }
 
   private openHarvestGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', Math.max(0.1, result ?? 1)) });
+    this.openFullMini({ mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', quality(result ?? 1)) });
   }
 
   /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */

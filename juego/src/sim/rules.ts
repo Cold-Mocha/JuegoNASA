@@ -89,12 +89,18 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
   cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },        // panel de pruebas (solo en Energía del Sol)
   eva:          { room: 'exterior', cost: { energy: -3, radiation: 4 }, gain: {}, science: 2 }, // recoger muestras de hielo en la roca
   repair:       { room: 'soporte', cost: { energy: -4 }, gain: {} }, // la sala real es la de la fractura (ver Simulation.breach)
+  pedal:        { room: 'puente', cost: { food: -3 }, gain: { energy: 6 } },                // bicicleta: energía de emergencia, × calidad del minijuego
   heal:         { room: 'enfermeria', cost: { energy: -8, food: -4 }, gain: { health: 25 } },
 };
 
 /** Las algas siguen creciendo: más oxígeno y comida al terminar la jornada. */
 /** Acciones propias de cada investigación: solo se pueden hacer una vez por jornada (no tiene sentido repetirlas el mismo día). Las normales, que están en todos los escenarios, no tienen este límite. */
 export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva']);
+/** Otras acciones con tope diario mayor que uno (la bicicleta cansa: 3 por jornada). */
+export const MAX_PER_DAY: Partial<Record<ActionId, number>> = { pedal: 3 };
+
+/** Calidad de un minijuego a partir de su puntaje (0–1): jugar mal nunca deja la acción en cero ni la regala. Solo escala las ganancias. */
+export const quality = (score: number): number => 0.4 + 0.6 * Math.min(1, Math.max(0, score));
 
 export const GROW_LIGHTS_AT_DUSK = { oxygen: 5, food: 4 } as const;
 

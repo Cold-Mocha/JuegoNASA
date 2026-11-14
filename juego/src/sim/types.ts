@@ -9,7 +9,7 @@ export type Zone = 'ship' | 'greenhouse' | 'surface';
 
 /** Acciones de las máquinas. `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
 export type ActionId =
-  | 'repairAntenna' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair';
+  | 'repairAntenna' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
 
 /**
  * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).

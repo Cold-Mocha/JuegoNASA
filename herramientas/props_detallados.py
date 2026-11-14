@@ -416,12 +416,29 @@ def reciclador_roto():
     return w, h, b
 
 
+def bicicleta_estatica():
+    """Bicicleta fija (como la de la ISS): volante de inercia, asiento, manillar con pantalla y pedales. Convierte el esfuerzo en energía."""
+    w, h = 230, 200
+    b = f'<ellipse cx="115" cy="188" rx="86" ry="9" fill="#6e7085" opacity=".45"/>'
+    b += rr(24, 176, 40, 12, 5, METAL_D, 3.5) + rr(166, 176, 40, 12, 5, METAL_D, 3.5)                    # patas de apoyo
+    b += path('M44 176 L92 92 L168 92 L186 176', 'none', OUT, 12) + path('M44 176 L92 92 L168 92 L186 176', 'none', METAL, 7)  # cuadro
+    b += path('M92 92 L116 36', 'none', OUT, 12) + path('M92 92 L116 36', 'none', METAL, 7)               # tubo del manillar
+    b += rr(94, 22, 52, 14, 7, NAVY_L, 3.5) + rr(100, 6, 40, 16, 5, NAVY, 3) + f'<rect x="104" y="10" width="32" height="8" rx="2" fill="{GREEN}"/>'  # manillar y pantalla
+    b += path('M168 92 L176 46', 'none', OUT, 10) + path('M168 92 L176 46', 'none', METAL, 5) + rr(152, 34, 52, 16, 8, VIOLET, 3.5)  # asiento
+    b += circ(150, 128, 38, METAL_D, 4) + circ(150, 128, 26, METAL_L, 3) + circ(150, 128, 7, GOLD, 2.5)  # volante de inercia
+    b += ''.join(path(f'M150 128 L{150 + 22 * math.cos(a):.1f} {128 + 22 * math.sin(a):.1f}', stroke=OUT, sw=2.5) for a in [i * math.pi / 3 for i in range(6)])
+    b += circ(92, 150, 14, METAL, 3.5) + path('M92 150 L66 176', 'none', OUT, 9) + path('M92 150 L66 176', 'none', GOLD, 4) + rr(52, 170, 28, 10, 4, CORAL, 3)  # pedal
+    b += path('M92 150 L118 124', 'none', OUT, 9) + path('M92 150 L118 124', 'none', GOLD, 4) + rr(110, 116, 28, 10, 4, CORAL, 3)
+    b += path('M106 150 H136', 'none', OUT, 5)                                                              # correa
+    return w, h, b
+
+
 PROPS = {
     # nombre: (función, ¿interactiva?)
     'reciclador-aire': (reciclador_aire, True), 'estacion-comida': (estacion_comida, True),
     'tanque-algas': (tanque_algas, True), 'rack-plantas': (rack_plantas, True),
     'consola-puente': (consola_puente, True), 'consola-antena': (consola_antena, True),
-    'camilla-medica': (camilla_medica, True), 'reciclador-roto': (reciclador_roto, True), 'roca': (roca, False),
+    'camilla-medica': (camilla_medica, True), 'bicicleta-estatica': (bicicleta_estatica, True), 'reciclador-roto': (reciclador_roto, True), 'roca': (roca, False),
     'panel-solar': (panel_solar, True), 'roca-hielo': (roca_hielo, True), 'estacion-limpieza': (estacion_limpieza, True),
     'casillero': (casillero, False), 'casillero-trajes': (casillero_trajes, False), 'planta': (planta, False),
     'mesa-comedor': (mesa_comedor, False), 'cajas': (cajas, False), 'bandeja-cultivo': (bandeja_cultivo, False),

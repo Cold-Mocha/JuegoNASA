@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ACTIONS, ACTION_COOLDOWN_SEC, BREACH_CHANCE, EVA_FACTOR, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR,
+  ACTIONS, ACTION_COOLDOWN_SEC, BREACH_CHANCE, EVA_FACTOR, MAX_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR, quality,
 } from '../../src/sim/rules';
 import type { ActionId, SimEvent } from '../../src/sim/types';
 import { DAY, flare, goTo, makeSim, run } from './helpers';
@@ -114,6 +114,40 @@ describe('límite por día de las acciones de cada investigación', () => {
     sim.tick(ACTION_COOLDOWN_SEC + 0.1);
     expect(sim.canAct('cleanTestPanel').reason).toBe('doneToday');
     expect(sim.canAct('cleanDust').ok).toBe(true);
+  });
+});
+
+describe('calidad de los minijuegos y bicicleta', () => {
+  it('la calidad va de 0,4 a 1: jugar mal nunca regala ni deja en cero', () => {
+    expect(quality(0)).toBeCloseTo(0.4);
+    expect(quality(1)).toBe(1);
+    expect(quality(2)).toBe(1);
+    expect(quality(-1)).toBeCloseTo(0.4);
+  });
+
+  it('pedalear da energía según la calidad, cuesta comida y se limita por día', () => {
+    const sim = makeSim({ drain: 0 });
+    goTo(sim, 'puente');
+    sim.res.energy = 20;
+    const food = sim.res.food;
+    sim.act('pedal', 0.5);
+    expect(sim.res.energy).toBeCloseTo(20 + (ACTIONS.pedal.gain.energy ?? 0) * 0.5, 0);
+    expect(sim.res.food).toBe(food + (ACTIONS.pedal.cost.food ?? 0)); // el costo no se escala
+    for (let i = 1; i < (MAX_PER_DAY.pedal ?? 1); i++) {
+      sim.tick(ACTION_COOLDOWN_SEC + 0.1);
+      sim.act('pedal');
+    }
+    sim.tick(ACTION_COOLDOWN_SEC + 0.1);
+    expect(sim.canAct('pedal').reason).toBe('doneToday');
+    sim.tick(DAY);
+    expect(sim.canAct('pedal').ok).toBe(true);
+  });
+
+  it('la bicicleta sirve (palpita) cuando falta energía', () => {
+    const sim = makeSim({ drain: 0 });
+    expect(sim.useful('pedal')).toBe(false); // energía llena
+    sim.res.energy = 50;
+    expect(sim.useful('pedal')).toBe(true);
   });
 });
 

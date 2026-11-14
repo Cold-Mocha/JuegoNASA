@@ -2,7 +2,7 @@ import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
   BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
@@ -64,7 +64,7 @@ export class Simulation {
   private active: ActiveFlare[] = [];
   private pending: Pending[] = [];
   private cooldowns = new Map<ActionId, number>();
-  private lastDone = new Map<ActionId, number>(); // jornada en que se hizo por última vez cada acción de una vez por día
+  private doneToday = new Map<ActionId, { day: number; n: number }>(); // cuántas veces se hizo hoy cada acción con tope diario
   private duskOxygen = 0;
   private duskFood = 0;
   private travelUntil = 0;
@@ -172,17 +172,28 @@ export class Simulation {
     if (action === 'repair' && !this.breach) return false;
     if (this.stageLocked(action)) return false;
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
-    if (ONCE_PER_DAY.has(action) && this.lastDone.get(action) === this.day) return false;
+    if (this.dailyLimitReached(action)) return false;
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return false;
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return false;
     return true;
   }
 
+  /** Tope de veces por jornada de una acción (Infinity = sin tope). */
+  private dailyCap(action: ActionId): number {
+    return ONCE_PER_DAY.has(action) ? 1 : MAX_PER_DAY[action] ?? Infinity;
+  }
+
+  private dailyLimitReached(action: ActionId): boolean {
+    const d = this.doneToday.get(action);
+    return d?.day === this.day && d.n >= this.dailyCap(action);
+  }
+
   /** ¿Sirve de algo hacerla ahora? (curarse con la salud llena, cosechar con la comida llena o limpiar paneles limpios no) */
   useful(action: ActionId): boolean {
     switch (action) {
       case 'heal': return this.res.health < 100;
+      case 'pedal': return this.res.energy < 100;
       case 'harvest': return this.res.food < 100;
       case 'cleanDust': case 'cleanTestPanel': return this.comp.dust > 0.05;
       case 'repairAntenna': return this.comp.antenna < 0.95;
@@ -227,7 +238,7 @@ export class Simulation {
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
     if (this.stageLocked(action)) return { ok: false, reason: 'locked' };
-    if (ONCE_PER_DAY.has(action) && this.lastDone.get(action) === this.day) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
+    if (this.dailyLimitReached(action)) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
     return { ok: true };
   }
 
@@ -239,7 +250,11 @@ export class Simulation {
     this.apply(d);
     if (d.science) this.science += d.science;
     this.cooldowns.set(action, this.time + ACTION_COOLDOWN_SEC);
-    if (ONCE_PER_DAY.has(action)) this.lastDone.set(action, this.day);
+    const cap = this.dailyCap(action);
+    if (cap !== Infinity) {
+      const prev = this.doneToday.get(action);
+      this.doneToday.set(action, { day: this.day, n: (prev?.day === this.day ? prev.n : 0) + 1 });
+    }
     this.stats.actions++;
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 

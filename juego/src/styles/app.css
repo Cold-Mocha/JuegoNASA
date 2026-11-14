@@ -488,3 +488,32 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .mini-suit__fill { height: 100%; background: var(--stat-suit); transition: width .2s linear; }
 .mini-suit__track.is-critical { border-color: var(--danger); }
 .mini-suit__track.is-critical .mini-suit__fill { background: var(--danger); }
+
+/* ---------- Pedalear y mensaje con ruido (sin texto) ---------- */
+.pedal, .msg { position: relative; flex: none; background: linear-gradient(#18144e, #241d6b); border: 2px solid var(--line); border-radius: var(--radius-md); overflow: hidden; touch-action: none; user-select: none; }
+.pedal__wheel { --spin: 1.6s; position: absolute; top: 24px; left: 50%; width: 120px; height: 120px; margin-left: -60px; border-radius: 50%; border: 6px solid #0e0b33; background: #9a98c8; animation: pedal-spin var(--spin) linear infinite; }
+.pedal__wheel i { position: absolute; left: 50%; top: 6px; width: 6px; height: 48px; margin-left: -3px; background: #0e0b33; border-radius: 3px; transform-origin: 3px 48px; }
+.pedal__wheel i:nth-child(2) { transform: rotate(90deg); } .pedal__wheel i:nth-child(3) { transform: rotate(180deg); } .pedal__wheel i:nth-child(4) { transform: rotate(270deg); }
+@keyframes pedal-spin { to { transform: rotate(360deg); } }
+.pedal__lane { position: absolute; top: 160px; bottom: 100px; width: 120px; background: rgba(245, 245, 242, .06); border-radius: var(--radius-md); overflow: visible; }
+.pedal__lane--l { left: 50px; } .pedal__lane--r { right: 50px; }
+.pedal__line { position: absolute; left: 40px; right: 40px; height: 6px; margin-top: 22px; border-radius: 3px; background: var(--star-gold); box-shadow: 0 0 14px rgba(255, 203, 71, .7); }
+.pedal__note { position: absolute; left: 20px; top: 0; width: 80px; height: 56px; border-radius: 28px; display: grid; place-items: center; font-style: normal; font: 700 26px/1 var(--font-display); color: #0e0b33; background: var(--aurora-teal); border: 4px solid #0e0b33; margin-top: 106px; }
+.pedal__note--r { background: var(--comet-cyan); }
+.pedal__note.is-hit { opacity: 0; transition: opacity .2s; } .pedal__note.is-miss { background: var(--danger); opacity: .25; }
+.pedal__meter { position: absolute; left: 24px; right: 24px; bottom: 112px; height: 12px; border-radius: 6px; background: rgba(14, 11, 51, .6); border: 1px solid var(--line); overflow: hidden; }
+.pedal__meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--solar-coral), var(--star-gold)); }
+.pedal__btn { position: absolute; bottom: 14px; width: 150px; height: 84px; border-radius: 42px; border: 4px solid #0e0b33; font: 700 34px/1 var(--font-display); color: #0e0b33; background: var(--metal, #c4c2e0); box-shadow: 0 6px 0 #0e0b33; cursor: pointer; }
+.pedal__btn--l { left: 26px; } .pedal__btn--r { right: 26px; }
+.pedal__btn.is-pressed { animation: pedal-press .18s ease-out; }
+@keyframes pedal-press { 50% { transform: translateY(5px); box-shadow: 0 1px 0 #0e0b33; } }
+.msg__tower { position: absolute; top: 24px; left: 50%; width: 150px; height: 150px; margin-left: -75px; }
+.msg__row { position: absolute; top: 210px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
+.msg__slot { width: 50px; height: 60px; border-radius: 12px; border: 4px solid #0e0b33; background: var(--space-800); color: var(--c); font: 700 30px/52px var(--font-display); text-align: center; }
+.msg__slot.is-noise { background: repeating-linear-gradient(0deg, #6e7085 0 4px, #3a3d43 4px 8px); animation: msg-static .25s steps(3) infinite; }
+.msg__slot.is-active { outline: 4px solid var(--star-gold); outline-offset: 3px; }
+@keyframes msg-static { 50% { background-position: 0 4px; } }
+.msg__choices { position: absolute; top: 330px; left: 0; right: 0; display: flex; justify-content: center; gap: 28px; }
+.msg__choice { width: 104px; height: 104px; border-radius: 22px; border: 4px solid #0e0b33; background: var(--space-700); color: var(--c); font: 700 56px/1 var(--font-display); cursor: pointer; box-shadow: 0 6px 0 #0e0b33; }
+.msg__choice.is-wrong { animation: dash-denied .32s ease-out; border-color: var(--danger); }
+@media (prefers-reduced-motion: reduce) { .pedal__wheel, .msg__slot.is-noise, .pedal__btn.is-pressed { animation: none; } }

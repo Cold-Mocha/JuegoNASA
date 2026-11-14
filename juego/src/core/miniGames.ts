@@ -175,6 +175,7 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
     ${spots.map((p, i) => `<button class="heal__spot" data-spot="${i}" style="left:${p.x - 34}px;top:${p.y - 34}px" aria-label="Herida en la ${p.label}"><span class="heal__ring"></span><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#f5f5f2" stroke-width="4" stroke-linecap="round"/></svg></button>`).join('')}
   </div>`;
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('.heal__spot')];
+  const startedAt = performance.now();
   let healed = 0;
   let over = false;
   const holds = new Map<HTMLButtonElement, { raf: number; t0: number }>();
@@ -199,7 +200,7 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
         cb.onProgress(healed / buttons.length);
         if (healed === buttons.length) {
           over = true;
-          cb.onDone();
+          cb.onDone(Math.min(1, Math.max(0, 1 - (performance.now() - startedAt - 4000) / 8000))); // más rápido, más calidad
         }
         return;
       }
@@ -217,4 +218,134 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
   });
   cb.onProgress(0);
   return { destroy() { over = true; holds.forEach((h) => cancelAnimationFrame(h.raf)); holds.clear(); } };
+}
+
+// ------------------------------------------------------------------ pedalear: seguir el ritmo con los dos pedales
+const PEDAL_BEATS = 14;
+const PEDAL_GAP = 640;      // ms entre notas
+const PEDAL_WINDOW = 240;   // ms de margen para acertar
+const PEDAL_LEAD = 1100;    // ms antes de la primera nota
+const PEDAL_LINE = 392;     // altura (px) de la línea de pedaleo
+
+/**
+ * Bicicleta de energía (sin texto): caen notas por dos carriles, izquierdo y derecho; hay que tocar el pedal del mismo lado cuando
+ * llegan a la línea. Con ratón o dedo (los dos botones grandes) o con las flechas izquierda y derecha. Calidad = notas acertadas.
+ */
+export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+  const sides = Array.from({ length: PEDAL_BEATS }, (_, i) => (i % 2 === 0 ? 'L' : 'R') as 'L' | 'R');
+  root.innerHTML = `<div class="pedal" style="width:${WIRE_W}px;height:${WIRE_H}px">
+    <div class="pedal__wheel" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="pedal__lane pedal__lane--l"></div><div class="pedal__lane pedal__lane--r"></div>
+    <div class="pedal__line" style="top:${PEDAL_LINE}px"></div>
+    <div class="pedal__meter" aria-hidden="true"><i data-meter></i></div>
+    <button class="pedal__btn pedal__btn--l" data-side="L" aria-label="Pedal izquierdo">◀</button>
+    <button class="pedal__btn pedal__btn--r" data-side="R" aria-label="Pedal derecho">▶</button></div>`;
+  const wheel = root.querySelector<HTMLElement>('.pedal__wheel')!;
+  const meter = root.querySelector<HTMLElement>('[data-meter]')!;
+  const lanes = { L: root.querySelector<HTMLElement>('.pedal__lane--l')!, R: root.querySelector<HTMLElement>('.pedal__lane--r')! };
+  const notes = sides.map((side, i) => {
+    const el = document.createElement('i');
+    el.className = `pedal__note pedal__note--${side.toLowerCase()}`;
+    el.textContent = side === 'L' ? '◀' : '▶';
+    lanes[side].append(el);
+    return { side, t: PEDAL_LEAD + i * PEDAL_GAP, el, judged: false };
+  });
+  const t0 = performance.now();
+  let hits = 0;
+  let judged = 0;
+  let over = false;
+  let raf = 0;
+  const settle = (n: (typeof notes)[number], hit: boolean): void => {
+    n.judged = true;
+    judged++;
+    n.el.classList.add(hit ? 'is-hit' : 'is-miss');
+    if (hit) hits++;
+    meter.style.width = `${(hits / PEDAL_BEATS) * 100}%`;
+    wheel.style.setProperty('--spin', `${Math.max(0.25, 1.6 - (hits / PEDAL_BEATS) * 1.35)}s`);
+    cb.onProgress(hits / PEDAL_BEATS);
+    if (judged === PEDAL_BEATS && !over) {
+      over = true;
+      cancelAnimationFrame(raf);
+      window.setTimeout(() => cb.onDone(hits / PEDAL_BEATS), 250);
+    }
+  };
+  const press = (side: 'L' | 'R'): void => {
+    if (over) return;
+    const now = performance.now() - t0;
+    const target = notes.filter((n) => !n.judged && n.side === side).sort((a, b) => Math.abs(a.t - now) - Math.abs(b.t - now))[0];
+    const btn = root.querySelector<HTMLElement>(`.pedal__btn--${side.toLowerCase()}`)!;
+    btn.classList.remove('is-pressed');
+    void btn.offsetWidth;
+    btn.classList.add('is-pressed');
+    if (target && Math.abs(target.t - now) <= PEDAL_WINDOW) settle(target, true);
+  };
+  const frame = (): void => {
+    const now = performance.now() - t0;
+    for (const n of notes) {
+      if (n.judged) continue;
+      n.el.style.transform = `translateY(${PEDAL_LINE - (n.t - now) * 0.42 - 30}px)`;
+      if (now - n.t > PEDAL_WINDOW) settle(n, false); // se pasó sin tocarla
+    }
+    if (!over) raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+  root.querySelectorAll<HTMLButtonElement>('.pedal__btn').forEach((b) => b.addEventListener('pointerdown', (ev) => { press(b.dataset.side as 'L' | 'R'); ev.preventDefault(); }));
+  cb.onProgress(0);
+  return {
+    nudge(dx) { if (dx !== 0) press(dx < 0 ? 'L' : 'R'); },
+    destroy() { over = true; cancelAnimationFrame(raf); },
+  };
+}
+
+// ------------------------------------------------------------------ mensaje con ruido: completar el patrón dañado por la estática
+const MSG_SYMBOLS = [
+  { color: '#ff7a59', shape: '●' }, { color: '#4cc3f5', shape: '■' }, { color: '#ffcb47', shape: '▲' }, { color: '#9b7bff', shape: '◆' },
+];
+
+/**
+ * Avisar a la Tierra (sin texto): el mensaje es un patrón de símbolos que se repite; la estática dañó dos casillas.
+ * Para cada una se elige entre dos símbolos el que continúa el patrón (la redundancia permite recuperarlo). Calidad = aciertos sin errores.
+ */
+export function mountNoisyMessage(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+  const base = shuffle([0, 1, 2, 3]).slice(0, 3);
+  const message = Array.from({ length: 6 }, (_, i) => base[i % 3]);
+  const bad = shuffle([0, 1, 2, 3, 4, 5]).slice(0, 2).sort((a, b) => a - b);
+  root.innerHTML = `<div class="msg" style="width:${WIRE_W}px;height:${WIRE_H}px">
+    <svg class="msg__tower" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 110 L44 40 M60 110 L76 40 M48 80 H72 M52 62 H68" stroke="#0e0b33" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M60 110 L44 40 M60 110 L76 40 M48 80 H72 M52 62 H68" stroke="#c4c2e0" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="60" cy="34" r="9" fill="#ffcb47" stroke="#0e0b33" stroke-width="4"/><path d="M36 24 q-12 10 0 20 M84 24 q12 10 0 20 M26 14 q-22 20 0 40 M94 14 q22 20 0 40" stroke="#4cc3f5" stroke-width="5" fill="none" stroke-linecap="round"/></svg>
+    <div class="msg__row">${message.map((m, i) => (bad.includes(i)
+      ? `<span class="msg__slot is-noise" data-i="${i}"></span>`
+      : `<span class="msg__slot" style="--c:${MSG_SYMBOLS[m].color}">${MSG_SYMBOLS[m].shape}</span>`)).join('')}</div>
+    <div class="msg__choices" data-choices></div></div>`;
+  const slots = [...root.querySelectorAll<HTMLElement>('.msg__slot.is-noise')];
+  const choices = root.querySelector<HTMLElement>('[data-choices]')!;
+  let step = 0;
+  let wrongs = 0;
+  const showChoices = (): void => {
+    const right = message[bad[step]];
+    const other = shuffle([0, 1, 2, 3].filter((x) => x !== right))[0];
+    slots.forEach((s, i) => s.classList.toggle('is-active', i === step));
+    choices.innerHTML = shuffle([right, other]).map((c) => `<button class="msg__choice" data-c="${c}" style="--c:${MSG_SYMBOLS[c].color}" aria-label="Símbolo">${MSG_SYMBOLS[c].shape}</button>`).join('');
+    choices.querySelectorAll<HTMLButtonElement>('.msg__choice').forEach((b) => b.addEventListener('click', () => {
+      if (Number(b.dataset.c) !== right) {
+        wrongs++;
+        b.classList.remove('is-wrong');
+        void b.offsetWidth;
+        b.classList.add('is-wrong');
+        return;
+      }
+      const s = slots[step];
+      s.classList.remove('is-noise', 'is-active');
+      s.style.setProperty('--c', MSG_SYMBOLS[right].color);
+      s.textContent = MSG_SYMBOLS[right].shape;
+      step++;
+      cb.onProgress(step / bad.length);
+      if (step === bad.length) {
+        choices.innerHTML = '';
+        cb.onDone(Math.max(0.2, 1 - wrongs * 0.3));
+      } else showChoices();
+    }));
+  };
+  showChoices();
+  cb.onProgress(0);
+  return { destroy() { /* nada que limpiar */ } };
 }

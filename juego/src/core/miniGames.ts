@@ -349,3 +349,59 @@ export function mountNoisyMessage(root: HTMLElement, cb: MiniCallbacks): MiniGam
   cb.onProgress(0);
   return { destroy() { /* nada que limpiar */ } };
 }
+
+// ------------------------------------------------------------------ biofirmas: emparejar los picos del espectro con su huella
+const BIO_KINDS = {
+  water: { color: '#4cc3f5', icon: '<path d="M32 8 C44 24 50 34 50 44 A18 18 0 0 1 14 44 C14 34 20 24 32 8Z" fill="#4cc3f5" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>' },
+  mineral: { color: '#ffcb47', icon: '<path d="M32 8 L52 26 L42 54 L22 54 L12 26Z" fill="#ffcb47" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/><path d="M12 26 H52 M32 8 L22 26 L32 54 L42 26Z" fill="none" stroke="#0e0b33" stroke-width="3"/>' },
+  organic: { color: '#7ed957', icon: '<path d="M12 52 C12 24 28 10 54 10 C54 38 40 54 12 52Z" fill="#7ed957" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/><path d="M14 50 C26 38 36 28 48 16" stroke="#0e0b33" stroke-width="3" fill="none"/>' },
+  noise: { color: '#9a98c8', icon: '' },
+} as const;
+type BioKind = keyof typeof BIO_KINDS;
+
+/**
+ * Taladro de hielo (sin texto): el espectrómetro muestra picos; hay que emparejar cada uno con su huella (agua, mineral, orgánico).
+ * Un pico es solo ruido y no corresponde a nada: emparejarlo es sobreinterpretar. Los orgánicos solos no prueban vida: se necesitan varias pruebas.
+ * Calidad = 1 − errores.
+ */
+export function mountBiosignature(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+  const peaks = shuffle<BioKind>(['water', 'mineral', 'organic', 'noise']);
+  const cards = shuffle<BioKind>(['water', 'mineral', 'organic']);
+  const heights = [150, 220, 120, 190];
+  root.innerHTML = `<div class="bio" style="width:${WIRE_W}px;height:${WIRE_H}px">
+    <svg class="bio__spectrum" viewBox="0 0 ${WIRE_W} 250" aria-hidden="true"><path d="M20 230 H360" stroke="#c4c2e0" stroke-width="3"/>
+      ${peaks.map((_, i) => `<path d="M${40 + i * 84} 230 Q${58 + i * 84} ${230 - heights[i] * 1.4} ${76 + i * 84} 230" fill="none" stroke="#5ad6b2" stroke-width="5" stroke-linecap="round"/>`).join('')}</svg>
+    <div class="bio__peaks">${peaks.map((k, i) => `<button class="bio__peak" data-peak="${i}" style="left:${40 + i * 84 - 6}px;top:${210 - heights[i] * 0.7}px;--c:${BIO_KINDS[k].color}" aria-label="Pico del espectro"></button>`).join('')}</div>
+    <div class="bio__cards">${cards.map((k, i) => `<button class="bio__card" data-card="${i}" style="--c:${BIO_KINDS[k].color}" aria-label="Huella"><svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">${BIO_KINDS[k].icon}</svg></button>`).join('')}</div></div>`;
+  const peakEls = [...root.querySelectorAll<HTMLButtonElement>('[data-peak]')];
+  const cardEls = [...root.querySelectorAll<HTMLButtonElement>('[data-card]')];
+  let selected: number | null = null;
+  let matched = 0;
+  let errors = 0;
+  const select = (i: number | null): void => {
+    selected = i;
+    peakEls.forEach((p, k) => p.setAttribute('aria-pressed', String(k === i)));
+  };
+  peakEls.forEach((p, i) => p.addEventListener('click', () => { if (!p.disabled) select(i); }));
+  cardEls.forEach((c, j) => c.addEventListener('click', () => {
+    if (selected === null || c.disabled) return;
+    const peak = peakEls[selected];
+    if (peaks[selected] === cards[j]) {
+      peak.disabled = true;
+      peak.classList.add('is-done');
+      c.disabled = true;
+      c.classList.add('is-done');
+      matched++;
+      cb.onProgress(matched / cards.length);
+      if (matched === cards.length) cb.onDone(Math.max(0.2, 1 - errors * 0.25));
+    } else {
+      errors++; // incluye emparejar el pico de ruido: sobreinterpretar
+      c.classList.remove('is-wrong');
+      void c.offsetWidth;
+      c.classList.add('is-wrong');
+    }
+    select(null);
+  }));
+  cb.onProgress(0);
+  return { destroy() { /* nada que limpiar */ } };
+}

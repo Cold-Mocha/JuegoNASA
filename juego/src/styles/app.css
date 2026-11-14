@@ -558,3 +558,14 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .glide__btn { position: absolute; bottom: 14px; width: 120px; height: 72px; border-radius: 36px; border: 4px solid #0e0b33; font: 700 30px/1 var(--font-display); color: #0e0b33; background: #c4c2e0; box-shadow: 0 6px 0 #0e0b33; cursor: pointer; }
 .glide__btn--up { left: 26px; } .glide__btn--down { right: 26px; }
 @media (prefers-reduced-motion: reduce) { .insp__tile.is-crack, .burn__flame, .reentry__static { animation: none; } }
+
+/* ---------- Biofirmas (sin texto) ---------- */
+.bio { position: relative; flex: none; background: linear-gradient(#0e0b33, #18144e); border: 2px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.bio__spectrum { position: absolute; top: 10px; left: 0; width: 100%; height: 250px; }
+.bio__peak { position: absolute; width: 36px; height: 36px; border-radius: 50%; border: 4px solid #0e0b33; background: var(--c); cursor: pointer; box-shadow: 0 4px 0 #0e0b33; }
+.bio__peak[aria-pressed="true"] { outline: 4px solid var(--star-gold); outline-offset: 4px; }
+.bio__peak.is-done { opacity: .4; box-shadow: none; }
+.bio__cards { position: absolute; left: 0; right: 0; bottom: 28px; display: flex; justify-content: center; gap: 22px; }
+.bio__card { width: 96px; height: 120px; border-radius: 18px; border: 4px solid #0e0b33; background: var(--space-700); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 0 #0e0b33; }
+.bio__card.is-done { opacity: .45; box-shadow: none; border-color: var(--aurora-teal); }
+.bio__card.is-wrong { animation: dash-denied .32s ease-out; border-color: var(--danger); }

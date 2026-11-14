@@ -7,7 +7,7 @@ import type { ActionId, Resources, RoomId, Zone } from './types';
  */
 
 /** Consumo pasivo por jornada: la estación gasta energía, oxígeno y comida. */
-export const PASSIVE_PER_DAY = { energy: -8, oxygen: -9, food: -7 } as const;
+export const PASSIVE_PER_DAY = { energy: -5, oxygen: -9, food: -7 } as const;
 
 /** Luz solar por jornada (1–3 día, 4 atardecer, 5–7 noche lunar). */
 export const LIGHT_BY_DAY = [1, 1, 1, 0.5, 0, 0, 0] as const;
@@ -33,11 +33,11 @@ export const HEALTH_LOSS_PER_DAY = { oxygen: -45, food: -25, radiation: -30 } as
 export const HEALTH_RADIATION_AT = 50;
 
 /** Polvo en los paneles por jornada (rango; se sortea con la semilla). Cada 100 % de polvo quita DUST_MAX_LOSS de la energía. */
-export const DUST_PER_DAY: readonly [number, number] = [0.08, 0.14];
+export const DUST_PER_DAY: readonly [number, number] = [0.05, 0.09];
 export const DUST_MAX_LOSS = 0.8;
 
 /** Los paneles renuevan la energía siempre: generan esto por jornada con los paneles limpios. Si el polvo los deja generando menos de lo que gasta la nave, la energía empieza a bajar. */
-export const PANEL_REGEN_PER_DAY = 14;
+export const PANEL_REGEN_PER_DAY = 7; // lenta: con los paneles limpios solo sobran 2 por jornada (pedalear recupera mucho más rápido)
 
 /** Degradación de la antena por jornada (rango; se sortea con la semilla). */
 export const ANTENNA_DRIFT_PER_DAY: readonly [number, number] = [0.12, 0.2];
@@ -89,7 +89,7 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
   cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },        // panel de pruebas (solo en Energía del Sol)
   eva:          { room: 'exterior', cost: { energy: -3, radiation: 4 }, gain: {}, science: 2 }, // recoger muestras de hielo en la roca
   repair:       { room: 'soporte', cost: { energy: -4 }, gain: {} }, // la sala real es la de la fractura (ver Simulation.breach)
-  pedal:        { room: 'puente', cost: { food: -3 }, gain: { energy: 6 } },                // bicicleta: energía de emergencia, × calidad del minijuego
+  pedal:        { room: 'puente', cost: { food: -3 }, gain: { energy: 10 } },                // bicicleta: energía de emergencia, × calidad del minijuego
   heal:         { room: 'enfermeria', cost: { energy: -8, food: -4 }, gain: { health: 25 } },
 };
 

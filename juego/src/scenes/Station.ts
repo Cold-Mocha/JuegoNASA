@@ -33,18 +33,18 @@ import { icon } from '../core/icons';
 import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
 import {
-  mountAntennaGame, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
+  mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
-const PROP_SIZE = 0.62;          // tamaño en el mapa respecto del dibujo 1x
+const PROP_SIZE = 0.46;          // tamaño en el mapa respecto del dibujo 1x
 const PROP_PAPER_MARGIN = 17.5;  // px de textura bajo el objeto (borde de papel de 14 px a 1x, exportado a 1,25×)
 const MICHI_SCALE = 0.6;
 const JUMP_V0 = 1.8;             // m/s: con g lunar sube ~1 m (en la Tierra serían ~16 cm)
-const INTERACT_RADIUS = 130;     // px de mapa entre los pies del michi y los de la máquina
-const OBSTACLE_R = { interactive: 56, deco: 34 } as const; // los adornos de pared no tienen
-const MACHINE_FRONT = 80;        // el michi camina solo hasta este punto frente a la máquina
+const INTERACT_RADIUS = 110;     // px de mapa entre los pies del michi y los de la máquina
+const OBSTACLE_R = { interactive: 42, deco: 26 } as const; // los adornos de pared no tienen
+const MACHINE_FRONT = 64;        // el michi camina solo hasta este punto frente a la máquina
 const HUD_HZ = 10;
 const GHOSTS = 4;                // estela del impulso (pool)
 const CAMERA_ZOOM = 0.8;         // cámara alejada: se ve más estación alrededor del michi
@@ -700,6 +700,7 @@ export class StationScene extends Phaser.Scene {
     if (id === 'repair') return this.openSealGame();
     if (id === 'repairAntenna') return this.openAntennaFlow();
     if (id === 'pedal') return this.openPedalGame();
+    if (id === 'eva') return this.openBiosignatureGame();
     if (id === 'harvest') return this.openHarvestGame();
     if (id === 'heal') return this.openHealGame();
     this.sim.act(id);
@@ -755,6 +756,11 @@ export class StationScene extends Phaser.Scene {
     const message = (): void => this.openFullMini({ mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
     if (this.sim.comp.antenna < 0.7) this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
     else message();
+  }
+
+  /** Taladro de hielo: emparejar los picos del espectro; la ciencia ganada escala con la calidad. Se juega afuera: el traje sigue gastando. */
+  private openBiosignatureGame(): void {
+    this.openFullMini({ mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => void this.sim.act('eva', quality(r ?? 1)), outdoor: true });
   }
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */

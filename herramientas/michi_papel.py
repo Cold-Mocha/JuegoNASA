@@ -21,7 +21,7 @@ FEET = (66, 84 + 31 * 0.92)            # ancla de los pies en el frame 1x  (≈ 
 VARIANTS = {
     'miu':   {'name': 'Miu',   'fur': '#f2a65a', 'band': '#ffcb47', 'nose': '#ee5fd6', 'ear': '#ff9ad9'},
     'tomas': {'name': 'Tomás', 'fur': '#a7a9b8', 'band': '#4cc3f5', 'nose': '#ee5fd6', 'ear': '#ff9ad9'},
-    'luna':  {'name': 'Luna',  'fur': '#f1e4c8', 'band': '#ee5fd6', 'nose': '#ff7fb8', 'ear': '#ff9ad9'},
+    'luna':  {'name': 'Luna',  'fur': '#8f7bd6', 'band': '#ee5fd6', 'nose': '#ff7fb8', 'ear': '#ff9ad9'},
     # marciano: pelaje verde y antenitas (caben dentro de la burbuja del casco)
     'zib':   {'name': 'Zib',   'fur': '#7ed957', 'band': '#9b7bff', 'nose': '#2f8f3a', 'ear': '#c6f28a', 'antennae': '#ffcb47', 'eyes': 1.45},
 }

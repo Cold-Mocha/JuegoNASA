@@ -44,15 +44,13 @@ const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ..
 export const ROOMS: Record<RoomId, Room> = {
   soporte: {
     id: 'soporte', name: 'Soporte vital',
-    props: [machine('reciclador-aire', 455, 78, ['recycleAir'], 'Reciclador de CO₂'),
-      machine('estacion-comida', 455, 255, ['cookMeal'], 'Cocina de la nave'),
+    props: [machine('reciclador-aire', 455, 78, [], 'Reciclador de oxígeno'),
       deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
       deco('planta', 40, 215), deco('cajas', 60, 305), deco('cajas', 520, 352)],
   },
   puente: {
     id: 'puente', name: 'Puente',
-    props: [machine('consola-puente', 450, 66, ['forecast'], 'Clima espacial'),
-      deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
+    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8), deco('casillero', 450, 62),
       deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
       deco('cajas', 520, 235), deco('cajas', 520, 305), deco('planta', 525, 352)],
   },
@@ -65,7 +63,7 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   comunicaciones: {
     id: 'comunicaciones', name: 'Comunicaciones',
-    props: [machine('consola-antena', 355, 72, ['alignAntenna'], 'Antena de la Tierra'),
+    props: [machine('consola-antena', 355, 72, ['repairAntenna'], 'Antena de la Tierra'),
       deco('casillero', 62, 62), wall('extintor', 140, 12),
       deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
       deco('cajas', 420, 235), deco('cajas', 420, 305)],
@@ -77,20 +75,19 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   exterior: {
     id: 'exterior', name: 'Superficie lunar',
-    props: [machine('panel-solar', 1550, 250, ['orientPanels'], 'Paneles solares'),
-      deco('panel-solar', 1260, 250), deco('panel-solar', 1840, 250),
+    props: [deco('panel-solar', 1550, 250), deco('panel-solar', 1260, 250), deco('panel-solar', 1840, 250),
       machine('estacion-limpieza', 1550, 440, ['cleanDust'], 'Limpieza de polvo'),
       deco('roca', 260, 140), deco('roca', 760, 430), deco('roca', 1100, 150), deco('roca', 1700, 150),
       // objetos de cada investigación
       only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'Taladro de hielo')),
-      only('paneles-solares', machine('panel-solar', 960, 260, ['orientPanels'], 'Panel de pruebas'))],
+      only('paneles-solares', machine('panel-solar', 960, 260, ['cleanTestPanel'], 'Panel de pruebas'))],
   },
   invernadero: {
     id: 'invernadero', name: 'Invernadero',
     props: [wall('extintor', 255, 12),
-      // la plantación solo está con la investigación del huerto
+      // la cosecha (comida) está en todas las jornadas; el cultivo de algas solo con la investigación del huerto
+      machine('rack-plantas', 640, 255, ['harvest'], 'Rack de plantas'),
       only('huerto-lunar', machine('tanque-algas', 600, 82, ['growLights'], 'Cultivo de algas')),
-      only('huerto-lunar', machine('rack-plantas', 640, 255, ['harvest'], 'Rack de plantas')),
       only('huerto-lunar', deco('planta', 60, 62)), only('huerto-lunar', deco('planta', 180, 62)),
       only('huerto-lunar', deco('planta', 40, 215)), only('huerto-lunar', deco('planta', 725, 352)),
       only('huerto-lunar', deco('bandeja-cultivo', 120, 352)), only('huerto-lunar', deco('bandeja-cultivo', 400, 352)),
@@ -100,7 +97,7 @@ export const ROOMS: Record<RoomId, Room> = {
 
 /** Dónde aparece la fractura (objeto interactivo temporal) en cada sala de la nave donde puede abrirse. */
 export const BREACH_SLOTS: Partial<Record<RoomId, { x: number; y: number }>> = {
-  soporte: { x: 130, y: 175 }, puente: { x: 130, y: 175 }, enfermeria: { x: 130, y: 175 }, comunicaciones: { x: 390, y: 165 },
+  soporte: { x: 430, y: 195 },
 };
 
 export const ROOM_IDS = Object.keys(ROOMS) as RoomId[];

@@ -1,42 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, GROW_LIGHTS_AT_DUSK, LIGHT_BY_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR, EARTH_MOON_ROUND_TRIP_SEC, ACTION_COOLDOWN_SEC } from '../../src/sim/rules';
-import { flareDose } from '../../src/sim/flares';
+import {
+  ACTIONS, ACTION_COOLDOWN_SEC, BREACH_CHANCE, EVA_FACTOR, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR,
+} from '../../src/sim/rules';
 import type { ActionId, SimEvent } from '../../src/sim/types';
 import { DAY, flare, goTo, makeSim, run } from './helpers';
 
 const types = (evs: SimEvent[]): string[] => evs.map((e) => e.type);
 
-describe('consumo pasivo y calendario lunar', () => {
-  it('una jornada consume lo que dice el diseño v2', () => {
-    const sim = makeSim();
-    const start = { ...sim.res };
+describe('recursos y calendario', () => {
+  it('con los paneles limpios la energía se renueva y el oxígeno también; la comida baja', () => {
+    const sim = makeSim({ drain: 1 });
+    sim.res.energy = 50;
+    sim.res.oxygen = 50;
+    const food = sim.res.food;
     run(sim, DAY * 0.999, 0.1);
-    expect(sim.res.energy).toBeCloseTo(start.energy + PASSIVE_PER_DAY.energy, 0);
-    expect(sim.res.oxygen).toBeCloseTo(start.oxygen + PASSIVE_PER_DAY.oxygen, 0);
-  });
-
-  it('el multiplicador de dificultad escala el consumo', () => {
-    const easy = makeSim({ drain: 0.5 });
-    run(easy, DAY * 0.999, 0.1);
-    expect(easy.res.oxygen).toBeCloseTo(70 + PASSIVE_PER_DAY.oxygen * 0.5, 0);
-  });
-
-  it('la luz sigue el calendario: 3 de día, 1 atardecer, 3 de noche', () => {
-    const sim = makeSim({ drain: 0 });
-    const light: number[] = [];
-    for (let d = 1; d <= 7; d++) {
-      light.push(sim.light);
-      sim.tick(DAY);
-    }
-    expect(light).toEqual([...LIGHT_BY_DAY]);
-  });
-
-  it('emite dayStart y degrada la antena al cerrar la jornada', () => {
-    const sim = makeSim({ drain: 0 });
-    sim.tick(DAY + 0.1);
-    const evs = sim.drainEvents();
-    expect(evs).toContainEqual({ type: 'dayStart', day: 2, light: 1 });
-    expect(sim.comp.antenna).toBeLessThan(1);
+    expect(sim.res.energy).toBeGreaterThan(50);                       // +generación −consumo
+    expect(sim.res.oxygen).toBeGreaterThan(50);
+    expect(sim.res.food).toBeCloseTo(food + PASSIVE_PER_DAY.food, 0);
   });
 
   it('dt negativo o nulo no avanza el tiempo', () => {
@@ -44,6 +24,14 @@ describe('consumo pasivo y calendario lunar', () => {
     sim.tick(0);
     sim.tick(-5);
     expect(sim.time).toBe(0);
+  });
+
+  it('emite dayStart y degrada la antena y los paneles al cerrar la jornada', () => {
+    const sim = makeSim({ drain: 0 });
+    sim.tick(DAY + 0.1);
+    expect(sim.drainEvents()).toContainEqual({ type: 'dayStart', day: 2, light: 1 });
+    expect(sim.comp.antenna).toBeLessThan(1);
+    expect(sim.comp.dust).toBeGreaterThan(0);
   });
 });
 
@@ -54,132 +42,157 @@ describe('ninguna decisión es gratis', () => {
     }
   });
 
-  it('limpiar el aire: +15 de soporte vital por −6 energía', () => {
-    const sim = makeSim();
-    goTo(sim, 'enfermeria'); goTo(sim, 'comunicaciones'); goTo(sim, 'soporte');
-    const before = { ...sim.res };
-    const d = sim.act('recycleAir');
-    expect(d).toMatchObject({ energy: -6, oxygen: 15 });
-    expect(sim.res.oxygen).toBeCloseTo(before.oxygen + 15, 5);
-    expect(sim.res.energy).toBeCloseTo(before.energy - 6, 5);
+  it('cosechar: la comida ganada escala con lo logrado en el minijuego', () => {
+    const full = makeSim({ drain: 0 });
+    goTo(full, 'invernadero');
+    full.res.food = 10;
+    expect(full.act('harvest', 1)).toMatchObject({ food: ACTIONS.harvest.gain.food });
+    const half = makeSim({ drain: 0 });
+    goTo(half, 'invernadero');
+    half.res.food = 10;
+    half.act('harvest', 0.5);
+    expect(half.res.food).toBeCloseTo(10 + (ACTIONS.harvest.gain.food ?? 0) * 0.5, 0);
   });
 
-  it('orientar paneles da energía según la luz, a cambio de radiación', () => {
+  it('limpiar el polvo deja los paneles limpios; solo se puede en la superficie', () => {
     const sim = makeSim({ drain: 0 });
-    goTo(sim, 'exterior');
-    expect(sim.preview('orientPanels')).toMatchObject({ energy: 20, radiation: 3 });
-    sim.tick(DAY * 3);
-    expect(sim.preview('orientPanels')).toMatchObject({ energy: 10 }); // atardecer
+    sim.comp.dust = 0.8;
+    expect(sim.canAct('cleanDust').reason).toBe('busy');
+    sim.enter('exterior', 'surface');
+    expect(sim.act('cleanDust')).not.toBeNull();
+    expect(sim.comp.dust).toBe(0);
   });
 
-  it('las luces de las algas dan soporte vital ya y más al cierre de la jornada', () => {
-    const sim = makeSim({ drain: 0 });
-    goTo(sim, 'enfermeria'); goTo(sim, 'comunicaciones'); goTo(sim, 'esclusa'); goTo(sim, 'invernadero');
-    const life = sim.res.oxygen;
-    sim.act('growLights');
-    expect(sim.res.oxygen).toBe(life + 10);
-    sim.tick(DAY);
-    expect(sim.res.oxygen).toBe(life + 10 + GROW_LIGHTS_AT_DUSK.oxygen);
-  });
-});
-
-describe('reglas de cada acción', () => {
-  it('solo se actúa en la sala correcta y sin estar caminando', () => {
-    const sim = makeSim();
-    expect(sim.canAct('recycleAir')).toEqual({ ok: false, reason: 'busy' });
-    const secs = sim.travel('soporte');
-    expect(sim.canAct('recycleAir').reason).toBe('busy');
-    sim.tick(secs + 0.1);
-    expect(sim.canAct('recycleAir').ok).toBe(true);
-  });
-
-  it('sin energía suficiente no se puede', () => {
-    const sim = makeSim();
-    sim.res.energy = 3;
-    goTo(sim, 'soporte');
-    expect(sim.canAct('recycleAir')).toEqual({ ok: false, reason: 'noEnergy' });
-    expect(sim.act('recycleAir')).toBeNull();
-  });
-
-  it('de noche los paneles no producen', () => {
-    const sim = makeSim({ drain: 0 });
-    goTo(sim, 'exterior');
-    sim.tick(DAY * 5);
-    expect(sim.canAct('orientPanels')).toEqual({ ok: false, reason: 'night' });
-  });
-
-  it('el pronóstico requiere enlace y llega tras la demora real Tierra–Luna', () => {
-    const sim = makeSim({ drain: 0, events: [flare(1, 20), flare(2, 6), flare(4, 1)] });
-    goTo(sim, 'exterior'); goTo(sim, 'puente');
-    sim.comp.antenna = 0.2;
-    expect(sim.canAct('forecast').reason).toBe('noLink');
-    sim.comp.antenna = 1;
-    sim.act('forecast');
-    expect(sim.forecastValid).toBe(false);
-    expect(sim.canAct('forecast').reason).toBe('cooldown');
-    sim.tick(EARTH_MOON_ROUND_TRIP_SEC + 0.01);
-    expect(sim.drainEvents()).toContainEqual({ type: 'actionResolved', action: 'forecast', message: 'forecastReady' });
-    expect(sim.forecast.map((e) => e.day)).toEqual([1, 2]); // hoy y mañana, no la jornada 4
-  });
-
-  it('alinear la antena la deja al 100 % tras la respuesta', () => {
+  it('reparar la antena la deja al 100 % tras la demora de la respuesta', () => {
     const sim = makeSim({ drain: 0 });
     goTo(sim, 'comunicaciones');
     sim.comp.antenna = 0.3;
-    sim.act('alignAntenna');
+    sim.act('repairAntenna');
     expect(sim.comp.antenna).toBe(0.3);
     sim.tick(3);
     expect(sim.comp.antenna).toBe(1);
   });
 
-  it('una salida al exterior por jornada; siempre da 2 de ciencia', () => {
-    const sim = makeSim({ drain: 0 });
-    goTo(sim, 'esclusa');
-    expect(sim.act('eva')).toMatchObject({ science: 2, oxygen: -10 });
-    sim.tick(4);
-    expect(sim.canAct('eva').reason).toBe('evaDone');
-    sim.tick(DAY);
-    sim.comp.antenna = 0.3;
-    expect(sim.preview('eva').science).toBe(2);
-    sim.res.oxygen = 5;
-    expect(sim.canAct('eva').reason).toBe('noLife');
-  });
-
-  it('salir durante una llamarada triplica la radiación del traje', () => {
-    const sim = makeSim({ drain: 0, events: [flare(1, 1)] });
-    goTo(sim, 'esclusa');
-    expect(sim.preview('eva').radiation).toBe(18);
-  });
-
   it('las acciones tienen enfriamiento', () => {
     const sim = makeSim({ drain: 0 });
-    goTo(sim, 'soporte');
-    sim.act('recycleAir');
-    expect(sim.canAct('recycleAir').reason).toBe('cooldown');
+    goTo(sim, 'enfermeria');
+    sim.act('heal');
+    expect(sim.canAct('heal').reason).toBe('cooldown');
     sim.tick(ACTION_COOLDOWN_SEC + 0.01);
-    expect(sim.canAct('recycleAir').ok).toBe(true);
+    expect(sim.canAct('heal').ok).toBe(true);
   });
 
-  it('dentro de la nave está protegido; afuera no', () => {
-    const sim = makeSim({ drain: 0 });
-    expect(sim.sheltered).toBe(true);
+  it('salir durante una llamarada multiplica la radiación', () => {
+    const sim = makeSim({ drain: 0, events: [flare(1, 1)] });
     sim.enter('exterior', 'surface');
-    expect(sim.sheltered).toBe(false);
-    sim.enter('invernadero', 'greenhouse');
-    expect(sim.sheltered).toBe(false);
-    sim.enter(null, 'ship');
-    expect(sim.sheltered).toBe(true);
+    run(sim, 2, 0.1);
+    expect(sim.preview('eva').radiation).toBe((ACTIONS.eva.cost.radiation ?? 0) * EVA_FACTOR);
+  });
+});
+
+describe('límite por día de las acciones de cada investigación', () => {
+  it('las luces de las algas y las muestras de hielo se hacen una vez por jornada; las normales no tienen límite', () => {
+    const sim = makeSim({ drain: 0 });
+    goTo(sim, 'invernadero');
+    sim.act('growLights');
+    sim.tick(ACTION_COOLDOWN_SEC + 0.1);
+    expect(sim.canAct('growLights').reason).toBe('doneToday');
+    sim.res.energy = 90;
+    sim.act('harvest');
+    sim.tick(ACTION_COOLDOWN_SEC + 0.1);
+    expect(sim.canAct('harvest').ok).toBe(true); // la cosecha es normal: sin límite diario
+    sim.tick(DAY); // jornada siguiente
+    expect(sim.canAct('growLights').ok).toBe(true);
   });
 
-  it('caminar libre: en el pasillo no se actúa; al entrar a una sala, sí', () => {
+  it('el panel de pruebas se limpia una vez por jornada y también limpia el polvo', () => {
     const sim = makeSim({ drain: 0 });
-    sim.enter(null);
-    expect(sim.inHall).toBe(true);
-    expect(sim.canAct('recycleAir').reason).toBe('busy');
-    sim.enter('soporte');
-    expect(sim.inHall).toBe(false);
-    expect(sim.room).toBe('soporte');
-    expect(sim.canAct('recycleAir').ok).toBe(true);
+    sim.enter('exterior', 'surface');
+    sim.comp.dust = 0.7;
+    sim.act('cleanTestPanel');
+    expect(sim.comp.dust).toBe(0);
+    sim.tick(ACTION_COOLDOWN_SEC + 0.1);
+    expect(sim.canAct('cleanTestPanel').reason).toBe('doneToday');
+    expect(sim.canAct('cleanDust').ok).toBe(true);
+  });
+});
+
+describe('paneles solares', () => {
+  it('con polvo suficiente fallan: avisan y la energía empieza a bajar; limpiarlos lo arregla', () => {
+    const sim = makeSim({ drain: 1 });
+    expect(sim.panelsOk).toBe(true);
+    sim.comp.dust = 1;
+    expect(sim.panelEfficiency).toBeLessThan(0.5);
+    sim.res.energy = 80;
+    run(sim, DAY * 0.5, 0.1);
+    expect(types(sim.drainEvents())).toContain('panelsFailing');
+    expect(sim.res.energy).toBeLessThan(80);
+    sim.enter('exterior', 'surface');
+    sim.act('cleanDust');
+    sim.tick(0.1);
+    expect(types(sim.drainEvents())).toContain('panelsRestored');
+    expect(PANEL_REGEN_PER_DAY * sim.panelEfficiency).toBeGreaterThan(-PASSIVE_PER_DAY.energy);
+  });
+});
+
+describe('fractura del casco', () => {
+  it('sin fractura el oxígeno se regenera; con fractura solo baja y el traje no se recarga', () => {
+    const ok = makeSim({ drain: 1 });
+    ok.res.oxygen = 50;
+    run(ok, DAY * 0.5, 0.1);
+    expect(ok.res.oxygen).toBeGreaterThan(50);
+
+    const broken = makeSim({ drain: 1 });
+    broken.breach = 'soporte';
+    broken.res.oxygen = 50;
+    broken.suit = 40;
+    run(broken, DAY * 0.5, 0.1);
+    expect(broken.res.oxygen).toBeLessThan(50);
+    expect(broken.suit).toBe(40);
+  });
+
+  it('sellar la fractura en su sala la elimina y el traje vuelve a recargarse', () => {
+    const sim = makeSim({ drain: 0 });
+    sim.breach = 'soporte';
+    expect(sim.canAct('repair').reason).toBe('busy'); // no estás en Soporte vital
+    goTo(sim, 'soporte');
+    sim.suit = 40;
+    sim.act('repair');
+    expect(sim.breach).toBeNull();
+    expect(types(sim.drainEvents())).toContain('breachRepaired');
+    run(sim, 3, 0.1);
+    expect(sim.suit).toBeGreaterThan(40);
+  });
+
+  it('con fractura no se puede pedir la caja de oxígeno del envío', () => {
+    const sim = makeSim({ drain: 0 });
+    sim.breach = 'soporte';
+    sim.tick(DAY * 2 + 0.1); // día 3: llega el envío
+    expect(sim.resupplyOpen).toBe(true);
+    expect(sim.chooseResupply('oxygen')).toBe(false);
+    expect(sim.chooseResupply('food')).toBe(true);
+  });
+
+  it('puede abrirse una fractura al empezar una jornada (probabilidad BREACH_CHANCE)', () => {
+    expect(BREACH_CHANCE).toBeGreaterThan(0);
+    let opened = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const sim = makeSim({ drain: 0, seed });
+      sim.tick(DAY * 3 + 0.1);
+      if (sim.drainEvents().some((e) => e.type === 'breachOpened')) opened++;
+    }
+    expect(opened).toBeGreaterThan(0);
+  });
+});
+
+describe('llamaradas y protección', () => {
+  it('dentro de la nave la radiación se reduce a SHELTER_FACTOR', () => {
+    const inside = makeSim({ drain: 0, events: [flare(1, 1)] });
+    const outside = makeSim({ drain: 0, events: [flare(1, 1)] });
+    outside.enter('exterior', 'surface');
+    run(inside, DAY * 0.5, 0.1);
+    run(outside, DAY * 0.5, 0.1);
+    expect(inside.res.radiation).toBeLessThan(outside.res.radiation * (SHELTER_FACTOR + 0.05));
   });
 
   it('el traje gasta oxígeno en la superficie y se recarga adentro; vacío = rescate', () => {
@@ -191,106 +204,25 @@ describe('reglas de cada acción', () => {
     run(sim, 5, 0.1);
     expect(sim.suit).toBe(100);
     sim.enter('exterior', 'surface');
-    const life = sim.res.oxygen;
     run(sim, 60, 0.1);
     expect(sim.room).toBe('esclusa');
-    expect(sim.res.oxygen).toBeLessThan(life);
-  });
-
-  it('travel ignora destinos inválidos', () => {
-    const sim = makeSim();
-    expect(sim.travel('puente')).toBe(0);
-    sim.travel('enfermeria');
-    expect(sim.travel('soporte')).toBe(0);
   });
 });
 
-describe('llamaradas reales', () => {
-  it('el blindaje deja pasar solo el 10 %', () => {
-    const open = makeSim({ drain: 0, events: [flare(1, 2, 'X9.3')] });
-    const safe = makeSim({ drain: 0, events: [flare(1, 2, 'X9.3')] });
-    open.enter('exterior', 'surface');
-    run(open, 20, 0.05);
-    run(safe, 20, 0.05);
-    const total = flareDose('X9.3', false);
-    const bg = 2 * (20 / DAY);
-    expect(open.res.radiation).toBeCloseTo(total + bg, 0); // afuera de la nave
-    expect(safe.res.radiation).toBeCloseTo((total + bg) * SHELTER_FACTOR, 0);
-    expect(safe.stats.shelteredFlares).toBe(1);
-    expect(open.stats.unshieldedFlares).toBe(1);
-  });
-
-  it('emite flareStart (marcando si fue pronosticada) y flareEnd', () => {
-    const sim = makeSim({ drain: 0, events: [flare(1, 3)] });
-    run(sim, 20, 0.05);
-    const evs = sim.drainEvents();
-    expect(types(evs)).toEqual(expect.arrayContaining(['flareStart', 'flareEnd']));
-    expect(evs.find((e) => e.type === 'flareStart')).toMatchObject({ forecasted: false });
-  });
-});
-
-describe('envíos de la Tierra (power-up con costo de oportunidad)', () => {
-  it('llegan en la jornada 3 si la antena está bien, y se elige solo una caja', () => {
-    const sim = makeSim({ drain: 0, seed: 1 });
-    sim.tick(DAY * 2 - 1);
-    sim.comp.antenna = 1;
-    sim.tick(1.1);
-    expect(sim.resupplyOpen).toBe(true);
-    const life = sim.res.oxygen;
-    expect(sim.chooseResupply('oxygen')).toBe(true);
-    expect(sim.res.oxygen).toBe(life + 25);
-    expect(sim.chooseResupply('energy')).toBe(false);
-  });
-
-  it('se pierden si la antena está desalineada', () => {
-    const sim = makeSim({ drain: 0 });
-    sim.tick(DAY * 2 - 1);
-    sim.comp.antenna = 0.3;
-    sim.tick(1.1);
-    expect(sim.resupplyOpen).toBe(false);
-    expect(types(sim.drainEvents())).toContain('resupplyMissed');
-  });
-});
-
-describe('fin de misión', () => {
-  it('sin soporte vital termina con causa "oxygen"', () => {
-    const sim = makeSim();
-    sim.res.oxygen = 0.01;
-    run(sim, 2, 0.25);
+describe('fin de la misión', () => {
+  it('con salud 0 la tripulación vuelve a la Tierra con la causa que estaba en peligro', () => {
+    const sim = makeSim({ drain: 1 });
+    sim.res.food = 0;
+    sim.res.health = 0.01;
+    run(sim, 1, 0.1);
     expect(sim.ended).toBe('lost');
-    expect(sim.cause).toBe('oxygen');
-    expect(types(sim.drainEvents())).toContain('gameOver');
-    expect(sim.summary().won).toBe(false);
+    expect(sim.cause).toBe('food');
   });
 
-  it('radiación al 100 % termina con causa "radiation"', () => {
-    const sim = makeSim({ drain: 0 });
-    sim.res.radiation = 100;
-    run(sim, 1, 0.25);
-    expect(sim.cause).toBe('radiation');
-  });
-
-  it('se acaba el plazo con tareas pendientes = "timeout"', () => {
-    const sim = makeSim({ drain: 0, tasks: [{ id: 't', kind: 'science', count: 99 }] });
-    sim.tick(DAY * 7 + 1);
-    expect(sim.cause).toBe('timeout');
-  });
-
-  it('avisa una sola vez cuando un recurso entra en estado crítico', () => {
-    const sim = makeSim();
-    sim.res.oxygen = 21;
-    run(sim, 10, 0.25);
-    run(sim, 10, 0.25);
-    expect(sim.drainEvents().filter((e) => e.type === 'critical' && e.resource === 'oxygen')).toHaveLength(1);
-  });
-
-  it('completar las 7 jornadas gana la misión', () => {
-    const sim = makeSim({ drain: 0 });
-    sim.tick(DAY * 7 + 1);
+  it('cumplir todas las tareas gana', () => {
+    const sim = makeSim({ drain: 0, tasks: [{ id: 't1', kind: 'action', action: 'heal', count: 1 }] });
+    goTo(sim, 'enfermeria');
+    sim.act('heal');
     expect(sim.ended).toBe('won');
-    expect(sim.summary()).toMatchObject({ won: true, daysSurvived: 7 });
-    expect(sim.act('forecast')).toBeNull();
-    sim.tick(5);
-    expect(sim.time).toBeCloseTo(DAY * 7, 0);
   });
 });

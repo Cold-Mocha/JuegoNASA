@@ -15,6 +15,9 @@ export const LIGHT_BY_DAY = [1, 1, 1, 0.5, 0, 0, 0] as const;
 /** Radiación de fondo por jornada (rayos cósmicos; en la Luna ≈200× la de la superficie terrestre). */
 export const BACKGROUND_RADIATION_PER_DAY = 2;
 
+/** El reciclador renueva el oxígeno solo: genera esto por jornada mientras no tenga una fractura abierta. Con la fractura, el oxígeno solo baja. */
+export const OXYGEN_REGEN_PER_DAY = 14;
+
 /** Sin energía, el soporte vital rinde menos: el oxígeno baja más rápido. */
 export const NO_ENERGY_EXTRA_OXYGEN_PER_DAY = -10;
 
@@ -75,26 +78,25 @@ export interface ActionRule {
 }
 
 export const ACTIONS: Record<ActionId, ActionRule> = {
-  alignAntenna: { room: 'comunicaciones', cost: { energy: -5 }, gain: {}, delayed: true },
-  recycleAir:   { room: 'soporte', cost: { energy: -6 }, gain: { oxygen: 15 } },
-  cookMeal:     { room: 'soporte', cost: { energy: -5 }, gain: { food: 18 } },
+  repairAntenna: { room: 'comunicaciones', cost: { energy: -5 }, gain: {}, delayed: true },
   growLights:   { room: 'invernadero', cost: { energy: -7 }, gain: { oxygen: 6, food: 4 } }, // + GROW_LIGHTS_AT_DUSK al cierre de la jornada
-  harvest:      { room: 'invernadero', cost: { energy: -3 }, gain: { food: 15 } },
-  forecast:     { room: 'puente', cost: { energy: -1 }, gain: {}, delayed: true },
-  orientPanels: { room: 'exterior', cost: { radiation: 3 }, gain: { energy: 20 } }, // × luz × (1 − pérdida por polvo)
+  harvest:      { room: 'invernadero', cost: { energy: -3 }, gain: { food: 20 } },            // × lo cosechado en el minijuego
   cleanDust:    { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },
+  cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },        // panel de pruebas (solo en Energía del Sol)
   eva:          { room: 'exterior', cost: { energy: -3, radiation: 4 }, gain: {}, science: 2 }, // recoger muestras de hielo en la roca
   repair:       { room: 'soporte', cost: { energy: -4 }, gain: {} }, // la sala real es la de la fractura (ver Simulation.breach)
   heal:         { room: 'enfermeria', cost: { energy: -8, food: -4 }, gain: { health: 25 } },
 };
 
 /** Las algas siguen creciendo: más oxígeno y comida al terminar la jornada. */
+/** Acciones propias de cada investigación: solo se pueden hacer una vez por jornada (no tiene sentido repetirlas el mismo día). Las normales, que están en todos los escenarios, no tienen este límite. */
+export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva']);
+
 export const GROW_LIGHTS_AT_DUSK = { oxygen: 5, food: 4 } as const;
-export const FORECAST_HORIZON_DAYS = 2;
 
 /** Fracturas del casco: desde el día BREACH_FROM_DAY, cada jornada hay esta probabilidad de que se abra una en una sala de la nave. */
 export const BREACH_FROM_DAY = 2;
 export const BREACH_CHANCE = 0.6;
-export const BREACH_ROOMS: readonly RoomId[] = ['soporte', 'puente', 'enfermeria', 'comunicaciones'];
+export const BREACH_ROOMS: readonly RoomId[] = ['soporte']; // el reciclador de oxígeno está en Soporte vital
 
 export const clamp = (v: number, min = 0, max = 100): number => Math.min(max, Math.max(min, v));

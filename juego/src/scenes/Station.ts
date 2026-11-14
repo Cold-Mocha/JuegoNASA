@@ -32,6 +32,7 @@ import type { ActionId, ResupplyChoice, Resources, RoomId, SimEvent, Zone } from
 import { icon } from '../core/icons';
 import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
+import { mountAntennaGame, mountHarvestGame, type MiniCallbacks, type MiniGameHandle } from '../core/miniGames';
 import { ACTION_ICON, MISSION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
@@ -95,7 +96,7 @@ export class StationScene extends Phaser.Scene {
   private tutorialIndex = -1;
   private flags = { moved: false, opened: false, map: false, archive: false };
   private ending = false;
-  private miniGame?: DustGame | SealGame;
+  private miniGame?: DustGame | SealGame | MiniGameHandle;
   private breachProp?: Machine;
   private disposers: (() => void)[] = [];
 
@@ -559,7 +560,7 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'actionResolved':
         audio.play('radio');
-        this.alert(ev.message === 'forecastReady' ? 'Llegó el pronóstico del Sol desde la Tierra.' : 'Antena alineada: la señal con la Tierra es fuerte.', 'ok');
+        this.alert('Antena reparada: la señal con la Tierra es fuerte.', 'ok');
         break;
       case 'resupplyOffer':
         this.openResupply();
@@ -661,49 +662,115 @@ export class StationScene extends Phaser.Scene {
       this.alert(BLOCK_REASON[check.reason!], 'danger');
       return;
     }
-    if (id === 'cleanDust') return this.openDustGame(); // limpiar a mano: el costo se cobra al terminar
+    if (id === 'cleanDust' || id === 'cleanTestPanel') return this.openDustGame(id); // limpiar a mano: el costo se cobra al terminar
     if (id === 'repair') return this.openSealGame();
+    if (id === 'repairAntenna') return this.openAntennaGame();
+    if (id === 'harvest') return this.openHarvestGame();
     this.sim.act(id);
     for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
     this.renderActions();
   }
 
-  // ---------- minijuego: sellar la fractura con el sellador (el reloj se detiene)
-  private openSealGame(): void {
+  // ---------- minijuegos (el reloj se detiene mientras se juegan; el costo y el efecto se aplican al terminar)
+  /** Panel de un minijuego: dibujo a la izquierda; a la derecha, qué hacer, el avance y el resultado. */
+  private openMini(cfg: {
+    title: string; iconName: Parameters<typeof icon>[0]; body: string; hint: string; barLabel: string; barClass: string; result: string;
+    mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void;
+  }): void {
     this.closeOverlay();
     this.openModal(`
       <div class="dust-layout">
         <div data-dust-root></div>
         <div class="dust-side">
-          <h2 class="mn-panel__title">${icon('gear')}Sella la fractura</h2>
-          <p class="mn-panel__body">Una grieta deja escapar el aire de la nave. Mientras esté abierta, el oxígeno no se recupera. Sigue la grieta con el sellador de arriba hacia abajo.</p>
-          <p class="body-sm">Arrastra con el ratón o el dedo, o usa las flechas del teclado.</p>
-          <div class="mn-bar mn-bar--oxygen dust-progress" role="progressbar" aria-label="Grieta sellada" aria-valuemin="0" aria-valuemax="100" data-dust-bar>
-            <span class="mn-bar__label">Sellado</span>
+          <h2 class="mn-panel__title">${icon(cfg.iconName)}${esc(cfg.title)}</h2>
+          <p class="mn-panel__body">${esc(cfg.body)}</p>
+          <p class="body-sm">${esc(cfg.hint)}</p>
+          <div class="mn-bar ${cfg.barClass} dust-progress" role="progressbar" aria-label="${esc(cfg.barLabel)}" aria-valuemin="0" aria-valuemax="100" data-dust-bar>
+            <span class="mn-bar__label">${esc(cfg.barLabel)}</span>
             <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
             <span class="mn-bar__value" data-value>0%</span>
           </div>
-          <p class="dust-result" data-dust-result hidden>${icon('check')}¡Fractura sellada! El oxígeno vuelve a regenerarse.</p>
+          <p class="dust-result" data-dust-result hidden>${icon('check')}${esc(cfg.result)}</p>
           <div class="mn-panel__footer"><button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="dust-cancel">${icon('close')}Cancelar</button></div>
         </div>
       </div>`, 'minigame', 'modal__panel--wide');
     const bar = this.ui.q('[data-dust-bar]');
-    this.miniGame = mountSealGame(this.ui.q('[data-dust-root]'), {
+    this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: (f) => {
         const v = Math.round(f * 100);
         bar.setAttribute('aria-valuenow', String(v));
         (bar.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
         (bar.querySelector('[data-value]') as HTMLElement).textContent = `${v}%`;
       },
-      onDone: () => {
+      onDone: (result) => {
         audio.play('achievement');
         this.ui.q('[data-dust-result]').hidden = false;
-        this.sim.act('repair');
+        cfg.finish(result);
         for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
         this.time.delayedCall(1300, () => {
           if (this.overlay === 'minigame') this.closeOverlay();
         });
       },
+    });
+  }
+
+  /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
+  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: () => void }): void {
+    this.closeOverlay();
+    this.openModal(`
+      <div class="mini-full" aria-label="Minijuego">
+        <div class="mini-full__stage" data-dust-root></div>
+        <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
+      </div>`, 'minigame', 'modal__panel--full');
+    this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
+      onProgress: () => undefined,
+      onDone: () => {
+        audio.play('achievement');
+        this.ui.q('[data-dust-result]').hidden = false;
+        this.ui.q('.mini-full').classList.add('is-done');
+        cfg.finish();
+        for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
+        this.time.delayedCall(1100, () => {
+          if (this.overlay === 'minigame') this.closeOverlay();
+        });
+      },
+    });
+  }
+
+  private openDustGame(action: 'cleanDust' | 'cleanTestPanel'): void {
+    this.openFullMini({
+      mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
+      finish: () => void this.sim.act(action),
+    });
+  }
+
+  private openSealGame(): void {
+    this.openMini({
+      title: 'Sella la fractura', iconName: 'gear', barLabel: 'Sellado', barClass: 'mn-bar--oxygen',
+      body: 'Una grieta deja escapar el aire de la nave. Mientras esté abierta, el oxígeno no se recupera. Sigue la grieta con el sellador de arriba hacia abajo.',
+      hint: 'Arrastra con el ratón o el dedo, o usa las flechas del teclado.', result: '¡Fractura sellada! El oxígeno vuelve a regenerarse.',
+      mount: (root, cb) => mountSealGame(root, cb),
+      finish: () => void this.sim.act('repair'),
+    });
+  }
+
+  private openAntennaGame(): void {
+    this.openMini({
+      title: 'Repara la antena', iconName: 'antenna', barLabel: 'Cables', barClass: 'mn-bar--oxygen',
+      body: 'La antena se desajustó y la señal con la Tierra es débil. Conecta cada cable con el enchufe de su mismo color y forma.',
+      hint: 'Toca un cable y después su enchufe. Funciona con ratón, dedo o teclado (Tab y Enter).', result: '¡Antena reparada! Enviando la señal a la Tierra…',
+      mount: (root, cb) => mountAntennaGame(root, cb),
+      finish: () => void this.sim.act('repairAntenna'),
+    });
+  }
+
+  private openHarvestGame(): void {
+    this.openMini({
+      title: 'Cosecha', iconName: 'sprout', barLabel: 'Cosechado', barClass: 'mn-bar--hunger',
+      body: 'Recoge solo las plantas maduras, las de frutos rojos y brillo. Las verdes todavía no están listas y te hacen perder tiempo.',
+      hint: 'Tienes 20 segundos. Toca "Listo" cuando termines. Más cosecha, más comida.', result: 'Cosecha terminada: ¡comida para la tripulación!',
+      mount: (root, cb) => mountHarvestGame(root, cb),
+      finish: (result) => void this.sim.act('harvest', Math.max(0.1, result ?? 1)),
     });
   }
 
@@ -737,45 +804,6 @@ export class StationScene extends Phaser.Scene {
     this.breachProp = undefined;
   }
 
-  // ---------- minijuego: limpiar el polvo de los paneles con un cepillo (el reloj se detiene)
-  private openDustGame(): void {
-    this.closeOverlay();
-    this.openModal(`
-      <div class="dust-layout">
-        <div data-dust-root></div>
-        <div class="dust-side">
-          <h2 class="mn-panel__title">${icon('panel')}Limpia los paneles</h2>
-          <p class="mn-panel__body">El polvo lunar tapa las celdas y los paneles generan menos. Pasa el cepillo por encima hasta dejarlos limpios.</p>
-          <p class="body-sm">Arrastra con el ratón o el dedo, o usa las flechas del teclado.</p>
-          <div class="mn-bar mn-bar--energy dust-progress" role="progressbar" aria-label="Panel limpio" aria-valuemin="0" aria-valuemax="100" data-dust-bar>
-            <span class="mn-bar__label">Limpio</span>
-            <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
-            <span class="mn-bar__value" data-value>0%</span>
-          </div>
-          <p class="dust-result" data-dust-result hidden>${icon('check')}¡Paneles limpios! La energía se renueva sola otra vez.</p>
-          <div class="mn-panel__footer"><button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="dust-cancel">${icon('close')}Cancelar</button></div>
-        </div>
-      </div>`, 'minigame', 'modal__panel--wide');
-    const bar = this.ui.q('[data-dust-bar]');
-    this.miniGame = mountDustGame(this.ui.q('[data-dust-root]'), {
-      dust: this.sim.comp.dust,
-      onProgress: (f) => {
-        const v = Math.round(f * 100);
-        bar.setAttribute('aria-valuenow', String(v));
-        (bar.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
-        (bar.querySelector('[data-value]') as HTMLElement).textContent = `${v}%`;
-      },
-      onDone: () => {
-        audio.play('achievement');
-        this.ui.q('[data-dust-result]').hidden = false;
-        this.sim.act('cleanDust');
-        for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
-        this.time.delayedCall(1300, () => {
-          if (this.overlay === 'minigame') this.closeOverlay();
-        });
-      },
-    });
-  }
 
   // ======================================================== HUD (HTML)
   private buildHud(): void {
@@ -821,12 +849,8 @@ export class StationScene extends Phaser.Scene {
             <span class="hud__tasks-name">${icon(MISSION_ICON[this.mission.id])}${esc(this.mission.name)}</span>
             <p class="hud__tasks-question">${esc(this.mission.question)}</p>
             <ul class="mn-checklist" data-tasks></ul>
+            <span class="caption-mono hud__tasks-source">${esc(sourceCredit(this.mission))}</span>
           </section>
-          <div class="hud__forecast mn-panel" data-forecast hidden>
-            <span class="mn-chip mn-chip--nav">Pronóstico</span>
-            <ul data-forecast-list></ul>
-            <span class="caption-mono">${esc(sourceCredit(this.mission))}</span>
-          </div>
           <span class="caption-mono hud__fps" data-fps hidden></span>
         </div>
         <div class="hud__alert" data-alert role="status" aria-live="polite" hidden></div>
@@ -899,12 +923,6 @@ export class StationScene extends Phaser.Scene {
     }
     this.renderTasks();
 
-    const fc = this.ui.q('[data-forecast]');
-    fc.hidden = !s.forecastValid;
-    if (s.forecastValid) {
-      const list = s.forecast.map((e) => `<li><strong>${esc(flareName(e.classType))}</strong>, ${e.day === s.day ? 'hoy' : 'mañana'}</li>`).join('') || '<li>Hoy y mañana el Sol está tranquilo</li>';
-      this.setHtml('[data-forecast-list]', list);
-    }
     const fps = this.ui.q('[data-fps]');
     fps.hidden = !state.settings.showFps;
     if (state.settings.showFps) fps.textContent = `${Math.round(this.game.loop.actualFps)} FPS`;
@@ -1160,7 +1178,7 @@ export class StationScene extends Phaser.Scene {
       { text: 'Arriba a la izquierda hay 5 barras: Energía, O₂, Comida, Salud y Radiación. Si falta O₂ o comida, baja la Salud. ¡Ninguna acción es gratis!', done: () => this.time.now - t0 > 24000 },
       { text: 'Los paneles solares y el invernadero están afuera: sal por la Esclusa. Afuera tu traje gasta oxígeno; en el invernadero hay aire.', done: () => this.time.now - t0 > 36000 },
       { text: 'Los paneles se llenan de polvo con los días: límpialos o rendirán menos. Si te sientes mal, ve a la Enfermería.', done: () => this.time.now - t0 > 48000 },
-      { text: 'Las llamaradas de esta misión pasaron de verdad. Pide el pronóstico en el Puente y, cuando venga una, quédate dentro de la nave. ¡Suerte!', done: () => false },
+      { text: 'Las llamaradas de esta misión pasaron de verdad. Cuando venga una, quédate dentro de la nave. ¡Suerte!', done: () => false },
     ];
     this.tutorialIndex = 0;
     this.showTutorial();
@@ -1199,7 +1217,7 @@ export class StationScene extends Phaser.Scene {
       audio.unlock();
       const key = ev.key.toLowerCase();
       if (this.overlay === 'minigame' && key.startsWith('arrow')) {
-        this.miniGame?.nudge(key === 'arrowright' ? 1 : key === 'arrowleft' ? -1 : 0, key === 'arrowdown' ? 1 : key === 'arrowup' ? -1 : 0);
+        this.miniGame?.nudge?.(key === 'arrowright' ? 1 : key === 'arrowleft' ? -1 : 0, key === 'arrowdown' ? 1 : key === 'arrowup' ? -1 : 0);
         ev.preventDefault();
         return;
       }
@@ -1246,10 +1264,10 @@ export class StationScene extends Phaser.Scene {
   }
 }
 
-const ACTIONS_DELAYED = new Set<ActionId>(['alignAntenna', 'forecast']);
+const ACTIONS_DELAYED = new Set<ActionId>(['repairAntenna']);
 /** Sala que repara cada recurso crítico (avisos en los bordes). */
 const GUIDE_ASSET: Record<Exclude<keyof Resources, 'radiation'>, string> = {
-  energy: 'panel-solar', oxygen: 'reciclador-aire', food: 'estacion-comida', health: 'camilla-medica',
+  energy: 'estacion-limpieza', oxygen: 'reciclador-aire', food: 'rack-plantas', health: 'camilla-medica',
 };
 /** La Esclusa: adonde guía la flecha cuando hay que volver a la nave. */
 const DOOR_ASSET = 'esclusa';

@@ -5,10 +5,10 @@ import { between, createRng } from '../../src/sim/rng';
 import { ROOM_IDS } from '../../src/data/rooms';
 
 describe('tiempo de caminata entre salas', () => {
-  it('cuesta según la distancia real del plano: Energía queda más lejos del Refugio que el Puente', () => {
-    expect(travelTime('puente', 'exterior')).toBeGreaterThan(travelTime('puente', 'puente'));
-    expect(travelTime('puente', 'puente')).toBeGreaterThan(1);
-    expect(travelTime('puente', 'comunicaciones')).toBeLessThan(10);
+  it('cuesta según la distancia real del plano: la superficie queda más lejos del Puente que Comunicaciones', () => {
+    expect(travelTime('puente', 'exterior')).toBeGreaterThan(travelTime('puente', 'comunicaciones'));
+    expect(travelTime('puente', 'comunicaciones')).toBeGreaterThan(1);
+    expect(travelTime('puente', 'puente')).toBe(0);
   });
 
   it('es simétrico y toda sala se alcanza', () => {

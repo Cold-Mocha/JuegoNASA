@@ -36,9 +36,8 @@ describe('archivo DONKI', () => {
   });
 
   it('muestra la fecha real de cada jornada', () => {
-    const sep = MISSIONS.find((m) => m.archiveId === 'sep-2017')!;
-    expect(realDate(sep, 3)).toMatch(/6/);
-    expect(realDate(sep, 3)).toMatch(/2017/);
+    const ice = MISSIONS.find((m) => m.archiveId === 'oct-2024')!;
+    expect(realDate(ice, 1)).toMatch(/2024/);
   });
 });
 
@@ -62,7 +61,6 @@ describe('jornadas científicas', () => {
       for (const t of m.tasks) {
         if (t.kind === 'shelter') expect(t.count, t.id).toBeLessThanOrEqual(archiveFor(m).flares.length);
         if (t.kind === 'action' && t.action === 'eva') expect(t.count, t.id).toBeLessThanOrEqual(MISSION_DAYS);
-        if (t.kind === 'action' && t.action === 'orientPanels') expect(t.count, t.id).toBeLessThanOrEqual(4); // hay sol solo 4 días
       }
     }
   });

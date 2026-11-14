@@ -11,8 +11,7 @@ export const RESOURCE_ICON: Record<keyof Resources | 'science', IconName> = {
 };
 
 export const ACTION_ICON: Record<ActionId, IconName> = {
-  alignAntenna: 'antenna', recycleAir: 'wind', cookMeal: 'bolt', growLights: 'sprout', harvest: 'sprout', forecast: 'radar',
-  orientPanels: 'panel', cleanDust: 'panel', eva: 'snowflake', heal: 'heart', repair: 'gear',
+  repairAntenna: 'antenna', growLights: 'sprout', harvest: 'sprout', cleanDust: 'panel', cleanTestPanel: 'panel', eva: 'snowflake', heal: 'heart', repair: 'gear',
 };
 
 export const ROOM_ICON: Record<RoomId, IconName> = {
@@ -31,7 +30,7 @@ export const CATEGORY_ICON: Record<EntryCategory, IconName> = {
 };
 
 export const ACHIEVEMENT_ICON: Record<AchievementId, IconName> = {
-  'first-forecast': 'radar', 'safe-shelter': 'shield', 'lunar-night': 'moon', explorer: 'helmet', 'strong-signal': 'antenna',
+  'safe-shelter': 'shield', 'lunar-night': 'moon', explorer: 'helmet', 'strong-signal': 'antenna',
   'mission-complete': 'rocket', 'healthy-crew': 'heart', scientist: 'flask', reader: 'book',
 };
 

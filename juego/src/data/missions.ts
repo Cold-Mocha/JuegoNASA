@@ -36,24 +36,23 @@ const act = (id: string, action: ActionId, count: number, label: string): Resear
 /** Tres jornadas: las dos primeras con el Sol tranquilo y la tercera con llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
   {
-    id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Rack de plantas y algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Cultivo de algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
     question: '¿Pueden las algas darnos aire y comida en la Luna?',
-    brief: 'Cultiva algas para fabricar aire. El Sol está tranquilo.',
+    brief: 'Cultiva algas con luz. El Sol está tranquilo.',
     tasks: [
-      act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 veces'),
-      act('huerto-cosecha', 'harvest', 2, 'Cosechar el invernadero 2 veces'),
-      act('huerto-aire', 'recycleAir', 2, 'Reciclar el aire 2 veces'),
-      act('huerto-datos', 'alignAntenna', 1, 'Mandar los resultados a la Tierra'),
+      act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 días'),
+      act('huerto-cosecha', 'harvest', 1, 'Cosechar el invernadero'),
+      act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
     ],
   },
   {
     id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
     question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
-    brief: 'Orienta y limpia los paneles solares.',
+    brief: 'Mantén limpios los paneles solares.',
     tasks: [
-      act('paneles-orientar', 'orientPanels', 3, 'Orientar los paneles solares 3 veces'),
-      act('paneles-polvo', 'cleanDust', 2, 'Limpiar el polvo de los paneles 2 veces'),
-      act('paneles-datos', 'alignAntenna', 1, 'Mandar los datos a la Tierra'),
+      act('paneles-polvo', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
+      act('paneles-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
+      act('paneles-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
     ],
   },
   {
@@ -61,9 +60,9 @@ export const MISSIONS: Mission[] = [
     question: '¿Hay agua congelada cerca de la estación?',
     brief: 'Busca hielo en la roca de afuera.',
     tasks: [
-      act('hielo-pronostico', 'forecast', 1, 'Pedir el pronóstico del Sol antes de salir'),
-      act('hielo-muestras', 'eva', 2, 'Recoger muestras de hielo 2 veces'),
-      act('hielo-datos', 'alignAntenna', 1, 'Mandar los datos a la Tierra'),
+      act('hielo-muestras', 'eva', 2, 'Recoger muestras de hielo 2 días'),
+      act('hielo-polvo', 'cleanDust', 1, 'Limpiar los paneles antes de salir'),
+      act('hielo-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
     ],
   },
 ];

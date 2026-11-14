@@ -1,8 +1,8 @@
 import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
-  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC, FORECAST_HORIZON_DAYS,
+  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, RESUPPLY_AMOUNT, RESUPPLY_DAYS, ROOM_ZONE, SHELTER_FACTOR,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, ONCE_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, RESUPPLY_AMOUNT, RESUPPLY_DAYS, ROOM_ZONE, SHELTER_FACTOR,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
@@ -55,7 +55,7 @@ export class Simulation {
   science = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { forecasts: 0, shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, resupplies: 0, actions: 0, actionsBy: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, resupplies: 0, actions: 0, actionsBy: {} };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -64,8 +64,7 @@ export class Simulation {
   private active: ActiveFlare[] = [];
   private pending: Pending[] = [];
   private cooldowns = new Map<ActionId, number>();
-  private forecastUntilDay = 0;
-  private evaDay = 0;
+  private lastDone = new Map<ActionId, number>(); // jornada en que se hizo por última vez cada acción de una vez por día
   private duskOxygen = 0;
   private duskFood = 0;
   private travelUntil = 0;
@@ -161,16 +160,6 @@ export class Simulation {
     return this.active.length > 0;
   }
 
-  /** Llamaradas futuras visibles gracias al pronóstico (vacío si no se pidió o expiró). */
-  get forecast(): SolarEvent[] {
-    if (this.forecastUntilDay < this.day) return [];
-    return this.config.events.slice(this.fired).filter((e) => e.day <= this.forecastUntilDay);
-  }
-
-  get forecastValid(): boolean {
-    return this.forecastUntilDay >= this.day;
-  }
-
   isPending(action: ActionId): boolean {
     return this.pending.some((p) => p.action === action);
   }
@@ -192,7 +181,6 @@ export class Simulation {
     const d: ActionDelta = { ...rule.cost };
     for (const [k, v] of Object.entries(rule.gain) as [keyof Resources, number][]) d[k] = (d[k] ?? 0) + v;
     if (this.breach && d.oxygen !== undefined && d.oxygen > 0) delete d.oxygen; // con fractura el oxígeno no se regenera
-    if (action === 'orientPanels') d.energy = Math.round(20 * this.light * (1 - this.comp.dust * DUST_MAX_LOSS));
     if (action === 'eva') {
       if (this.flareActive) d.radiation = (d.radiation ?? 0) * EVA_FACTOR;
       d.science = rule.science;
@@ -204,32 +192,31 @@ export class Simulation {
     if (this.ended) return { ok: false, reason: 'ended' };
     const room = action === 'repair' ? this.breach : ACTIONS[action].room;
     if (!room || this.traveling || this.hall || room !== this.room) return { ok: false, reason: 'busy' };
-    if (action === 'recycleAir' && this.breach) return { ok: false, reason: 'leak' };
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return { ok: false, reason: 'cooldown' };
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
-    if (action === 'orientPanels' && this.light === 0) return { ok: false, reason: 'night' };
-    if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
-    if (action === 'eva' && this.evaDay === this.day) return { ok: false, reason: 'evaDone' };
+    if (ONCE_PER_DAY.has(action) && this.lastDone.get(action) === this.day) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
     return { ok: true };
   }
 
   /** Ejecuta la acción si es posible. Devuelve el cambio aplicado o null. */
-  act(action: ActionId): ActionDelta | null {
+  act(action: ActionId, scale = 1): ActionDelta | null {
     if (!this.canAct(action).ok) return null;
     const d = this.preview(action);
+    if (scale !== 1) for (const k of Object.keys(d) as (keyof ActionDelta)[]) if ((d[k] ?? 0) > 0) d[k] = Math.round((d[k] as number) * scale); // minijuegos: se gana según lo logrado
     this.apply(d);
     if (d.science) this.science += d.science;
     this.cooldowns.set(action, this.time + ACTION_COOLDOWN_SEC);
+    if (ONCE_PER_DAY.has(action)) this.lastDone.set(action, this.day);
     this.stats.actions++;
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 
     switch (action) {
       case 'growLights': if (!this.breach) this.duskOxygen += GROW_LIGHTS_AT_DUSK.oxygen; this.duskFood += GROW_LIGHTS_AT_DUSK.food; break;
-      case 'cleanDust': this.comp.dust = 0; break;
+      case 'cleanDust': case 'cleanTestPanel': this.comp.dust = 0; break;
       case 'repair': this.breach = null; this.events.push({ type: 'breachRepaired' }); break;
-      case 'eva': this.evaDay = this.day; this.stats.evas++; break;
+      case 'eva': this.stats.evas++; break;
       default: break;
     }
     if (ACTIONS[action].delayed) this.pending.push({ action, at: this.time + EARTH_MOON_ROUND_TRIP_SEC });
@@ -298,7 +285,7 @@ export class Simulation {
     const shield = this.sheltered ? SHELTER_FACTOR : 1;
     this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k + PANEL_REGEN_PER_DAY * this.panelEfficiency * (dt / len));
     this.checkPanels();
-    this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
+    this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.breach ? 0 : OXYGEN_REGEN_PER_DAY * (dt / len)) + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
     this.res.food = clamp(this.res.food + PASSIVE_PER_DAY.food * k);
     this.updateHealth(k);
     this.res.radiation = clamp(this.res.radiation + BACKGROUND_RADIATION_PER_DAY * (dt / len) * shield);
@@ -340,8 +327,8 @@ export class Simulation {
     // aviso previo: con pronóstico llega antes
     while (this.warned < events.length) {
       const e = events[this.warned];
-      const forecasted = this.forecastUntilDay >= e.day;
-      const lead = forecasted ? FLARE_WARNING_SEC.forecasted : FLARE_WARNING_SEC.unforecasted;
+      const forecasted = false;
+      const lead = FLARE_WARNING_SEC.unforecasted;
       if (this.time < this.eventTime(e) - lead) break;
       this.warned++;
       this.events.push({ type: 'flareWarning', event: e, inSec: Math.max(0, this.eventTime(e) - this.time), forecasted });
@@ -349,7 +336,7 @@ export class Simulation {
     while (this.fired < events.length && this.time >= this.eventTime(events[this.fired])) {
       const event = events[this.fired++];
       this.active.push({ event, remaining: FLARE_DURATION_SEC, total: flareDose(event.classType, event.sep), received: 0 });
-      this.events.push({ type: 'flareStart', event, forecasted: this.forecastUntilDay >= event.day });
+      this.events.push({ type: 'flareStart', event, forecasted: false });
     }
     for (const f of this.active) {
       const portion = Math.min(dt, f.remaining) / FLARE_DURATION_SEC;
@@ -395,14 +382,10 @@ export class Simulation {
     if (!due.length) return;
     this.pending = this.pending.filter((p) => this.time < p.at);
     for (const p of due) {
-      if (p.action === 'alignAntenna') {
+      if (p.action === 'repairAntenna') {
         this.comp.antenna = 1;
         this.stats.antennaAligns++;
         this.events.push({ type: 'actionResolved', action: p.action, message: 'linkRestored' });
-      } else if (p.action === 'forecast') {
-        this.forecastUntilDay = this.day + FORECAST_HORIZON_DAYS - 1;
-        this.stats.forecasts++;
-        this.events.push({ type: 'actionResolved', action: p.action, message: 'forecastReady' });
       }
     }
   }

@@ -120,7 +120,7 @@ export function mountDustGame(root: HTMLElement, opts: Options): DustGame {
   root.innerHTML = `<div class="dust" style="width:${W}px;height:${H}px">
     <canvas class="dust__panel" width="${W}" height="${H}"></canvas>
     <canvas class="dust__dirt" width="${W}" height="${H}" aria-label="Polvo sobre el panel solar" role="img"></canvas>
-    <div class="dust__brush" aria-hidden="true">${BRUSH_SVG}</div></div>`;
+    <div class="dust__brush is-demo" aria-hidden="true">${BRUSH_SVG}</div></div>`;
   const wrap = root.firstElementChild as HTMLElement;
   const [panel, dirt] = [...wrap.querySelectorAll('canvas')] as HTMLCanvasElement[];
   const brush = wrap.querySelector<HTMLElement>('.dust__brush')!;
@@ -135,7 +135,10 @@ export function mountDustGame(root: HTMLElement, opts: Options): DustGame {
   let last: { x: number; y: number } | null = null;
   let timer = 0;
 
-  const place = (): void => void (brush.style.transform = `translate(${cx - 14}px, ${cy - 70}px)`);
+  const place = (): void => {
+    brush.classList.remove('is-demo'); // al tocar, el cepillo deja de mostrar la demostración
+    brush.style.transform = `translate(${cx - 14}px, ${cy - 70}px)`;
+  };
   const check = (): void => {
     const fraction = Math.min(1, 1 - dustPixels(dctx) / total);
     opts.onProgress(fraction);
@@ -182,7 +185,7 @@ export function mountDustGame(root: HTMLElement, opts: Options): DustGame {
   dirt.addEventListener('pointermove', move);
   dirt.addEventListener('pointerup', up);
   dirt.addEventListener('pointercancel', up);
-  place();
+  brush.style.transform = `translate(${cx - 14}px, ${cy - 70}px)`; // posición inicial: la demostración la anima
   opts.onProgress(0);
 
   return {

@@ -1,7 +1,7 @@
 import type { MissionSummary } from './simulation';
 
 export type AchievementId =
-  | 'first-forecast' | 'safe-shelter' | 'lunar-night' | 'explorer' | 'strong-signal'
+  | 'safe-shelter' | 'lunar-night' | 'explorer' | 'strong-signal'
   | 'mission-complete' | 'healthy-crew' | 'scientist' | 'reader';
 
 /** Logros que se desbloquean al terminar una jornada científica (los textos están en data/achievements.ts). */
@@ -10,7 +10,6 @@ export const SCIENTIST_GOAL = 4;
 export const HEALTHY_HEALTH = 80;
 export function earnedAchievements(s: MissionSummary): AchievementId[] {
   const out: AchievementId[] = [];
-  if (s.stats.forecasts > 0) out.push('first-forecast');
   if (s.stats.shelteredFlares > 0) out.push('safe-shelter');
   if (s.daysSurvived >= 5) out.push('lunar-night');
   if (s.stats.evas > 0) out.push('explorer');

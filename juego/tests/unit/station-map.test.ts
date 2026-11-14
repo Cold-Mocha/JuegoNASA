@@ -52,16 +52,15 @@ describe('plano continuo de la estación', () => {
     }
   });
 
-  it('lo más lejano del Refugio está al otro extremo (Energía o Comunicaciones): protegerse cuesta camino', () => {
+  it('lo más lejano del Puente está afuera de la nave (invernadero o superficie): salir cuesta camino', () => {
     const from = roomCenter('puente');
     const far = ROOM_IDS.map((id) => [id, routeLength(from, findRoute(from, roomCenter(id)))] as const).sort((x, y) => y[1] - x[1]);
-    expect(['exterior', 'comunicaciones']).toContain(far[0][0]);
+    expect(['exterior', 'invernadero']).toContain(far[0][0]);
   });
 
   it('las máquinas de cada sala quedan dentro de su sala y se llega caminando', () => {
     for (const id of ROOM_IDS) {
-      const machines = ROOMS[id].props.filter((p) => p.kind === 'interactive');
-      expect(machines.length).toBeGreaterThan(0);
+      const machines = ROOMS[id].props.filter((p) => p.kind === 'interactive'); // algunas salas no tienen máquinas
       for (const p of machines) {
         const at = propPosition(id, p);
         expect(roomAt(at)).toBe(id);

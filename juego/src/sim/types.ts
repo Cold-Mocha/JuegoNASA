@@ -7,9 +7,9 @@ export type RoomId = 'soporte' | 'puente' | 'enfermeria' | 'comunicaciones' | 'e
  */
 export type Zone = 'ship' | 'greenhouse' | 'surface';
 
-/** 10 acciones, hasta 2 por máquina (teclas 1 y 2 en el panel). */
+/** Acciones de las máquinas. `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
 export type ActionId =
-  | 'alignAntenna' | 'recycleAir' | 'cookMeal' | 'growLights' | 'harvest' | 'forecast' | 'orientPanels' | 'cleanDust' | 'eva' | 'heal' | 'repair';
+  | 'repairAntenna' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair';
 
 export type ResupplyChoice = 'oxygen' | 'food' | 'energy' | 'health';
 
@@ -68,7 +68,7 @@ export type SimEvent =
   | { type: 'flareStart'; event: SolarEvent; forecasted: boolean }
   | { type: 'flareEnd'; event: SolarEvent; dose: number }
   | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> & { science?: number } }
-  | { type: 'actionResolved'; action: ActionId; message: 'forecastReady' | 'linkRestored' }
+  | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
   | { type: 'resupplyOffer'; day: number }
   | { type: 'resupplyMissed'; day: number }
   | { type: 'critical'; resource: keyof Resources }
@@ -84,11 +84,10 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'ended';
 }
 
 export interface SimStats {
-  forecasts: number;
   shelteredFlares: number; // llamaradas pasadas dentro de la nave
   unshieldedFlares: number;
   evas: number;

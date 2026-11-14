@@ -2,14 +2,11 @@ import type { ActionCheck, ActionId, ResupplyChoice } from '../sim/types';
 
 /** Textos de las acciones de cada sala (los números viven en sim/rules.ts). */
 export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
-  alignAntenna: { label: 'Alinear la antena', why: 'Con buena señal llegan el pronóstico y los envíos. La Tierra tarda casi 3 segundos en responder.' },
-  recycleAir: { label: 'Reciclar el aire', why: 'La máquina saca el CO₂ que exhalas y repone O₂. Usa energía.' },
-  cookMeal: { label: 'Preparar comida', why: 'Calientas raciones de la despensa. Usa un poco de energía.' },
+  repairAntenna: { label: 'Reparar la antena', why: 'La antena se desajusta con los días y la señal con la Tierra se debilita. Conecta los cables en el minijuego para repararla. La Tierra tarda casi 3 segundos en responder.' },
   growLights: { label: 'Encender luces de las algas', why: 'Las algas del invernadero dan O₂ y comida: un poco ahora y más al terminar el día.' },
-  harvest: { label: 'Cosechar el invernadero', why: 'Recoges verduras frescas del cultivo. Gasta poca energía.' },
-  forecast: { label: 'Pedir el pronóstico solar', why: 'La Tierra te avisa antes de las llamaradas. Necesita buena señal.' },
-  orientPanels: { label: 'Orientar los paneles solares', why: 'Apuntas los paneles al Sol y ganas energía; el polvo les quita rendimiento. Afuera recibes un poco de radiación. De noche no hay sol.' },
+  harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas.' },
   cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'El polvo lunar tapa las celdas de los paneles. Los limpias a mano con un cepillo (minijuego); al terminar, la energía vuelve a renovarse sola.' },
+  cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuánto polvo junta en un día. Se limpia a mano con el cepillo (minijuego). Una vez por día.' },
   eva: { label: 'Recoger muestras de hielo', why: 'Muestras para la ciencia. Afuera hay más radiación y el traje gasta oxígeno. Una vez por día.' },
   repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire. Sigue la grieta con el sellador (minijuego); al cerrarla, el oxígeno vuelve a regenerarse.' },
   heal: { label: 'Curarse', why: 'La enfermería recupera tu salud. Gasta energía y un poco de comida.' },
@@ -24,6 +21,7 @@ export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = 
   night: 'Es de noche: los paneles no reciben luz.',
   noLink: 'La señal es débil: alinea la antena en Comunicaciones.',
   evaDone: 'Ya saliste hoy. Vuelve mañana.',
+  doneToday: 'Eso ya lo hiciste hoy. Vuelve mañana.',
   ended: 'La misión terminó.',
 };
 
@@ -46,4 +44,9 @@ export const RESOURCE_TEXT = {
 
 /** Máquinas sin acciones: información (y, si tienen, una ficha del Archivo para leer). */
 export const MACHINE_INFO: Record<string, { body: string; read?: string; entry?: string }> = {
+  'reciclador-aire': {
+    body: 'Saca el CO₂ que exhalas y repone el oxígeno: funciona solo mientras esté entero. Si se abre una fractura, deja de regenerar el aire: sella la grieta que aparece a su lado.',
+    read: 'Leer: las algas y el oxígeno',
+    entry: 'algae-oxygen',
+  },
 };

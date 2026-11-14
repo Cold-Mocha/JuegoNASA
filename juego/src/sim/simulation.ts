@@ -1,6 +1,6 @@
 import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
-  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
+  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
   NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
@@ -53,6 +53,9 @@ export class Simulation {
   res: Resources = { energy: 100, oxygen: 70, food: 70, health: 100, radiation: 0 };
   comp: Components = { antenna: 1, dust: 0 };
   science = 0;
+  /** El panel de pruebas se ensució con la última tormenta de polvo y todavía no se limpió. */
+  testDirty = false;
+  private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
   readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
@@ -195,7 +198,8 @@ export class Simulation {
       case 'heal': return this.res.health < 100;
       case 'pedal': return this.res.energy < 100;
       case 'harvest': return this.res.food < 100;
-      case 'cleanDust': case 'cleanTestPanel': return this.comp.dust > 0.05;
+      case 'cleanDust': return this.comp.dust > 0.05;
+      case 'cleanTestPanel': return this.testDirty;
       case 'repairAntenna': return this.comp.antenna < 0.95;
       default: return true;
     }
@@ -222,11 +226,16 @@ export class Simulation {
     const d: ActionDelta = { ...rule.cost };
     for (const [k, v] of Object.entries(rule.gain) as [keyof Resources, number][]) d[k] = (d[k] ?? 0) + v;
     if (this.breach && d.oxygen !== undefined && d.oxygen > 0) delete d.oxygen; // con fractura el oxígeno no se regenera
-    if (action === 'eva') {
-      if (this.flareActive) d.radiation = (d.radiation ?? 0) * EVA_FACTOR;
-      d.science = rule.science;
-    }
+    if (action === 'eva' && this.flareActive) d.radiation = (d.radiation ?? 0) * EVA_FACTOR;
+    if (rule.science) d.science = rule.science;
     return d;
+  }
+
+  /** Limpiar solo se puede cuando una tormenta de polvo ensució los paneles (no a voluntad). */
+  private needsCleaning(action: ActionId): boolean {
+    if (action === 'cleanDust') return this.comp.dust > 0.05;
+    if (action === 'cleanTestPanel') return this.testDirty;
+    return true;
   }
 
   canAct(action: ActionId): ActionCheck {
@@ -238,6 +247,7 @@ export class Simulation {
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
     if (this.stageLocked(action)) return { ok: false, reason: 'locked' };
+    if (!this.needsCleaning(action)) return { ok: false, reason: 'clean' };
     if (this.dailyLimitReached(action)) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
     return { ok: true };
   }
@@ -260,7 +270,8 @@ export class Simulation {
 
     switch (action) {
       case 'growLights': if (!this.breach) this.duskOxygen += GROW_LIGHTS_AT_DUSK.oxygen; this.duskFood += GROW_LIGHTS_AT_DUSK.food; break;
-      case 'cleanDust': case 'cleanTestPanel': this.comp.dust = 0; break;
+      case 'cleanDust': this.comp.dust = 0; break;
+      case 'cleanTestPanel': this.testDirty = false; break; // el panel de pruebas no limpia los paneles de la estación
       case 'repair': this.breach = null; this.events.push({ type: 'breachRepaired' }); break;
       case 'eva': this.stats.evas++; break;
       default: break;
@@ -454,7 +465,6 @@ export class Simulation {
     this.res.food = clamp(this.res.food + this.duskFood);
     this.duskOxygen = 0;
     this.duskFood = 0;
-    this.comp.dust = Math.min(1, this.comp.dust + between(this.rnd, DUST_PER_DAY));
     this.comp.antenna = Math.max(0, this.comp.antenna - between(this.rnd, ANTENNA_DRIFT_PER_DAY));
     if (this.day >= this.config.days) {
       // fin del plazo: gana si sobrevivió y (si hay investigación) la terminó
@@ -465,6 +475,16 @@ export class Simulation {
     this.day++;
     this.events.push({ type: 'dayStart', day: this.day, light: this.light });
     this.rollBreach();
+    this.rollDustStorm();
+  }
+
+  /** Cada jornada puede llegar una tormenta de polvo (segura si pasaron DUST_STORM_MAX_GAP jornadas sin una): cubre los paneles y ensucia el de pruebas. */
+  private rollDustStorm(): void {
+    if (this.rnd() >= DUST_STORM_CHANCE && this.day - this.lastStormDay < DUST_STORM_MAX_GAP) return;
+    this.lastStormDay = this.day;
+    this.comp.dust = Math.min(1, this.comp.dust + between(this.rnd, DUST_PER_STORM));
+    this.testDirty = true;
+    this.events.push({ type: 'dustStorm' });
   }
 
   /** Avisa cada tarea recién cumplida; con todas cumplidas, la tripulación vuelve a la Tierra. */

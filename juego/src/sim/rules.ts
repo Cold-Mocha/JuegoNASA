@@ -32,8 +32,14 @@ export const HEALTH_DANGER_AT = 0;
 export const HEALTH_LOSS_PER_DAY = { oxygen: -45, food: -25, radiation: -30 } as const;
 export const HEALTH_RADIATION_AT = 50;
 
-/** Polvo en los paneles por jornada (rango; se sortea con la semilla). Cada 100 % de polvo quita DUST_MAX_LOSS de la energía. */
-export const DUST_PER_DAY: readonly [number, number] = [0.05, 0.09];
+/**
+ * Tormentas de polvo: el polvo ya no se acumula solo cada día; cubre los paneles en eventos al azar (al empezar cada jornada).
+ * Cada tormenta suma DUST_PER_STORM de polvo y ensucia el panel de pruebas; solo entonces hay algo que limpiar.
+ * Si pasan DUST_STORM_MAX_GAP jornadas sin tormenta, la siguiente llega segura (así la investigación siempre se puede cumplir).
+ */
+export const DUST_PER_STORM: readonly [number, number] = [0.2, 0.35];
+export const DUST_STORM_CHANCE = 0.5;
+export const DUST_STORM_MAX_GAP = 2;
 export const DUST_MAX_LOSS = 0.8;
 
 /** Los paneles renuevan la energía siempre: generan esto por jornada con los paneles limpios. Si el polvo los deja generando menos de lo que gasta la nave, la energía empieza a bajar. */
@@ -69,7 +75,9 @@ export const SUIT_RESCUE_OXYGEN = -15;
 export const EVA_FACTOR = 3;
 export const ACTION_COOLDOWN_SEC = 3;
 /** Velocidad al caminar por el plano (px de mapa por segundo; ver `stationMap.ts`). Escala de juego, no real. */
-export const WALK_SPEED = 500;
+/** Cuánto se agrandó el plano respecto del diseño base (salas, pasillos y distancias): más aire entre objetos y personajes. */
+export const WORLD_SCALE = 0.9;
+export const WALK_SPEED = 500 * WORLD_SCALE; // el plano es más grande: se escala para que los tiempos de viaje no cambien
 export const CRITICAL_THRESHOLD = 20;
 
 export interface ActionRule {
@@ -86,7 +94,7 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
   growLights:   { room: 'invernadero', cost: { energy: -7 }, gain: { oxygen: 6, food: 4 } }, // + GROW_LIGHTS_AT_DUSK al cierre de la jornada
   harvest:      { room: 'invernadero', cost: { energy: -3 }, gain: { food: 20 } },            // × lo cosechado en el minijuego
   cleanDust:    { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },
-  cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },        // panel de pruebas (solo en Energía del Sol)
+  cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {}, science: 1 },  // panel de pruebas (solo en Energía del Sol): mide, no limpia la estación
   eva:          { room: 'exterior', cost: { energy: -3, radiation: 4 }, gain: {}, science: 2 }, // recoger muestras de hielo en la roca
   repair:       { room: 'soporte', cost: { energy: -4 }, gain: {} }, // la sala real es la de la fractura (ver Simulation.breach)
   pedal:        { room: 'puente', cost: { food: -3 }, gain: { energy: 10 } },                // bicicleta: energía de emergencia, × calidad del minijuego

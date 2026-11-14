@@ -74,6 +74,7 @@ export type SimEvent =
   | { type: 'critical'; resource: keyof Resources }
   | { type: 'breachOpened'; room: RoomId }
   | { type: 'breachRepaired' }
+  | { type: 'dustStorm' }
   | { type: 'panelsFailing' }
   | { type: 'panelsRestored' }
   | { type: 'suitLow' }
@@ -85,7 +86,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'locked' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'ended';
 }
 
 export interface SimStats {

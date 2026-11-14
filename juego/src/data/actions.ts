@@ -3,10 +3,10 @@ import type { ActionCheck, ActionId } from '../sim/types';
 /** Textos de las acciones de cada sala (los números viven en sim/rules.ts). */
 export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
   repairAntenna: { label: 'Reparar la antena', why: 'La antena se desajusta con los días y la señal con la Tierra se debilita. Conecta los cables en el minijuego para repararla. La Tierra tarda casi 3 segundos en responder.' },
-  growLights: { label: 'Encender luces de las algas', why: 'Las algas del invernadero dan O₂ y comida: un poco ahora y más al terminar el día.' },
+  growLights: { label: 'Encender luces de las algas', why: 'Minijuego: mantén la luz, los nutrientes y la temperatura de las algas en la franja verde. La luz calienta el tanque, así que subirla te obliga a compensar. Cuanto mejor lo hagas, más O₂ y comida dan las algas.' },
   harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas.' },
-  cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'El polvo lunar tapa las celdas de los paneles. Los limpias a mano con un cepillo (minijuego); al terminar, la energía vuelve a renovarse sola.' },
-  cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuánto polvo junta en un día. Se limpia a mano con el cepillo (minijuego). Una vez por día.' },
+  cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'Las tormentas de polvo lunar tapan las celdas de los paneles cuando menos lo esperas. Solo se puede limpiar cuando llega una: se hace a mano con un cepillo (minijuego) y al terminar la energía vuelve a renovarse sola.' },
+  cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuando una tormenta de polvo lo ensucia, límpialo con el cepillo y oriéntalo hacia el Sol para medir cuánta energía da. Afuera hay radiación y el traje gasta oxígeno. Una vez por día.' },
   eva: { label: 'Recoger muestras de hielo', why: 'Muestras para la ciencia. Afuera hay más radiación y el traje gasta oxígeno. Una vez por día.' },
   repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire: el oxígeno de la nave baja hasta cerrarla. Sigue la grieta con el sellador (minijuego).' },
   pedal: { label: 'Pedalear', why: 'La bicicleta de la estación convierte tu esfuerzo en energía: sigue el ritmo. Cuesta un poco de comida. Hasta 3 veces por día.' },
@@ -23,6 +23,7 @@ export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = 
   night: 'Es de noche: los paneles no reciben luz.',
   noLink: 'La señal es débil: alinea la antena en Comunicaciones.',
   evaDone: 'Ya saliste hoy. Vuelve mañana.',
+  clean: 'Los paneles están limpios. Cuando una tormenta de polvo los cubra, podrás limpiarlos.',
   doneToday: 'Eso ya lo hiciste hoy. Vuelve mañana.',
   ended: 'La misión terminó.',
 };

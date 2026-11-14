@@ -105,12 +105,13 @@ describe('límite por día de las acciones de cada investigación', () => {
     expect(sim.canAct('growLights').ok).toBe(true);
   });
 
-  it('el panel de pruebas se limpia una vez por jornada y también limpia el polvo', () => {
+  it('el panel de pruebas se mide una vez por jornada y no limpia los paneles de la estación', () => {
     const sim = makeSim({ drain: 0 });
     sim.enter('exterior', 'surface');
     sim.comp.dust = 0.7;
+    sim.testDirty = true; // una tormenta de polvo ensució el panel
     sim.act('cleanTestPanel');
-    expect(sim.comp.dust).toBe(0);
+    expect(sim.comp.dust).toBe(0.7);
     sim.tick(ACTION_COOLDOWN_SEC + 0.1);
     expect(sim.canAct('cleanTestPanel').reason).toBe('doneToday');
     expect(sim.canAct('cleanDust').ok).toBe(true);

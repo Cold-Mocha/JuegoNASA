@@ -3,8 +3,8 @@ import { ROOM_ZONE } from './rules';
 
 /**
  * Plano de la Estación Central como UN solo mundo continuo (vista cenital 3/4, en píxeles de mapa).
- * Layout: la NAVE arriba (Soporte vital, Puente y Enfermería sobre un pasillo central que termina en
- * Comunicaciones; la Esclusa abajo) y AFUERA la superficie lunar (paneles solares y roca con hielo),
+ * Layout: la NAVE compacta arriba (Soporte vital, Puente y Enfermería sobre un pasillo central; Esclusa y
+ * Comunicaciones justo debajo) y AFUERA la superficie lunar (paneles solares y roca con hielo),
  * a la que se sale por la Esclusa, con el invernadero al fondo.
  * Salas y pasillos son rectángulos ("áreas"); dos áreas se conectan donde se solapan.
  * Todo es puro: la escena solo lo dibuja.
@@ -13,20 +13,20 @@ export interface Rect { x: number; y: number; w: number; h: number; }
 export interface Point { x: number; y: number; }
 export interface Obstacle extends Point { r: number; }
 
-export const MAP_W = 3000;
-export const MAP_H = 2900;
+export const MAP_W = 2400;
+export const MAP_H = 2800;
 /** Alto de la pared del fondo (cara norte) que se ve sobre cada piso. */
 export const WALL_H = 130;
 
-/** Piso caminable de cada sala. `exterior` es la superficie lunar (sin paredes). */
+/** Piso caminable de cada sala. `exterior` es la superficie lunar (sin paredes). Nave compacta: tres salas arriba, un pasillo y dos abajo. */
 export const ROOM_RECTS: Record<RoomId, Rect> = {
   soporte:        { x: 300,  y: 200,  w: 560,  h: 360 },
-  puente:         { x: 1000, y: 200,  w: 560,  h: 360 },
-  enfermeria:     { x: 1700, y: 200,  w: 560,  h: 360 },
-  comunicaciones: { x: 2300, y: 640,  w: 460,  h: 360 },
-  esclusa:        { x: 1060, y: 1180, w: 440,  h: 360 },
-  exterior:       { x: 200,  y: 1720, w: 2600, h: 520 },
-  invernadero:    { x: 400,  y: 2420, w: 760,  h: 380 },
+  puente:         { x: 920,  y: 200,  w: 560,  h: 360 },
+  enfermeria:     { x: 1540, y: 200,  w: 560,  h: 360 },
+  comunicaciones: { x: 1540, y: 1020, w: 460,  h: 360 },
+  esclusa:        { x: 980,  y: 1020, w: 440,  h: 360 },
+  exterior:       { x: 200,  y: 1600, w: 2000, h: 520 },
+  invernadero:    { x: 400,  y: 2300, w: 760,  h: 380 },
 };
 
 /** Pasillo o camino. `outdoors`: está afuera de la nave (el traje gasta oxígeno y no hay protección). */
@@ -34,13 +34,14 @@ export interface Hall extends Rect { outdoors?: boolean; }
 
 /** Pasillos de la nave y caminos de afuera. Se meten 80 px en lo que unen (sin rendijas al chocar). */
 export const HALLS: readonly Hall[] = [
-  { x: 480, y: 795, w: 1900, h: 150 },  // pasillo central → Comunicaciones
-  { x: 515, y: 480, w: 130, h: 395 },   // → Soporte vital
-  { x: 1215, y: 480, w: 130, h: 395 },  // → Puente
-  { x: 1915, y: 480, w: 130, h: 395 },  // → Enfermería
-  { x: 1145, y: 865, w: 130, h: 395 },  // → Esclusa
-  { x: 1145, y: 1460, w: 130, h: 340, outdoors: true }, // Esclusa → superficie lunar (en línea con el pasillo de la Esclusa)
-  { x: 715, y: 2160, w: 130, h: 340, outdoors: true },  // superficie → invernadero
+  { x: 515, y: 690, w: 1370, h: 140 },  // pasillo central
+  { x: 515, y: 480, w: 130, h: 290 },   // → Soporte vital
+  { x: 1135, y: 480, w: 130, h: 290 },  // → Puente
+  { x: 1755, y: 480, w: 130, h: 290 },  // → Enfermería
+  { x: 1135, y: 750, w: 130, h: 350 },  // → Esclusa
+  { x: 1705, y: 750, w: 130, h: 350 },  // → Comunicaciones
+  { x: 1135, y: 1300, w: 130, h: 380, outdoors: true }, // Esclusa → superficie lunar
+  { x: 715, y: 2040, w: 130, h: 340, outdoors: true },  // superficie → invernadero
 ];
 
 /** Margen de los pies del michi con cada borde (la pared norte es alta: más margen arriba). */

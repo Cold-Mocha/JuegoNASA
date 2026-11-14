@@ -60,15 +60,15 @@ function play(missionId: string, diffId: string, smart: boolean, seed = 3, skyFr
       }
     }
     const r = sim.res;
-    if (sim.resupplyOpen) sim.chooseResupply(r.energy < r.life ? 'energy' : 'life');
+    if (sim.resupplyOpen) sim.chooseResupply(r.energy < r.oxygen ? 'energy' : 'oxygen');
     // 1) mantener lo básico
     if (!sim.forecastValid && !sim.isPending('forecast') && sim.comp.antenna >= 0.4 && want('puente', 'forecast')) continue;
     if (sim.comp.antenna < 0.6 && !sim.isPending('alignAntenna') && want('comunicaciones', 'alignAntenna')) continue;
-    if (r.life < 45 && want('soporte', 'recycleAir')) continue;
+    if (r.oxygen < 45 && want('soporte', 'recycleAir')) continue;
     if (sim.light > 0 && r.energy < 50 && r.radiation < 75 && want('exterior', 'orientPanels')) continue;
     // 2) avanzar la investigación: la primera tarea pendiente que se pueda hacer ahora
     const task = sim.tasks.find((t) => t.kind === 'action' && sim.taskProgress(t) < t.count && doable(t.action) && !sim.isPending(t.action)
-      && (t.action !== 'eva' || (r.life > 30 && r.radiation < 60)));
+      && (t.action !== 'eva' || (r.oxygen > 30 && r.radiation < 60)));
     if (task && task.kind === 'action' && want(taskRoom(task), task.action)) continue;
     // 3) sin tareas posibles ahora: cuidar energía mientras hay sol
     if (sim.light > 0 && r.energy < 90 && r.radiation < 70 && want('exterior', 'orientPanels')) continue;
@@ -93,6 +93,6 @@ describe('balance de las jornadas científicas', () => {
 
   it('la misma investigación es más difícil con el Sol de mayo de 2024 que con el de diciembre de 2019', () => {
     const rad = (sky: string) => play('hielo-lunar', 'piloto', true, 3, sky).resources.radiation;
-    expect(rad('cazadores-tormentas')).toBeGreaterThan(rad('huerto-lunar'));
+    expect(rad('paneles-solares')).toBeGreaterThan(rad('huerto-lunar'));
   });
 });

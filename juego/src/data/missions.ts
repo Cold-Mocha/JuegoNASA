@@ -10,7 +10,7 @@ import type { ActionId, RoomId, SolarEvent, TaskGoal } from '../sim/types';
  * propuestas del equipo: sus fuentes se revisarán en una iteración siguiente.
  * Agregar una jornada = un objeto aquí (y, si hace falta, una semana nueva en donki-archive.ts).
  */
-export type MissionId = 'huerto-lunar' | 'hielo-lunar' | 'cazadores-tormentas';
+export type MissionId = 'huerto-lunar' | 'paneles-solares' | 'hielo-lunar';
 
 /** Tarea con su texto para el jugador. */
 export type ResearchTask = TaskGoal & { label: string };
@@ -25,44 +25,45 @@ export interface Mission {
   accent: string;        // token de color del design system
   archiveId: string;
   tasks: ResearchTask[];
+  newObject: string;     // objeto interactivo que solo aparece con esta jornada
 }
 
 /** Plazo de cada jornada científica (días lunares comprimidos). */
 export const MISSION_DAYS = 7;
 
 const act = (id: string, action: ActionId, count: number, label: string): ResearchTask => ({ id, kind: 'action', action, count, label });
-const shelter = (id: string, count: number, label: string): ResearchTask => ({ id, kind: 'shelter', count, label });
 
-/** Tres jornadas, una por nivel: primero sin llamaradas, después con algunas y al final la gran tormenta. */
+/** Tres jornadas: las dos primeras con el Sol tranquilo y la tercera con llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
   {
-    id: 'huerto-lunar', name: 'Huerto lunar', level: 1, accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Rack de plantas y algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
     question: '¿Pueden las algas darnos aire y comida en la Luna?',
-    brief: 'Las algas crecen con luz y fabrican aire. Sal al invernadero, cultívalas, limpia el aire y manda los resultados a la Tierra. Esa semana el Sol estuvo tranquilo.',
+    brief: 'Cultiva algas para fabricar aire. El Sol está tranquilo.',
     tasks: [
       act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 veces'),
-      act('huerto-aire', 'recycleAir', 2, 'Limpiar el aire 2 veces'),
+      act('huerto-cosecha', 'harvest', 2, 'Cosechar el invernadero 2 veces'),
+      act('huerto-aire', 'recycleAir', 2, 'Reciclar el aire 2 veces'),
       act('huerto-datos', 'alignAntenna', 1, 'Mandar los resultados a la Tierra'),
     ],
   },
   {
-    id: 'hielo-lunar', name: 'Hielo en la Luna', level: 2, accent: 'comet-cyan', archiveId: 'oct-2024', tagline: 'Sol de octubre de 2024',
+    id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
+    brief: 'Orienta y limpia los paneles solares.',
+    tasks: [
+      act('paneles-orientar', 'orientPanels', 3, 'Orientar los paneles solares 3 veces'),
+      act('paneles-polvo', 'cleanDust', 2, 'Limpiar el polvo de los paneles 2 veces'),
+      act('paneles-datos', 'alignAntenna', 1, 'Mandar los datos a la Tierra'),
+    ],
+  },
+  {
+    id: 'hielo-lunar', name: 'Hielo en la Luna', level: 3, newObject: 'Taladro de hielo', accent: 'comet-cyan', archiveId: 'oct-2024', tagline: 'Sol de octubre de 2024',
     question: '¿Hay agua congelada cerca de la estación?',
-    brief: 'Los cráteres de los polos lunares casi no reciben sol y pueden guardar hielo. Pide el pronóstico, sal a la roca con hielo y avisa a la Tierra.',
+    brief: 'Busca hielo en la roca de afuera.',
     tasks: [
       act('hielo-pronostico', 'forecast', 1, 'Pedir el pronóstico del Sol antes de salir'),
       act('hielo-muestras', 'eva', 2, 'Recoger muestras de hielo 2 veces'),
       act('hielo-datos', 'alignAntenna', 1, 'Mandar los datos a la Tierra'),
-    ],
-  },
-  {
-    id: 'cazadores-tormentas', name: 'Cazadores de tormentas', level: 3, accent: 'nebula-magenta', archiveId: 'may-2024', tagline: 'Sol de mayo de 2024',
-    question: '¿Cómo protegemos a la tripulación de las llamaradas?',
-    brief: 'En mayo de 2024 el Sol lanzó muchas llamaradas fuertes en una semana. Pide pronósticos, vuelve a la nave a tiempo y manda el informe.',
-    tasks: [
-      act('tormenta-pronosticos', 'forecast', 2, 'Pedir 2 pronósticos del Sol'),
-      shelter('tormenta-refugio', 2, 'Pasar 2 llamaradas dentro de la nave'),
-      act('tormenta-informe', 'alignAntenna', 1, 'Mandar el informe a la Tierra'),
     ],
   },
 ];

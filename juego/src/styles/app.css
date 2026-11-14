@@ -146,7 +146,8 @@ button { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) { .hud__guide.is-onscreen .hud__guide-arrow { animation: none; } }
 
 /* estadísticas compactas arriba a la derecha */
-.hud__stats { position: absolute; left: var(--space-4); top: var(--space-4); width: 300px; padding: var(--space-3); display: grid; gap: 6px; }
+.hud__left { position: absolute; left: var(--space-4); top: var(--space-4); width: 300px; display: grid; gap: var(--space-2); }
+.hud__stats { padding: var(--space-3); display: grid; gap: 6px; }
 .hud__stats .mn-bar { grid-template-columns: 112px 1fr 38px; gap: var(--space-2); }
 .hud__stats .mn-bar__label { min-width: 0; font-size: 13px; line-height: 16px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
 .hud__stats .mn-bar__label .mn-icon { width: 15px; height: 15px; vertical-align: 0; }
@@ -194,7 +195,7 @@ button { font-family: inherit; }
 .controls__pointer { margin: 0 0 var(--space-3); font: 500 15px/20px var(--font-display); color: var(--ink-muted); }
 
 
-.resupply { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-top: var(--space-4); }
+.resupply { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-top: var(--space-4); }
 .option--small { min-height: 120px; justify-content: center; }
 
 /* ---------- Archivo científico ---------- */
@@ -251,7 +252,7 @@ button { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) { .hud__dash.is-denied .mn-bar__track { animation: none; } }
 
 /* oxígeno del traje: aparece bajo el reloj al salir de la nave */
-.hud__suit { position: absolute; left: 50%; top: 138px; transform: translateX(-50%); width: 340px; padding: var(--space-3); display: grid; gap: 4px; text-align: center; }
+.hud__suit { padding: var(--space-3); display: grid; gap: 4px; text-align: center; }
 .hud__suit .mn-bar { grid-template-columns: auto 1fr 40px; gap: var(--space-2); }
 .hud__suit .mn-bar__label { min-width: 0; font-size: 13px; line-height: 16px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
 .hud__suit .mn-bar__label .mn-icon { width: 15px; height: 15px; vertical-align: 0; }
@@ -338,3 +339,64 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 [data-calm] .option { transition-property: opacity, border-color, box-shadow; }
 [data-calm] .option:active { transform: none; }
 [data-calm] :is(.hud .mn-bar__fill, .hud__daybar i) { transition: none; }
+
+/* ---------- Colores propios de cada stat (barras, iconos y cajas del envío) ---------- */
+:root { --stat-energy: var(--star-gold); --stat-oxygen: var(--comet-cyan); --stat-food: var(--solar-coral); --stat-health: #7ed957; --stat-radiation: var(--nebula-magenta); --stat-suit: var(--nebula-violet); }
+.hud__stats .mn-bar--energy, .resupply__opt--energy { --bar-color: var(--stat-energy); }
+.hud__stats .mn-bar--oxygen, .resupply__opt--oxygen { --bar-color: var(--stat-oxygen); }
+.hud__stats .mn-bar--hunger, .resupply__opt--food { --bar-color: var(--stat-food); }
+.hud__stats .mn-bar--health, .resupply__opt--health { --bar-color: var(--stat-health); }
+.hud__stats .mn-bar--radiation { --bar-color: var(--stat-radiation); }
+.hud__suit .mn-bar--oxygen { --bar-color: var(--stat-suit); }
+.hud__stats .mn-bar__label .mn-icon, .hud__suit .mn-bar__label .mn-icon, .hud__stats .mn-bar__value { color: var(--bar-color); }
+.hud__stats .mn-bar.is-critical .mn-bar__value, .hud__stats .mn-bar.is-critical .mn-bar__label .mn-icon { color: var(--danger); }
+.resupply__opt { border-color: var(--bar-color); }
+.resupply__icon { display: inline-flex; color: var(--bar-color); }
+.resupply__icon .mn-icon { width: 32px; height: 32px; }
+.resupply__opt .option__subtitle { color: var(--bar-color); }
+@media (max-width: 760px) { .resupply { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- Selector de tripulante: michis en vertical a la izquierda y vista previa al lado (cabe en 1280×720) ---------- */
+.select { min-height: 0; }
+.select__grid.is-roster { display: flex; align-items: stretch; justify-content: center; gap: var(--space-5); max-width: 1080px; min-height: 0; padding-bottom: var(--space-2); }
+.roster { display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); flex: 0 1 470px; min-height: 0; }
+.option--row { flex-direction: row; text-align: left; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); min-height: 0; }
+.option--row .option__art { height: 64px; width: 64px; flex: none; }
+.option--row .option__art > svg { width: 64px; height: 64px; }
+.option--row .option__text { display: grid; gap: 0; min-width: 0; }
+.option--row .option__title { margin: 0; font-size: 20px; line-height: 24px; }
+.option--row .option__subtitle { font-size: 15px; line-height: 19px; }
+.option--row .option__body { font-size: 14px; line-height: 18px; }
+.preview { flex: 1 1 380px; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-4); text-align: center; }
+.preview__stage { flex: 1 1 auto; min-height: 0; width: 100%; display: grid; place-items: center; }
+.preview__sprite { height: 100%; max-height: 320px; aspect-ratio: 1; max-width: 100%; background-repeat: no-repeat; }
+.preview__role { color: var(--star-gold); font-size: 16px; line-height: 20px; }
+@media (max-width: 860px) {
+  .select__grid.is-roster { flex-direction: column; }
+  .roster { flex-basis: auto; width: 100%; }
+}
+
+/* Datos de cada jornada: una etiqueta por línea */
+.option__chips { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+
+/* ---------- Minijuego de limpiar paneles ---------- */
+.dust-layout { display: flex; gap: var(--space-5); align-items: flex-start; }
+.dust-side { display: grid; gap: var(--space-3); align-content: start; min-width: 0; flex: 1; }
+.dust { position: relative; touch-action: none; user-select: none; flex: none; }
+.dust canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dust__dirt { cursor: none; }
+.dust__brush { position: absolute; left: 0; top: 0; pointer-events: none; filter: drop-shadow(0 4px 0 rgba(14, 11, 51, .35)); }
+.dust-result { margin: 0; display: flex; align-items: center; gap: var(--space-2); font: 600 17px/22px var(--font-display); color: var(--aurora-teal); }
+.dust-result[hidden] { display: none; }
+.dust-side .mn-panel__footer { margin-top: var(--space-2); }
+
+/* ---------- Minijuego de sellar la fractura ---------- */
+.seal { position: relative; touch-action: none; user-select: none; flex: none; }
+.seal canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.seal__bead { cursor: none; }
+.seal__air { position: absolute; inset: 0; pointer-events: none; transition: opacity .3s ease-out; }
+.seal__air i { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, rgba(223, 243, 255, .5) 60%, transparent 72%); animation: seal-puff 1.5s ease-out infinite; }
+@keyframes seal-puff { 0% { transform: translate(0, 0) scale(.5); opacity: .9; } 100% { transform: translate(var(--dx, 18px), -26px) scale(1.7); opacity: 0; } }
+.seal__air i:nth-child(odd) { --dx: -18px; }
+.seal__tool { position: absolute; left: 0; top: 0; pointer-events: none; filter: drop-shadow(0 4px 0 rgba(14, 11, 51, .35)); }
+@media (prefers-reduced-motion: reduce) { .seal__air i { animation: none; opacity: .6; } }

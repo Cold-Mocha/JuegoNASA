@@ -7,24 +7,28 @@ export type RoomId = 'soporte' | 'puente' | 'enfermeria' | 'comunicaciones' | 'e
  */
 export type Zone = 'ship' | 'greenhouse' | 'surface';
 
+/** 10 acciones, hasta 2 por máquina (teclas 1 y 2 en el panel). */
 export type ActionId =
-  | 'alignAntenna' | 'recycleAir' | 'growLights' | 'forecast' | 'orientPanels' | 'eva';
+  | 'alignAntenna' | 'recycleAir' | 'cookMeal' | 'growLights' | 'harvest' | 'forecast' | 'orientPanels' | 'cleanDust' | 'eva' | 'heal' | 'repair';
 
-export type ResupplyChoice = 'life' | 'energy';
+export type ResupplyChoice = 'oxygen' | 'food' | 'energy' | 'health';
 
 /**
- * Solo 3 recursos (el reto pide 2–3 para 7–12 años): energía, soporte vital y radiación.
- * `life` = soporte vital (aire y comida juntos). `radiation` es la dosis acumulada en % del límite de la misión.
+ * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).
+ * La salud baja cuando falta oxígeno o comida, o la radiación es alta; con salud 0 la misión termina.
  */
 export interface Resources {
   energy: number;
-  life: number;
+  oxygen: number;
+  food: number;
+  health: number;
   radiation: number;
 }
 
 /** Componentes físicos que se degradan (0–1). */
 export interface Components {
   antenna: number; // calidad del enlace con la Tierra (se muestra como "Señal")
+  dust: number;    // polvo en los paneles (0 = limpios, 1 = cubiertos): variable oculta que baja lo que rinden
 }
 
 /** Llamarada ubicada en la línea de tiempo de la misión. */
@@ -55,8 +59,8 @@ export interface SimConfig {
   tasks?: TaskGoal[];
 }
 
-/** Por qué terminó antes de tiempo: se acabó el soporte vital, la radiación llegó al límite o se acabó el plazo. */
-export type DeathCause = 'life' | 'radiation' | 'timeout';
+/** Por qué terminó antes de tiempo: salud en 0 (por falta de oxígeno, de comida, por radiación o varias a la vez) o se acabó el plazo. */
+export type DeathCause = 'oxygen' | 'food' | 'radiation' | 'mixed' | 'timeout';
 
 export type SimEvent =
   | { type: 'dayStart'; day: number; light: number }
@@ -68,15 +72,19 @@ export type SimEvent =
   | { type: 'resupplyOffer'; day: number }
   | { type: 'resupplyMissed'; day: number }
   | { type: 'critical'; resource: keyof Resources }
+  | { type: 'breachOpened'; room: RoomId }
+  | { type: 'breachRepaired' }
+  | { type: 'panelsFailing' }
+  | { type: 'panelsRestored' }
   | { type: 'suitLow' }
-  | { type: 'suitEmpty'; lifeLost: number }
+  | { type: 'suitEmpty'; oxygenLost: number }
   | { type: 'taskDone'; id: string }
   | { type: 'gameOver'; cause: DeathCause }
   | { type: 'missionComplete' };
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'night' | 'noLink' | 'evaDone' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'ended';
 }
 
 export interface SimStats {

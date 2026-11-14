@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Loadout } from '../core/state';
-import { PROP_ASSETS } from './rooms';
+import { propAssetsFor } from './rooms';
 
 /** Animaciones del michi de papel (assets/personajes/michi-papel/animaciones/animaciones.json). */
 export const MICHI_ANIMS = {
@@ -24,7 +24,8 @@ export const michiKey = (helmet: boolean, anim: MichiAnim): string => `michi-${h
  * El plano de la estación no se descarga: se rasteriza desde SVG (`core/stationArt.ts`) en la misma pantalla.
  */
 export function queueStationAssets(load: Phaser.Loader.LoaderPlugin, loadout: Loadout): void {
-  for (const asset of PROP_ASSETS) if (!load.textureManager.exists(propKey(asset))) load.image(propKey(asset), `game/props/${asset}.png`);
+  const { plain, marked } = propAssetsFor(loadout.mission);
+  for (const asset of [...plain, ...marked, 'fractura-marcado']) if (!load.textureManager.exists(propKey(asset))) load.svg(propKey(asset), `game/props/${asset}.svg`, { scale: 1.25 });
   for (const helmet of [false, true]) {
     for (const anim of Object.keys(MICHI_ANIMS) as MichiAnim[]) {
       const key = michiKey(helmet, anim);

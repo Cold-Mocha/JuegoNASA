@@ -13,7 +13,6 @@ import { addDrawnProps, drawnPropsReady } from '../core/propArt';
 import { MAP_W, MAP_H } from '../sim/stationMap';
 
 const BAND = GAME_HEIGHT;          // alto de cada capa en pantalla (no a escala)
-const ROCKET_Y = 400;
 const GROUND = GAME_HEIGHT - 70;
 
 /**
@@ -29,7 +28,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
   private loadProgress = 0;
   private shown = 0;
   private elapsed = 0;
-  private minMs = 6000;
+  private minMs = 3000;
   private done = false;
 
   constructor() {
@@ -46,7 +45,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
     // Todas las misiones van a la Estación Central, en la superficie lunar
     this.layers = [...LAYERS, CISLUNAR];
-    this.minMs = reduced ? 2500 : 6000;
+    this.minMs = reduced ? 1200 : 3000;
     Object.assign(this, { loadProgress: 0, shown: 0, elapsed: 0, done: false, ready: true });
 
     fadeIn(this);
@@ -130,11 +129,10 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
     if (!state.settings.ultraLight) this.addFlame();
 
-    // despegue: el cohete sube hasta su altura de crucero y desde ahí "sube" el mundo
-    this.tweens.add({ targets: this.rocket, y: ROCKET_Y, duration: reduced ? 1 : 1200, ease: 'Quad.in' });
+    // despegue: el cohete sube sin pausas de la plataforma hasta salir por arriba (su altura sigue al progreso, ver update)
     if (!reduced) {
       this.tweens.add({ targets: this.rocket, angle: { from: -2.5, to: 2.5 }, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-      this.cameras.main.shake(900, 0.004);
+      this.cameras.main.shake(500, 0.004);
     }
   }
 
@@ -153,18 +151,21 @@ export class LaunchLoadingScene extends Phaser.Scene {
     if (!this.ready) return;
     this.elapsed += delta;
     const target = Math.min(this.loadProgress, this.elapsed / this.minMs);
-    this.shown += (target - this.shown) * Math.min(1, delta / 120);
+    this.shown += (target - this.shown) * Math.min(1, delta / 80);
     if (target >= 1 && this.shown > 0.995) this.shown = 1;
 
     const n = this.layers.length;
     this.world.y = Phaser.Math.Easing.Sine.InOut(this.shown) * (n - 1) * BAND + this.shown * 120;
+
+    // el cohete solo sube: de la plataforma al borde de arriba, acelerando, sin quedarse flotando a mitad de camino
+    const lift = Phaser.Math.Easing.Quadratic.In(this.shown);
+    this.rocket.setY(Phaser.Math.Linear(GROUND - 64, -160, lift)).setScale(Phaser.Math.Linear(0.5, 0.3, this.shown));
 
     if (this.shown >= 1 && !this.done) this.arrive();
   }
 
   private arrive(): void {
     this.done = true;
-    this.tweens.add({ targets: this.rocket, y: -160, scale: 0.3, duration: state.calm ? 1 : 900, ease: 'Quad.in', delay: 600 });
-    this.time.delayedCall(2200, () => fadeTo(this, SCENES.station, 400));
+    this.time.delayedCall(150, () => fadeTo(this, SCENES.station, 300));
   }
 }

@@ -1,9 +1,9 @@
 import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
-  EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC, FORECAST_HORIZON_DAYS, GROW_LIGHTS_LIFE_AT_DUSK,
-  LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_LIFE_PER_DAY, PASSIVE_PER_DAY, RESUPPLY_AMOUNT, RESUPPLY_DAYS, ROOM_ZONE, SHELTER_FACTOR,
-  SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_LIFE, SUIT_SECONDS, clamp,
+  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC, FORECAST_HORIZON_DAYS,
+  GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, RESUPPLY_AMOUNT, RESUPPLY_DAYS, ROOM_ZONE, SHELTER_FACTOR,
+  SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
 import { flareDose } from './flares';
@@ -29,7 +29,7 @@ export interface MissionSummary {
   stats: SimStats;
 }
 
-const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'life', 'radiation'];
+const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health', 'radiation'];
 
 /** Avance de una tarea (0..count) según lo hecho: sirve en la partida y en el informe final. */
 export function taskProgress(t: TaskGoal, stats: SimStats, science: number): number {
@@ -50,8 +50,8 @@ export class Simulation {
   zone: Zone = 'ship';
   /** Oxígeno del traje (0–100). Solo baja en la superficie. */
   suit = 100;
-  res: Resources = { energy: 60, life: 70, radiation: 0 };
-  comp: Components = { antenna: 1 };
+  res: Resources = { energy: 60, oxygen: 70, food: 70, health: 100, radiation: 0 };
+  comp: Components = { antenna: 1, dust: 0 };
   science = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
@@ -66,7 +66,8 @@ export class Simulation {
   private cooldowns = new Map<ActionId, number>();
   private forecastUntilDay = 0;
   private evaDay = 0;
-  private duskLife = 0;
+  private duskOxygen = 0;
+  private duskFood = 0;
   private travelUntil = 0;
   private travelTo: RoomId | null = null;
   private hall = false;
@@ -74,6 +75,9 @@ export class Simulation {
   private resupplyDay = 0;
   private critical = new Set<keyof Resources>();
   private suitWarned = false;
+  private panelsWereOk = true;
+  /** Sala donde hay una fractura (el oxígeno no se regenera, ni en la nave ni en el traje) o null. */
+  breach: RoomId | null = null;
 
   constructor(config: SimConfig) {
     this.config = { ...config, events: [...config.events].sort((a, b) => a.day - b.day || a.hour - b.hour) };
@@ -122,6 +126,16 @@ export class Simulation {
   /** El michi está en un pasillo (camina libre por el plano): no hay máquinas a mano. */
   get inHall(): boolean {
     return this.hall;
+  }
+
+  /** Rendimiento de los paneles (0–1): el polvo les quita hasta DUST_MAX_LOSS. */
+  get panelEfficiency(): number {
+    return 1 - this.comp.dust * DUST_MAX_LOSS;
+  }
+
+  /** Los paneles funcionan mientras generen al menos lo que gasta la nave (entonces la energía se renueva sola). */
+  get panelsOk(): boolean {
+    return PANEL_REGEN_PER_DAY * this.panelEfficiency >= -PASSIVE_PER_DAY.energy * this.config.drain;
   }
 
   /** Radio buena o mala: lo único que ve el jugador del enlace con la Tierra. */
@@ -177,7 +191,8 @@ export class Simulation {
     const rule = ACTIONS[action];
     const d: ActionDelta = { ...rule.cost };
     for (const [k, v] of Object.entries(rule.gain) as [keyof Resources, number][]) d[k] = (d[k] ?? 0) + v;
-    if (action === 'orientPanels') d.energy = Math.round(20 * this.light);
+    if (this.breach && d.oxygen !== undefined && d.oxygen > 0) delete d.oxygen; // con fractura el oxígeno no se regenera
+    if (action === 'orientPanels') d.energy = Math.round(20 * this.light * (1 - this.comp.dust * DUST_MAX_LOSS));
     if (action === 'eva') {
       if (this.flareActive) d.radiation = (d.radiation ?? 0) * EVA_FACTOR;
       d.science = rule.science;
@@ -187,10 +202,13 @@ export class Simulation {
 
   canAct(action: ActionId): ActionCheck {
     if (this.ended) return { ok: false, reason: 'ended' };
-    if (this.traveling || this.hall || ACTIONS[action].room !== this.room) return { ok: false, reason: 'busy' };
+    const room = action === 'repair' ? this.breach : ACTIONS[action].room;
+    if (!room || this.traveling || this.hall || room !== this.room) return { ok: false, reason: 'busy' };
+    if (action === 'recycleAir' && this.breach) return { ok: false, reason: 'leak' };
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return { ok: false, reason: 'cooldown' };
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
+    if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
     if (action === 'orientPanels' && this.light === 0) return { ok: false, reason: 'night' };
     if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
     if (action === 'eva' && this.evaDay === this.day) return { ok: false, reason: 'evaDone' };
@@ -208,7 +226,9 @@ export class Simulation {
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 
     switch (action) {
-      case 'growLights': this.duskLife += GROW_LIGHTS_LIFE_AT_DUSK; break;
+      case 'growLights': if (!this.breach) this.duskOxygen += GROW_LIGHTS_AT_DUSK.oxygen; this.duskFood += GROW_LIGHTS_AT_DUSK.food; break;
+      case 'cleanDust': this.comp.dust = 0; break;
+      case 'repair': this.breach = null; this.events.push({ type: 'breachRepaired' }); break;
       case 'eva': this.evaDay = this.day; this.stats.evas++; break;
       default: break;
     }
@@ -241,7 +261,7 @@ export class Simulation {
   }
 
   chooseResupply(choice: ResupplyChoice): boolean {
-    if (!this.resupplyOpen) return false;
+    if (!this.resupplyOpen || (choice === 'oxygen' && this.breach)) return false;
     this.apply({ [choice]: RESUPPLY_AMOUNT });
     this.resupplyDay = 0;
     this.stats.resupplies++;
@@ -276,8 +296,11 @@ export class Simulation {
 
     const k = (dt / len) * this.config.drain;
     const shield = this.sheltered ? SHELTER_FACTOR : 1;
-    this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k);
-    this.res.life = clamp(this.res.life + PASSIVE_PER_DAY.life * k + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_LIFE_PER_DAY * k : 0));
+    this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k + PANEL_REGEN_PER_DAY * this.panelEfficiency * (dt / len));
+    this.checkPanels();
+    this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
+    this.res.food = clamp(this.res.food + PASSIVE_PER_DAY.food * k);
+    this.updateHealth(k);
     this.res.radiation = clamp(this.res.radiation + BACKGROUND_RADIATION_PER_DAY * (dt / len) * shield);
 
     this.updateSuit(dt);
@@ -286,6 +309,30 @@ export class Simulation {
     this.resolvePending();
     this.checkDepleted();
     this.checkCritical();
+  }
+
+  /** Cada jornada puede abrirse una fractura en una sala de la nave (una a la vez). */
+  private rollBreach(): void {
+    if (this.breach || this.day < BREACH_FROM_DAY || this.rnd() >= BREACH_CHANCE) return;
+    this.breach = BREACH_ROOMS[Math.floor(this.rnd() * BREACH_ROOMS.length)];
+    this.events.push({ type: 'breachOpened', room: this.breach });
+  }
+
+  /** Avisa cuando los paneles empiezan a fallar (la energía va a bajar) y cuando se arreglan. */
+  private checkPanels(): void {
+    const ok = this.panelsOk;
+    if (ok === this.panelsWereOk) return;
+    this.panelsWereOk = ok;
+    this.events.push({ type: ok ? 'panelsRestored' : 'panelsFailing' });
+  }
+
+  /** La salud baja mientras falte oxígeno o comida, o la radiación sea muy alta. */
+  private updateHealth(k: number): void {
+    let loss = 0;
+    if (this.res.oxygen <= HEALTH_DANGER_AT) loss += HEALTH_LOSS_PER_DAY.oxygen;
+    if (this.res.food <= HEALTH_DANGER_AT) loss += HEALTH_LOSS_PER_DAY.food;
+    if (this.res.radiation >= HEALTH_RADIATION_AT) loss += HEALTH_LOSS_PER_DAY.radiation;
+    if (loss) this.res.health = clamp(this.res.health + loss * k);
   }
 
   private updateFlares(dt: number, shield: number): void {
@@ -323,6 +370,7 @@ export class Simulation {
   /** El traje gasta oxígeno en la superficie y se recarga en la nave o el invernadero. Vacío = rescate. */
   private updateSuit(dt: number): void {
     if (this.zone !== 'surface') {
+      if (this.breach) return; // con una fractura el traje no se recarga ni en la nave ni en el invernadero
       this.suit = Math.min(100, this.suit + SUIT_REFILL_PER_SEC * dt);
       if (this.suit > SUIT_LOW) this.suitWarned = false;
       return;
@@ -333,12 +381,12 @@ export class Simulation {
       this.events.push({ type: 'suitLow' });
     }
     if (this.suit > 0) return;
-    this.apply({ life: SUIT_RESCUE_LIFE });
+    this.apply({ oxygen: SUIT_RESCUE_OXYGEN });
     this.room = 'esclusa';
     this.zone = 'ship';
     this.travelTo = null;
     this.hall = false;
-    this.events.push({ type: 'suitEmpty', lifeLost: -SUIT_RESCUE_LIFE });
+    this.events.push({ type: 'suitEmpty', oxygenLost: -SUIT_RESCUE_OXYGEN });
     this.checkDepleted();
   }
 
@@ -359,10 +407,16 @@ export class Simulation {
     }
   }
 
-  /** Sin soporte vital o con la radiación al límite, la tripulación vuelve a la Tierra (sin barra de salud intermedia). */
+  /** Con salud 0 (o la radiación al límite) la tripulación vuelve a la Tierra; la causa es la que estaba en peligro. */
   private checkDepleted(): void {
-    if (this.res.life <= 0) this.finish(false, 'life');
-    else if (this.res.radiation >= 100) this.finish(false, 'radiation');
+    if (this.res.radiation >= 100) this.finish(false, 'radiation');
+    else if (this.res.health <= 0) {
+      const causes: DeathCause[] = [];
+      if (this.res.oxygen <= HEALTH_DANGER_AT) causes.push('oxygen');
+      if (this.res.food <= HEALTH_DANGER_AT) causes.push('food');
+      if (this.res.radiation >= HEALTH_RADIATION_AT) causes.push('radiation');
+      this.finish(false, causes.length === 1 ? causes[0] : 'mixed');
+    }
   }
 
   private checkCritical(): void {
@@ -376,8 +430,11 @@ export class Simulation {
   }
 
   private closeDay(): void {
-    this.res.life = clamp(this.res.life + this.duskLife);
-    this.duskLife = 0;
+    if (!this.breach) this.res.oxygen = clamp(this.res.oxygen + this.duskOxygen);
+    this.res.food = clamp(this.res.food + this.duskFood);
+    this.duskOxygen = 0;
+    this.duskFood = 0;
+    this.comp.dust = Math.min(1, this.comp.dust + between(this.rnd, DUST_PER_DAY));
     this.comp.antenna = Math.max(0, this.comp.antenna - between(this.rnd, ANTENNA_DRIFT_PER_DAY));
     if (this.day >= this.config.days) {
       // fin del plazo: gana si sobrevivió y (si hay investigación) la terminó
@@ -388,6 +445,7 @@ export class Simulation {
     this.day++;
     this.resupplyDay = 0;
     this.events.push({ type: 'dayStart', day: this.day, light: this.light });
+    this.rollBreach();
     if ((RESUPPLY_DAYS as readonly number[]).includes(this.day)) {
       if (this.radioOk) {
         this.resupplyDay = this.day;

@@ -17,7 +17,9 @@ const STAR_OFF = STAR.replace(' is-earned', '');
 
 /** Qué enseña cada final: el error se explica con la causa real, sin castigar. */
 const LESSONS: Record<DeathCause | 'won', { text: string; entry: string }> = {
-  life: { text: 'Se acabó el aire y la comida. En una base real, las máquinas de aire y las algas necesitan energía: si la energía falla, el soporte vital también.', entry: 'algae-oxygen' },
+  oxygen: { text: 'Se acabó el oxígeno y la salud llegó a cero. Las máquinas de aire y las algas necesitan energía: si la energía falla, el oxígeno también.', entry: 'algae-oxygen' },
+  food: { text: 'Se acabó la comida y la salud llegó a cero. En una base real, el invernadero y las raciones se planifican con días de anticipación.', entry: 'algae-oxygen' },
+  mixed: { text: 'Faltaron varias cosas a la vez (oxígeno, comida o protección) y la salud llegó a cero. Revisar las barras con frecuencia evita que un problema arrastre a los otros.', entry: 'algae-oxygen' },
   radiation: { text: 'La radiación acumulada fue demasiada. La Luna no tiene aire ni campo magnético que la protejan: por eso las bases tienen paredes gruesas. Dentro de la nave estás a salvo, y el pronóstico del Sol te da tiempo de volver.', entry: 'moon-radiation' },
   timeout: { text: 'Se acabó el plazo antes de terminar la investigación. Planear el orden de las tareas ahorra camino y tiempo, como hacen los equipos de misión.', entry: 'lunar-day' },
   won: { text: 'Terminaste la investigación cuidando los recursos justo lo necesario para hacer ciencia de verdad en la Luna. Así trabajan los equipos de misión.', entry: 'donki' },

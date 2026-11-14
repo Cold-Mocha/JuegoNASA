@@ -6,8 +6,8 @@ export type AchievementId =
 
 /** Logros que se desbloquean al terminar una jornada científica (los textos están en data/achievements.ts). */
 export const SCIENTIST_GOAL = 4;
-/** "Tripulación sana": volver con menos de esta radiación acumulada. */
-export const HEALTHY_DOSE = 30;
+/** "Tripulación sana": volver con al menos esta salud. */
+export const HEALTHY_HEALTH = 80;
 export function earnedAchievements(s: MissionSummary): AchievementId[] {
   const out: AchievementId[] = [];
   if (s.stats.forecasts > 0) out.push('first-forecast');
@@ -16,7 +16,7 @@ export function earnedAchievements(s: MissionSummary): AchievementId[] {
   if (s.stats.evas > 0) out.push('explorer');
   if (s.stats.antennaAligns > 0) out.push('strong-signal');
   if (s.won) out.push('mission-complete');
-  if (s.won && s.resources.radiation < HEALTHY_DOSE) out.push('healthy-crew');
+  if (s.won && s.resources.health >= HEALTHY_HEALTH) out.push('healthy-crew');
   if (s.science >= SCIENTIST_GOAL) out.push('scientist');
   return out;
 }

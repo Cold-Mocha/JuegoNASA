@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, GROW_LIGHTS_LIFE_AT_DUSK, LIGHT_BY_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR, EARTH_MOON_ROUND_TRIP_SEC, ACTION_COOLDOWN_SEC } from '../../src/sim/rules';
+import { ACTIONS, GROW_LIGHTS_AT_DUSK, LIGHT_BY_DAY, PASSIVE_PER_DAY, SHELTER_FACTOR, EARTH_MOON_ROUND_TRIP_SEC, ACTION_COOLDOWN_SEC } from '../../src/sim/rules';
 import { flareDose } from '../../src/sim/flares';
 import type { ActionId, SimEvent } from '../../src/sim/types';
 import { DAY, flare, goTo, makeSim, run } from './helpers';
@@ -12,13 +12,13 @@ describe('consumo pasivo y calendario lunar', () => {
     const start = { ...sim.res };
     run(sim, DAY * 0.999, 0.1);
     expect(sim.res.energy).toBeCloseTo(start.energy + PASSIVE_PER_DAY.energy, 0);
-    expect(sim.res.life).toBeCloseTo(start.life + PASSIVE_PER_DAY.life, 0);
+    expect(sim.res.oxygen).toBeCloseTo(start.oxygen + PASSIVE_PER_DAY.oxygen, 0);
   });
 
   it('el multiplicador de dificultad escala el consumo', () => {
     const easy = makeSim({ drain: 0.5 });
     run(easy, DAY * 0.999, 0.1);
-    expect(easy.res.life).toBeCloseTo(70 + PASSIVE_PER_DAY.life * 0.5, 0);
+    expect(easy.res.oxygen).toBeCloseTo(70 + PASSIVE_PER_DAY.oxygen * 0.5, 0);
   });
 
   it('la luz sigue el calendario: 3 de día, 1 atardecer, 3 de noche', () => {
@@ -59,8 +59,8 @@ describe('ninguna decisión es gratis', () => {
     goTo(sim, 'enfermeria'); goTo(sim, 'comunicaciones'); goTo(sim, 'soporte');
     const before = { ...sim.res };
     const d = sim.act('recycleAir');
-    expect(d).toMatchObject({ energy: -6, life: 15 });
-    expect(sim.res.life).toBeCloseTo(before.life + 15, 5);
+    expect(d).toMatchObject({ energy: -6, oxygen: 15 });
+    expect(sim.res.oxygen).toBeCloseTo(before.oxygen + 15, 5);
     expect(sim.res.energy).toBeCloseTo(before.energy - 6, 5);
   });
 
@@ -75,11 +75,11 @@ describe('ninguna decisión es gratis', () => {
   it('las luces de las algas dan soporte vital ya y más al cierre de la jornada', () => {
     const sim = makeSim({ drain: 0 });
     goTo(sim, 'enfermeria'); goTo(sim, 'comunicaciones'); goTo(sim, 'esclusa'); goTo(sim, 'invernadero');
-    const life = sim.res.life;
+    const life = sim.res.oxygen;
     sim.act('growLights');
-    expect(sim.res.life).toBe(life + 10);
+    expect(sim.res.oxygen).toBe(life + 10);
     sim.tick(DAY);
-    expect(sim.res.life).toBe(life + 10 + GROW_LIGHTS_LIFE_AT_DUSK);
+    expect(sim.res.oxygen).toBe(life + 10 + GROW_LIGHTS_AT_DUSK.oxygen);
   });
 });
 
@@ -135,13 +135,13 @@ describe('reglas de cada acción', () => {
   it('una salida al exterior por jornada; siempre da 2 de ciencia', () => {
     const sim = makeSim({ drain: 0 });
     goTo(sim, 'esclusa');
-    expect(sim.act('eva')).toMatchObject({ science: 2, life: -10 });
+    expect(sim.act('eva')).toMatchObject({ science: 2, oxygen: -10 });
     sim.tick(4);
     expect(sim.canAct('eva').reason).toBe('evaDone');
     sim.tick(DAY);
     sim.comp.antenna = 0.3;
     expect(sim.preview('eva').science).toBe(2);
-    sim.res.life = 5;
+    sim.res.oxygen = 5;
     expect(sim.canAct('eva').reason).toBe('noLife');
   });
 
@@ -191,10 +191,10 @@ describe('reglas de cada acción', () => {
     run(sim, 5, 0.1);
     expect(sim.suit).toBe(100);
     sim.enter('exterior', 'surface');
-    const life = sim.res.life;
+    const life = sim.res.oxygen;
     run(sim, 60, 0.1);
     expect(sim.room).toBe('esclusa');
-    expect(sim.res.life).toBeLessThan(life);
+    expect(sim.res.oxygen).toBeLessThan(life);
   });
 
   it('travel ignora destinos inválidos', () => {
@@ -236,9 +236,9 @@ describe('envíos de la Tierra (power-up con costo de oportunidad)', () => {
     sim.comp.antenna = 1;
     sim.tick(1.1);
     expect(sim.resupplyOpen).toBe(true);
-    const life = sim.res.life;
-    expect(sim.chooseResupply('life')).toBe(true);
-    expect(sim.res.life).toBe(life + 25);
+    const life = sim.res.oxygen;
+    expect(sim.chooseResupply('oxygen')).toBe(true);
+    expect(sim.res.oxygen).toBe(life + 25);
     expect(sim.chooseResupply('energy')).toBe(false);
   });
 
@@ -253,12 +253,12 @@ describe('envíos de la Tierra (power-up con costo de oportunidad)', () => {
 });
 
 describe('fin de misión', () => {
-  it('sin soporte vital termina con causa "life"', () => {
+  it('sin soporte vital termina con causa "oxygen"', () => {
     const sim = makeSim();
-    sim.res.life = 0.01;
+    sim.res.oxygen = 0.01;
     run(sim, 2, 0.25);
     expect(sim.ended).toBe('lost');
-    expect(sim.cause).toBe('life');
+    expect(sim.cause).toBe('oxygen');
     expect(types(sim.drainEvents())).toContain('gameOver');
     expect(sim.summary().won).toBe(false);
   });
@@ -278,10 +278,10 @@ describe('fin de misión', () => {
 
   it('avisa una sola vez cuando un recurso entra en estado crítico', () => {
     const sim = makeSim();
-    sim.res.life = 21;
+    sim.res.oxygen = 21;
     run(sim, 10, 0.25);
     run(sim, 10, 0.25);
-    expect(sim.drainEvents().filter((e) => e.type === 'critical' && e.resource === 'life')).toHaveLength(1);
+    expect(sim.drainEvents().filter((e) => e.type === 'critical' && e.resource === 'oxygen')).toHaveLength(1);
   });
 
   it('completar las 7 jornadas gana la misión', () => {

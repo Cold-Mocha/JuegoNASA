@@ -6,7 +6,7 @@ import { ACHIEVEMENTS } from '../../src/data/achievements';
 
 const base: MissionSummary = {
   won: true, cause: null, daysSurvived: 5, days: 7, science: 6, tasksDone: 3, tasksTotal: 3,
-  resources: { energy: 40, life: 40, radiation: 20 },
+  resources: { energy: 40, oxygen: 40, food: 40, health: 90, radiation: 20 },
   stats: { forecasts: 1, shelteredFlares: 2, unshieldedFlares: 0, evas: 3, antennaAligns: 1, resupplies: 1, actions: 20, actionsBy: {} },
 };
 

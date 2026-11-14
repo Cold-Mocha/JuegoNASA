@@ -7,11 +7,12 @@ import type { MissionId } from '../data/missions';
 
 /** Un solo icono por concepto en toda la app (HUD, acciones, tareas, mapa, archivo, logros e informe). */
 export const RESOURCE_ICON: Record<keyof Resources | 'science', IconName> = {
-  energy: 'bolt', life: 'oxygen', radiation: 'radiation', science: 'flask',
+  energy: 'bolt', oxygen: 'oxygen', food: 'sprout', health: 'heart', radiation: 'radiation', science: 'flask',
 };
 
 export const ACTION_ICON: Record<ActionId, IconName> = {
-  alignAntenna: 'antenna', recycleAir: 'wind', growLights: 'sprout', forecast: 'radar', orientPanels: 'panel', eva: 'snowflake',
+  alignAntenna: 'antenna', recycleAir: 'wind', cookMeal: 'bolt', growLights: 'sprout', harvest: 'sprout', forecast: 'radar',
+  orientPanels: 'panel', cleanDust: 'panel', eva: 'snowflake', heal: 'heart', repair: 'gear',
 };
 
 export const ROOM_ICON: Record<RoomId, IconName> = {
@@ -22,7 +23,7 @@ export const ROOM_ICON: Record<RoomId, IconName> = {
 export const taskIcon = (t: TaskGoal): IconName => (t.kind === 'action' ? ACTION_ICON[t.action] : t.kind === 'shelter' ? 'shield' : 'flask');
 
 export const MISSION_ICON: Record<MissionId, IconName> = {
-  'huerto-lunar': 'sprout', 'hielo-lunar': 'snowflake', 'cazadores-tormentas': 'sun',
+  'huerto-lunar': 'sprout', 'paneles-solares': 'panel', 'hielo-lunar': 'snowflake',
 };
 
 export const CATEGORY_ICON: Record<EntryCategory, IconName> = {

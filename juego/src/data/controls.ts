@@ -5,7 +5,7 @@ export interface Control {
   action: string;
 }
 
-/** Pocas teclas para 8–12 años: caminar, usar, impulso, saltar, mapa y pausa. */
+/** 6 controles: caminar, usar, impulso, saltar, mapa y pausa. */
 export const CONTROLS: Control[] = [
   { keys: ['W', 'A', 'S', 'D'], alt: 'o flechas', action: 'Caminar' },
   { keys: ['E'], action: 'Usar la máquina que tienes cerca (otra vez E para confirmar)' },

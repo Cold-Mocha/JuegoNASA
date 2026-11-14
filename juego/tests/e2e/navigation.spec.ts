@@ -57,11 +57,11 @@ test.describe('carga y navegación', () => {
   test('flujo completo: historia → selector → cohete → estación → pausa → mapa → acción', async ({ page }) => {
     const problems = watchConsole(page);
     await seedStorage(page, {}, { tutorialDone: true, best: {}, achievements: [], readEntries: [] });
-    await startMission(page, { mission: 'cazadores-tormentas' });
+    await startMission(page, { mission: 'paneles-solares' });
 
     await expect(page.locator('[data-day]')).toHaveText('Jornada 1/7');
     await expect(page.locator('[data-date]')).toContainText('2017');
-    await expect(page.locator('[data-res="life"]')).toHaveAttribute('aria-valuenow', /\d+/);
+    await expect(page.locator('[data-res="oxygen"]')).toHaveAttribute('aria-valuenow', /\d+/);
 
     // Pausa → Ajustes → Archivo → volver
     await page.keyboard.press('Escape');
@@ -125,7 +125,7 @@ test.describe('carga y navegación', () => {
     await startMission(page, { mission: 'hielo-lunar', difficulty: 'cadete', timescale: 50 });
     // los envíos de la Tierra detienen el reloj hasta elegir una caja: el test elige oxígeno
     await expect(async () => {
-      const crate = page.locator('[data-action="resupply"][data-id="life"]');
+      const crate = page.locator('[data-action="resupply"][data-id="oxygen"]');
       if (await crate.isVisible()) await crate.click();
       await expect(page.locator('[data-report]')).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 45_000 });

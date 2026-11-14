@@ -57,14 +57,10 @@ export function missionArtSvg(id: MissionId, accent: string): string {
       <path d="M80 94 V58" stroke="#0e0b33" stroke-width="9" stroke-linecap="round"/><path d="M80 94 V58" stroke="#2f8f3a" stroke-width="4" stroke-linecap="round"/>
       <path d="M80 66 C80 44 96 30 122 30 C122 54 104 66 80 66 Z" fill="#5ad6b2" ${O}/>
       <path d="M80 78 C80 60 66 50 42 50 C42 68 56 78 80 78 Z" fill="#7ed957" ${O}/>`,
-    'cazadores-tormentas': `${Array.from({ length: 10 }, (_, i) => {
-        const a = (i * Math.PI) / 5;
-        return `<line x1="${62 + 40 * Math.cos(a)}" y1="${62 + 40 * Math.sin(a)}" x2="${62 + 50 * Math.cos(a)}" y2="${62 + 50 * Math.sin(a)}" stroke="#ffcb47" stroke-width="6" stroke-linecap="round"/>`;
-      }).join('')}
-      <circle cx="62" cy="62" r="32" fill="#ffcb47" ${O}/>
-      <path d="M86 40 Q108 20 120 34 Q104 36 94 54 Z" fill="#ee5fd6" ${O}/>
-      <path d="M106 70 L136 82 V102 C136 120 123 133 106 139 C89 133 76 120 76 102 V82 Z" fill="#9b7bff" ${O}/>
-      <path d="M92 104 L102 114 L122 92" fill="none" stroke="#faf8f0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'paneles-solares': `<circle cx="120" cy="38" r="20" fill="#ffcb47" ${O}/>
+      <path d="M36 118 L56 70 H132 L112 118 Z" fill="#322a8a" ${O}/>
+      <path d="M46 94 H122 M80 70 L72 118 M104 70 L92 118" stroke="#4cc3f5" stroke-width="3" fill="none"/>
+      <path d="M72 118 V136 M42 136 H102" stroke="#0e0b33" stroke-width="7" stroke-linecap="round"/>`,
   };
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" aria-hidden="true">
   <circle cx="80" cy="80" r="70" fill="${accent}" opacity=".18"/>${art[id]}</svg>`;

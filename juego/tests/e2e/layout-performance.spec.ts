@@ -58,7 +58,7 @@ test.describe('rendimiento', () => {
 
   test('FPS estables en la estación y memoria JS acotada', async ({ page }) => {
     await seedStorage(page, {}, { tutorialDone: true, best: {}, achievements: [], readEntries: [] });
-    await startMission(page, { mission: 'cazadores-tormentas' });
+    await startMission(page, { mission: 'paneles-solares' });
     await page.keyboard.down('ArrowRight');
     const result = await page.evaluate(() => new Promise<{ fps: number; worst: number }>((resolve) => {
       const times: number[] = [];

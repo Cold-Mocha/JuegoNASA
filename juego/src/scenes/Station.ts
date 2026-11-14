@@ -504,7 +504,7 @@ export class StationScene extends Phaser.Scene {
         m.sprite.setScale(base);
       }
       if (want && !state.calm) {
-        this.pulses.set(m, this.tweens.add({ targets: m.sprite, scale: base * 1.07, duration: 560, yoyo: true, repeat: -1, ease: 'Sine.inOut' }));
+        this.pulses.set(m, this.tweens.add({ targets: m.sprite, scale: base * 1.03, duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.inOut' }));
       }
     }
   }
@@ -602,11 +602,8 @@ export class StationScene extends Phaser.Scene {
         this.alert('¡Investigación lista! Ahora avisa a la Tierra: repara la antena.', 'ok');
         break;
       case 'taskDone': {
-        const t = this.mission.tasks.find((x) => x.id === ev.id);
-        audio.play('achievement');
-        if (t) this.alert(`✓ Tarea cumplida: ${t.label}`, 'ok');
+        audio.play('achievement'); // sin cartel: el avance se ve en la lista de tareas
         this.renderTasks();
-    this.updateMachines();
         break;
       }
       case 'critical': {
@@ -843,7 +840,6 @@ export class StationScene extends Phaser.Scene {
           <section class="hud__tasks mn-panel" aria-label="Investigación">
             <span class="hud__tasks-name">${esc(this.mission.name)}</span>
             <div class="hud__tabs" role="tablist" aria-label="Tareas">
-              <button class="hud__tab is-current" role="tab" data-action="tasks-tab" data-tab="1">Investigación</button>
               <button class="hud__tab" role="tab" data-action="tasks-tab" data-tab="2" data-tab2 hidden>Avisar a la Tierra</button>
             </div>
             <ul class="mn-checklist" data-tasks></ul>
@@ -882,7 +878,7 @@ export class StationScene extends Phaser.Scene {
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
-      .on('tasks-tab', (el) => { this.taskTab = el.dataset.tab === '2' ? 2 : 1; this.renderTasks(); })
+      .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
       .on('read-info', (el) => this.openArchive(el.dataset.entry))
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
@@ -915,6 +911,7 @@ export class StationScene extends Phaser.Scene {
       countdown.classList.toggle('is-safe', s.sheltered);
     }
     this.renderTasks();
+    this.updateMachines();
 
     const fps = this.ui.q('[data-fps]');
     fps.hidden = !state.settings.showFps;

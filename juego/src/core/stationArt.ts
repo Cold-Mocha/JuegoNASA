@@ -1,5 +1,5 @@
 import { HALLS, MAP_H, MAP_W, ROOM_RECTS, WALL_H, type Rect } from '../sim/stationMap';
-import { ROOM_ZONE } from '../sim/rules';
+import { ROOM_ZONE, WORLD_SCALE } from '../sim/rules';
 import { ROOM_IDS } from '../data/rooms';
 import type { RoomId } from '../sim/types';
 
@@ -9,6 +9,8 @@ import type { RoomId } from '../sim/types';
  * es exactamente lo que se camina. Se rasteriza una vez durante la pantalla del cohete.
  */
 export const MAP_TEXTURE = 'station-map';
+/** Resolución de la textura del plano (1 = tamaño real; el mapa debe seguir bajo los 4096 px de alto que aceptan las GPU chicas). */
+export const MAP_RASTER = 1;
 
 const INK = '#0b0c0f';
 const PAPER = '#6b707a';     // borde exterior del casco (gris medio, opaco)
@@ -97,7 +99,7 @@ const floor = (r: Rect): string => rect(r, 'url(#tiles)');
 /** Cráteres fijos (en coordenadas relativas a la superficie): decorativos, no estorban al caminar. */
 const CRATERS: readonly [number, number, number][] = [
   [180, 120, 70], [760, 380, 54], [1120, 300, 90], [1060, 110, 46], [1940, 420, 66], [960, 120, 38], [1780, 450, 40], [80, 420, 44],
-];
+].map(([x, y, rad]) => [x * WORLD_SCALE, y * WORLD_SCALE, rad * WORLD_SCALE]) as [number, number, number][];
 
 function surface(): string {
   const r = ROOM_RECTS.exterior;
@@ -105,7 +107,7 @@ function surface(): string {
   out += CRATERS.map(([x, y, rad]) => `<ellipse cx="${r.x + x}" cy="${r.y + y}" rx="${rad}" ry="${rad * 0.55}" fill="${GROUND_DARK}"/>
     <path d="M${r.x + x - rad} ${r.y + y} A${rad} ${rad * 0.55} 0 0 0 ${r.x + x + rad} ${r.y + y}" fill="none" stroke="${GROUND_LIGHT}" stroke-width="6"/>`).join('');
   // piedritas: patrón determinista
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < Math.round(90 * WORLD_SCALE ** 2); i++) {
     const px = r.x + 40 + ((i * 337) % (r.w - 80));
     const py = r.y + 30 + ((i * 211) % (r.h - 60));
     out += `<circle cx="${px}" cy="${py}" r="${3 + (i % 4)}" fill="${i % 3 ? GROUND_DARK : GROUND_LIGHT}"/>`;

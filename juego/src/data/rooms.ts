@@ -1,10 +1,11 @@
 import type { ActionId, RoomId } from '../sim/types';
 import type { MissionId } from './missions';
 import { ROOM_RECTS, type Point } from '../sim/stationMap';
+import { WORLD_SCALE } from '../sim/rules';
 
 /**
  * Salas de la Estación Central sobre el plano continuo (`sim/stationMap.ts`).
- * Posiciones (x, y) relativas a la esquina del piso de cada sala, en px de mapa:
+ * Posiciones (x, y) relativas a la esquina del piso de cada sala, en px del diseño base (se multiplican por WORLD_SCALE):
  * todos los objetos van en el piso ('interactive' y 'deco'): (x, y) = pies del objeto (centro inferior).
  * Cada máquina dice sus acciones (vacío = sala de lectura o información) y, si hace falta, su propio nombre.
  * El mapa base es fijo; cada investigación suma sus propios objetos (`only(...)`), que solo aparecen al elegirla.
@@ -37,63 +38,58 @@ const wall = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 
 const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ...p, missions: Array.isArray(missions) ? missions : [missions] });
 
 /**
- * Orden del mapa: las entradas de la nave están en la pared del fondo (x ≈ 215–345; Comunicaciones 165–295; Esclusa 155–285,
- * que además tiene la salida de abajo en la misma franja; Invernadero 315–445). Las máquinas van a la derecha de esa franja,
- * los casilleros y adornos a la izquierda, las cajas y plantas en los costados y el centro queda libre para caminar.
+ * Orden del mapa: las puertas de los pasillos dan a las franjas x ≈ 215–345 (Comunicaciones 165–295; Esclusa 155–285 arriba y abajo;
+ * Invernadero 315–445; Exterior 935–1065 arriba y 515–645 abajo). Esas franjas y el centro quedan libres para caminar; las máquinas
+ * y casilleros van contra la pared, y las cajas y plantas en los costados, una sola pila por lado y sin montarse sobre otro objeto.
  */
 export const ROOMS: Record<RoomId, Room> = {
   soporte: {
     id: 'soporte', name: 'Soporte vital',
-    props: [deco('reciclador-aire', 455, 78), // normalmente decorativo; cuando se rompe lo reemplaza 'reciclador-roto' (interactivo)
+    props: [deco('reciclador-aire', 445, 78), // normalmente decorativo; cuando se rompe lo reemplaza 'reciclador-roto' (interactivo)
       deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
-      deco('planta', 40, 215), deco('cajas', 60, 305), deco('cajas', 520, 352)],
+      deco('planta', 45, 255), deco('cajas', 480, 350)],
   },
   puente: {
     id: 'puente', name: 'Puente',
     props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
-      machine('bicicleta-estatica', 455, 120, ['pedal'], 'Bicicleta de energía'),
-      deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
-      deco('cajas', 520, 235), deco('cajas', 520, 305), deco('planta', 525, 352)],
+      machine('bicicleta-estatica', 445, 120, ['pedal'], 'Bicicleta de energía'),
+      deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   enfermeria: {
     id: 'enfermeria', name: 'Enfermería',
     props: [machine('camilla-medica', 450, 66, ['heal']),
-      deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
-      deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
-      deco('cajas', 520, 235), deco('cajas', 520, 305), deco('planta', 525, 352)],
+      deco('casillero', 62, 62), wall('extintor', 165, 12),
+      deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   comunicaciones: {
     id: 'comunicaciones', name: 'Comunicaciones',
     props: [machine('consola-antena', 355, 72, ['repairAntenna'], 'Antena de la Tierra'),
       deco('casillero', 62, 62), wall('extintor', 140, 12),
-      deco('planta', 40, 215), deco('mesa-comedor', 110, 352),
-      deco('cajas', 420, 235), deco('cajas', 420, 305)],
+      deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 400, 350)],
   },
   esclusa: {
     id: 'esclusa', name: 'Esclusa',
     props: [deco('casillero-trajes', 80, 66), deco('casillero-trajes', 370, 66), wall('extintor', 300, 12),
-      deco('planta', 40, 215), deco('cajas', 70, 345), deco('cajas', 420, 352)],
+      deco('planta', 45, 235), deco('cajas', 400, 350)],
   },
   exterior: {
     id: 'exterior', name: 'Superficie lunar',
-    props: [deco('panel-solar', 1550, 250), deco('panel-solar', 1260, 250), deco('panel-solar', 1840, 250),
-      machine('estacion-limpieza', 1550, 440, ['cleanDust'], 'Limpieza de polvo'),
-      deco('roca', 260, 140), deco('roca', 760, 430), deco('roca', 1100, 150), deco('roca', 1700, 150),
+    props: [deco('panel-solar', 760, 250), deco('panel-solar', 1260, 250), deco('panel-solar', 1600, 250),
+      machine('estacion-limpieza', 1600, 480, ['cleanDust'], 'Limpieza de polvo'),
+      deco('roca', 160, 150), deco('roca', 900, 470), deco('roca', 1900, 420),
       // objetos de cada investigación
       only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'Taladro de hielo')),
-      only('paneles-solares', machine('panel-solar', 960, 260, ['cleanTestPanel'], 'Panel de pruebas'))],
+      only('paneles-solares', machine('panel-solar', 440, 260, ['cleanTestPanel'], 'Panel de pruebas'))],
   },
   invernadero: {
     id: 'invernadero', name: 'Invernadero',
     props: [wall('extintor', 255, 12),
       // arriba a la derecha el rack de plantas (la cosecha está en todas las jornadas)
-      machine('rack-plantas', 650, 120, ['harvest'], 'Rack de plantas'),
+      machine('rack-plantas', 620, 100, ['harvest'], 'Rack de plantas'),
       // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
-      only('huerto-lunar', machine('tanque-algas', 105, 105, ['growLights'], 'Cultivo de algas')),
-      only('huerto-lunar', deco('bandeja-cultivo', 130, 352)), only('huerto-lunar', deco('bandeja-cultivo', 380, 352)),
-      only('huerto-lunar', deco('bandeja-cultivo', 630, 352)),
-      only('huerto-lunar', deco('planta', 38, 215)), only('huerto-lunar', deco('planta', 38, 305)),
-      only('huerto-lunar', deco('planta', 722, 235)), only('huerto-lunar', deco('planta', 722, 320))],
+      only('huerto-lunar', machine('tanque-algas', 115, 90, ['growLights'], 'Cultivo de algas')),
+      only('huerto-lunar', deco('bandeja-cultivo', 250, 350)), only('huerto-lunar', deco('bandeja-cultivo', 470, 350)),
+      only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250))],
   },
 };
 
@@ -106,7 +102,7 @@ export const roomProps = (room: RoomId, mission: MissionId): RoomProp[] =>
 /** Posición absoluta (en el mapa) de un objeto de la sala. */
 export function propPosition(room: RoomId, p: RoomProp): Point {
   const r = ROOM_RECTS[room];
-  return { x: r.x + p.x, y: r.y + p.y };
+  return { x: r.x + p.x * WORLD_SCALE, y: r.y + p.y * WORLD_SCALE };
 }
 
 const unique = (xs: string[]): string[] => [...new Set(xs)];

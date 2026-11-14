@@ -1,5 +1,5 @@
 import type { RoomId, Zone } from './types';
-import { ROOM_ZONE } from './rules';
+import { ROOM_ZONE, WORLD_SCALE } from './rules';
 
 /**
  * Plano de la Estación Central como UN solo mundo continuo (vista cenital 3/4, en píxeles de mapa).
@@ -13,13 +13,15 @@ export interface Rect { x: number; y: number; w: number; h: number; }
 export interface Point { x: number; y: number; }
 export interface Obstacle extends Point { r: number; }
 
-export const MAP_W = 2400;
-export const MAP_H = 2800;
+const sc = (r: Rect): Rect => ({ x: r.x * WORLD_SCALE, y: r.y * WORLD_SCALE, w: r.w * WORLD_SCALE, h: r.h * WORLD_SCALE });
+
+export const MAP_W = 2400 * WORLD_SCALE;
+export const MAP_H = 2800 * WORLD_SCALE;
 /** Alto de la pared del fondo (cara norte) que se ve sobre cada piso. */
-export const WALL_H = 130;
+export const WALL_H = 190;
 
 /** Piso caminable de cada sala. `exterior` es la superficie lunar (sin paredes). Nave compacta: tres salas arriba, un pasillo y dos abajo. */
-export const ROOM_RECTS: Record<RoomId, Rect> = {
+const BASE_ROOM_RECTS: Record<RoomId, Rect> = {
   soporte:        { x: 300,  y: 200,  w: 560,  h: 360 },
   puente:         { x: 920,  y: 200,  w: 560,  h: 360 },
   enfermeria:     { x: 1540, y: 200,  w: 560,  h: 360 },
@@ -29,11 +31,13 @@ export const ROOM_RECTS: Record<RoomId, Rect> = {
   invernadero:    { x: 400,  y: 2300, w: 760,  h: 380 },
 };
 
+export const ROOM_RECTS = Object.fromEntries(Object.entries(BASE_ROOM_RECTS).map(([id, r]) => [id, sc(r)])) as Record<RoomId, Rect>;
+
 /** Pasillo o camino. `outdoors`: está afuera de la nave (el traje gasta oxígeno y no hay protección). */
 export interface Hall extends Rect { outdoors?: boolean; }
 
 /** Pasillos de la nave y caminos de afuera. Se meten 80 px en lo que unen (sin rendijas al chocar). */
-export const HALLS: readonly Hall[] = [
+const BASE_HALLS: readonly Hall[] = [
   { x: 515, y: 690, w: 1370, h: 140 },  // pasillo central
   { x: 515, y: 480, w: 130, h: 290 },   // → Soporte vital
   { x: 1135, y: 480, w: 130, h: 290 },  // → Puente
@@ -43,6 +47,8 @@ export const HALLS: readonly Hall[] = [
   { x: 1135, y: 1300, w: 130, h: 380, outdoors: true }, // Esclusa → superficie lunar
   { x: 715, y: 2040, w: 130, h: 340, outdoors: true },  // superficie → invernadero
 ];
+
+export const HALLS: readonly Hall[] = BASE_HALLS.map((h) => ({ ...sc(h), outdoors: h.outdoors }));
 
 /** Margen de los pies del michi con cada borde (la pared norte es alta: más margen arriba). */
 const INSET = { side: 24, top: 36, bottom: 14 } as const;

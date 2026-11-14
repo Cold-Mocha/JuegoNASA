@@ -569,3 +569,23 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .bio__card { width: 96px; height: 120px; border-radius: 18px; border: 4px solid #0e0b33; background: var(--space-700); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 0 #0e0b33; }
 .bio__card.is-done { opacity: .45; box-shadow: none; border-color: var(--aurora-teal); }
 .bio__card.is-wrong { animation: dash-denied .32s ease-out; border-color: var(--danger); }
+
+/* ---------- Minijuegos de las investigaciones: cultivo de algas y panel de pruebas ---------- */
+.algae, .aim { position: relative; flex: none; touch-action: none; user-select: none; box-sizing: border-box; background: linear-gradient(#18144e, #241d6b); border: 2px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.algae__time, .aim__time { position: absolute; left: 16px; right: 16px; top: 12px; height: 12px; border-radius: var(--radius-pill); background: var(--space-600); border: 1px solid var(--line); overflow: hidden; z-index: 2; }
+.algae__time i, .aim__time i { display: block; height: 100%; width: 100%; background: var(--star-gold); }
+.algae__tank { position: absolute; left: 0; top: 30px; width: 100%; height: 190px; }
+.algae__gauge { position: absolute; top: 236px; width: 100px; height: 250px; border: 0; padding: 0; background: none; display: grid; grid-template-rows: auto 1fr; justify-items: center; gap: 6px; cursor: pointer; }
+.algae__track { position: relative; width: 34px; height: 100%; border-radius: var(--radius-pill); background: var(--space-600); border: 3px solid var(--ink-dark); box-sizing: border-box; }
+.algae__band { position: absolute; left: 0; right: 0; background: rgba(90, 214, 178, .55); border-top: 2px solid var(--aurora-teal); border-bottom: 2px solid var(--aurora-teal); }
+.algae__needle { position: absolute; left: -8px; right: -8px; height: 10px; margin-bottom: -5px; border-radius: 5px; background: var(--c); border: 3px solid var(--ink-dark); }
+.algae__gauge.is-ok .algae__track { border-color: var(--aurora-teal); box-shadow: 0 0 14px rgba(90, 214, 178, .7); }
+.algae__gauge:focus-visible { outline: 3px solid var(--star-gold); outline-offset: 4px; }
+.aim__sun { position: absolute; width: 64px; height: 64px; filter: drop-shadow(0 0 18px rgba(255, 203, 71, .7)); }
+.aim__panel { position: absolute; width: 160px; height: 110px; transition: none; }
+.aim__meter { position: absolute; right: 18px; top: 44px; bottom: 120px; width: 22px; border-radius: var(--radius-pill); background: var(--space-600); border: 3px solid var(--ink-dark); overflow: hidden; display: flex; align-items: flex-end; }
+.aim__meter i { display: block; width: 100%; background: var(--star-gold); }
+.aim.is-aligned .aim__meter i { background: var(--aurora-teal); }
+.aim__btn { position: absolute; bottom: 14px; width: 84px; height: 56px; border-radius: var(--radius-md); border: 3px solid var(--ink-dark); background: var(--lunar-200, #c4c2e0); display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 0 var(--ink-dark); }
+.aim__btn--l { left: 40px; } .aim__btn--r { right: 40px; }
+.aim__btn:active { transform: translateY(3px); box-shadow: none; }

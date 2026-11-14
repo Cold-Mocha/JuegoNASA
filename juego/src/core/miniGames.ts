@@ -405,3 +405,74 @@ export function mountBiosignature(root: HTMLElement, cb: MiniCallbacks): MiniGam
   cb.onProgress(0);
   return { destroy() { /* nada que limpiar */ } };
 }
+
+// ------------------------------------------------------------------ cultivo de algas: mantener luz, nutrientes y temperatura en su franja verde
+const ALGAE_SECONDS = 15;
+const ALGAE_NEEDED = 0.7;     // fracción del tiempo en rango que da el puntaje completo
+const ALGAE_HEAT_FROM_LIGHT = 0.3; // la luz calienta el tanque: subir la luz obliga a compensar la temperatura
+const ALGAE_GAUGES = [
+  { label: 'Luz', color: '#ffcb47', icon: '<circle cx="24" cy="24" r="8" fill="#ffcb47" stroke="#0e0b33" stroke-width="3"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M10 38l4-4M34 14l4-4" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>' },
+  { label: 'Nutrientes', color: '#4cc3f5', icon: '<path d="M24 6 C33 17 38 24 38 31 A14 14 0 0 1 10 31 C10 24 15 17 24 6Z" fill="#4cc3f5" stroke="#0e0b33" stroke-width="3" stroke-linejoin="round"/>' },
+  { label: 'Temperatura', color: '#ff7a59', icon: '<rect x="19" y="6" width="10" height="26" rx="5" fill="#f5f5f2" stroke="#0e0b33" stroke-width="3"/><circle cx="24" cy="35" r="8" fill="#ff7a59" stroke="#0e0b33" stroke-width="3"/><rect x="22.5" y="18" width="3" height="16" fill="#ff7a59"/>' },
+] as const;
+
+/**
+ * Cultivo de algas (sin texto): tres indicadores verticales se desvían solos; mantener apretado el de cada columna lo sube, soltarlo lo deja caer.
+ * Hay que tener las tres agujas dentro de su franja verde; la luz calienta el tanque, así que subirla obliga a compensar la temperatura.
+ * Puntaje = fracción del tiempo con las tres en rango.
+ */
+export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+  const band = ALGAE_GAUGES.map(() => ({ center: 0.35 + Math.random() * 0.3, half: 0.12 }));
+  const phase = ALGAE_GAUGES.map(() => Math.random() * 6.28);
+  const pos = ALGAE_GAUGES.map(() => 0.5);
+  const held = ALGAE_GAUGES.map(() => false);
+  root.innerHTML = `<div class="algae" style="width:${WIRE_W}px;height:${WIRE_H}px">
+    <div class="algae__time" role="progressbar" aria-label="Tiempo" aria-valuemin="0" aria-valuemax="${ALGAE_SECONDS}"><i data-time></i></div>
+    <svg class="algae__tank" viewBox="0 0 ${WIRE_W} 190" aria-hidden="true">
+      <rect x="70" y="20" width="240" height="150" rx="26" fill="#bfe6ff" fill-opacity=".25" stroke="#0e0b33" stroke-width="5"/>
+      <path d="M78 70 Q130 56 190 70 T302 70 V150 Q302 162 290 162 H90 Q78 162 78 150Z" fill="#2f8f3a" fill-opacity=".85"/>
+      <circle cx="120" cy="110" r="7" fill="#7ed957"/><circle cx="210" cy="132" r="9" fill="#7ed957"/><circle cx="260" cy="96" r="6" fill="#5ad6b2"/><circle cx="160" cy="145" r="5" fill="#5ad6b2"/>
+      <circle cx="105" cy="84" r="3.5" fill="#fff" opacity=".8"/><circle cx="240" cy="116" r="3" fill="#fff" opacity=".8"/><circle cx="182" cy="98" r="3" fill="#fff" opacity=".8"/>
+      <rect x="120" y="4" width="140" height="14" rx="7" fill="#ee5fd6" stroke="#0e0b33" stroke-width="3"/></svg>
+    ${ALGAE_GAUGES.map((g, i) => `<button class="algae__gauge" data-gauge="${i}" style="left:${28 + i * 112}px;--c:${g.color}" aria-label="${g.label}">
+      <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">${g.icon}</svg>
+      <span class="algae__track"><i class="algae__band" style="bottom:${(band[i].center - band[i].half) * 100}%;height:${band[i].half * 200}%"></i><i class="algae__needle" data-needle></i></span></button>`).join('')}</div>`;
+  const bar = root.querySelector<HTMLElement>('[data-time]')!;
+  const gauges = [...root.querySelectorAll<HTMLButtonElement>('[data-gauge]')];
+  const needles = gauges.map((g) => g.querySelector<HTMLElement>('[data-needle]')!);
+  let elapsed = 0;
+  let inRange = 0;
+  let last = performance.now();
+  let raf = 0;
+  const tick = (now: number): void => {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    elapsed += dt;
+    pos.forEach((p, i) => {
+      let v = (held[i] ? 0.4 : -0.2) + 0.12 * Math.sin(elapsed * 1.7 + phase[i]);
+      if (i === 2) v += ALGAE_HEAT_FROM_LIGHT * (pos[0] - 0.3); // la luz alta calienta; con luz baja el tanque se enfría
+      pos[i] = Math.min(1, Math.max(0, p + v * dt));
+      needles[i].style.bottom = `${pos[i] * 100}%`;
+    });
+    const ok = pos.map((p, i) => Math.abs(p - band[i].center) <= band[i].half);
+    gauges.forEach((g, i) => g.classList.toggle('is-ok', ok[i]));
+    if (ok.every(Boolean)) inRange += dt;
+    bar.style.width = `${Math.max(0, 1 - elapsed / ALGAE_SECONDS) * 100}%`;
+    cb.onProgress(Math.min(1, elapsed / ALGAE_SECONDS));
+    if (elapsed >= ALGAE_SECONDS) {
+      cb.onDone(Math.min(1, inRange / (ALGAE_SECONDS * ALGAE_NEEDED)));
+      return;
+    }
+    raf = requestAnimationFrame(tick);
+  };
+  const set = (i: number, on: boolean): void => { held[i] = on; };
+  gauges.forEach((g, i) => {
+    g.addEventListener('pointerdown', (ev) => { g.setPointerCapture(ev.pointerId); set(i, true); ev.preventDefault(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => g.addEventListener(n, () => set(i, false)));
+    g.addEventListener('keydown', (ev) => { if (ev.key === ' ' || ev.key === 'Enter') { set(i, true); ev.preventDefault(); } });
+    g.addEventListener('keyup', (ev) => { if (ev.key === ' ' || ev.key === 'Enter') set(i, false); });
+  });
+  raf = requestAnimationFrame(tick);
+  cb.onProgress(0);
+  return { destroy() { cancelAnimationFrame(raf); } };
+}

@@ -33,7 +33,9 @@
 | Puntaje con 7 términos y estrellas atadas a la salud | El niño no entiende qué mejorar | Rejugabilidad clara |
 | Tutorial de 6 pasos largos | Se salta o se olvida | Bajo umbral |
 
-## 3. Decisiones de simplificación (aplicadas)
+> **Nota (14-11-2026):** a pedido del equipo, las decisiones de abajo se **revirtieron** (5 barras con salud, 2 acciones por sala, polvo, impulso, 5 jornadas, 6 pasos de tutorial, jerga original). Este documento queda como registro de la propuesta.
+
+## 3. Decisiones de simplificación (propuestas; revertidas)
 
 1. **3 recursos, como pide el reto:** ⚡ **Energía**, 🫧 **Aire y comida** (soporte vital) y ☢ **Radiación** (el blindaje). Comida y oxígeno van juntos porque en el juego los produce la misma cadena de soporte vital (reciclador y algas). Se elimina la barra de **Salud**: perder pasa solo si el soporte vital llega a 0 o la radiación a 100 %, y así la causa siempre es una sola y clara.
 2. **Una acción por sala** (el Refugio alterna entrar/salir). Se quitan *Curarse* y *Limpiar polvo*, con su variable oculta. **E** abre la máquina y **E otra vez** confirma; el costo se ve antes de confirmar.

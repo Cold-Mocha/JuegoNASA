@@ -44,7 +44,7 @@ const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ..
 export const ROOMS: Record<RoomId, Room> = {
   soporte: {
     id: 'soporte', name: 'Soporte vital',
-    props: [machine('reciclador-aire', 455, 78, [], 'Reciclador de oxígeno'),
+    props: [deco('reciclador-aire', 455, 78), // normalmente decorativo; cuando se rompe lo reemplaza 'reciclador-roto' (interactivo)
       deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
       deco('planta', 40, 215), deco('cajas', 60, 305), deco('cajas', 520, 352)],
   },
@@ -85,19 +85,15 @@ export const ROOMS: Record<RoomId, Room> = {
   invernadero: {
     id: 'invernadero', name: 'Invernadero',
     props: [wall('extintor', 255, 12),
-      // la cosecha (comida) está en todas las jornadas; el cultivo de algas solo con la investigación del huerto
-      machine('rack-plantas', 640, 255, ['harvest'], 'Rack de plantas'),
-      only('huerto-lunar', machine('tanque-algas', 600, 82, ['growLights'], 'Cultivo de algas')),
-      only('huerto-lunar', deco('planta', 60, 62)), only('huerto-lunar', deco('planta', 180, 62)),
-      only('huerto-lunar', deco('planta', 40, 215)), only('huerto-lunar', deco('planta', 725, 352)),
-      only('huerto-lunar', deco('bandeja-cultivo', 120, 352)), only('huerto-lunar', deco('bandeja-cultivo', 400, 352)),
-      deco('cajas', 60, 290), deco('cajas', 560, 352)],
+      // arriba a la derecha el rack de plantas (la cosecha está en todas las jornadas)
+      machine('rack-plantas', 650, 120, ['harvest'], 'Rack de plantas'),
+      // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
+      only('huerto-lunar', machine('tanque-algas', 105, 105, ['growLights'], 'Cultivo de algas')),
+      only('huerto-lunar', deco('bandeja-cultivo', 130, 352)), only('huerto-lunar', deco('bandeja-cultivo', 380, 352)),
+      only('huerto-lunar', deco('bandeja-cultivo', 630, 352)),
+      only('huerto-lunar', deco('planta', 38, 215)), only('huerto-lunar', deco('planta', 38, 305)),
+      only('huerto-lunar', deco('planta', 722, 235)), only('huerto-lunar', deco('planta', 722, 320))],
   },
-};
-
-/** Dónde aparece la fractura (objeto interactivo temporal) en cada sala de la nave donde puede abrirse. */
-export const BREACH_SLOTS: Partial<Record<RoomId, { x: number; y: number }>> = {
-  soporte: { x: 430, y: 195 },
 };
 
 export const ROOM_IDS = Object.keys(ROOMS) as RoomId[];
@@ -118,10 +114,10 @@ const unique = (xs: string[]): string[] => [...new Set(xs)];
 export function propAssetsFor(mission: MissionId): { plain: string[]; marked: string[] } {
   const props = ROOM_IDS.flatMap((id) => roomProps(id, mission));
   return {
-    plain: unique(props.filter((p) => p.kind !== 'interactive').map((p) => p.asset)),
+    plain: unique(props.map((p) => p.asset)), // las máquinas también: se ven normales hasta que se puede interactuar con ellas
     marked: unique(props.filter((p) => p.kind === 'interactive').map((p) => `${p.asset}-marcado`)),
   };
 }
 
 /** Textura de un objeto: las máquinas usan la versión marcada. */
-export const textureAsset = (p: RoomProp): string => (p.kind === 'interactive' ? `${p.asset}-marcado` : p.asset);
+export const textureAsset = (p: RoomProp, active: boolean): string => (p.kind === 'interactive' && active ? `${p.asset}-marcado` : p.asset);

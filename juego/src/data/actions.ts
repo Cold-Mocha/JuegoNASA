@@ -1,4 +1,4 @@
-import type { ActionCheck, ActionId, ResupplyChoice } from '../sim/types';
+import type { ActionCheck, ActionId } from '../sim/types';
 
 /** Textos de las acciones de cada sala (los números viven en sim/rules.ts). */
 export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
@@ -8,8 +8,8 @@ export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
   cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'El polvo lunar tapa las celdas de los paneles. Los limpias a mano con un cepillo (minijuego); al terminar, la energía vuelve a renovarse sola.' },
   cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuánto polvo junta en un día. Se limpia a mano con el cepillo (minijuego). Una vez por día.' },
   eva: { label: 'Recoger muestras de hielo', why: 'Muestras para la ciencia. Afuera hay más radiación y el traje gasta oxígeno. Una vez por día.' },
-  repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire. Sigue la grieta con el sellador (minijuego); al cerrarla, el oxígeno vuelve a regenerarse.' },
-  heal: { label: 'Curarse', why: 'La enfermería recupera tu salud. Gasta energía y un poco de comida.' },
+  repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire: el oxígeno de la nave baja hasta cerrarla. Sigue la grieta con el sellador (minijuego).' },
+  heal: { label: 'Curarse', why: 'Minijuego: trata cada herida de la camilla. Recupera salud; gasta energía y un poco de comida.' },
 };
 
 export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = {
@@ -17,19 +17,13 @@ export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = 
   cooldown: 'Espera un momento…',
   noEnergy: 'No hay energía suficiente.',
   noFood: 'No hay comida suficiente.',
+  locked: 'Primero termina las tareas de la investigación.',
   leak: 'Hay una fractura: el aire se escapa. Repárala primero.',
   night: 'Es de noche: los paneles no reciben luz.',
   noLink: 'La señal es débil: alinea la antena en Comunicaciones.',
   evaDone: 'Ya saliste hoy. Vuelve mañana.',
   doneToday: 'Eso ya lo hiciste hoy. Vuelve mañana.',
   ended: 'La misión terminó.',
-};
-
-export const RESUPPLY_TEXT: Record<ResupplyChoice, string> = {
-  oxygen: 'Tanques de oxígeno',
-  food: 'Cajas de comida',
-  energy: 'Baterías cargadas',
-  health: 'Botiquín médico',
 };
 
 export const RESOURCE_TEXT = {
@@ -44,9 +38,4 @@ export const RESOURCE_TEXT = {
 
 /** Máquinas sin acciones: información (y, si tienen, una ficha del Archivo para leer). */
 export const MACHINE_INFO: Record<string, { body: string; read?: string; entry?: string }> = {
-  'reciclador-aire': {
-    body: 'Saca el CO₂ que exhalas y repone el oxígeno: funciona solo mientras esté entero. Si se abre una fractura, deja de regenerar el aire: sella la grieta que aparece a su lado.',
-    read: 'Leer: las algas y el oxígeno',
-    entry: 'algae-oxygen',
-  },
 };

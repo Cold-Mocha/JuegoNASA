@@ -62,6 +62,18 @@ function drawPlate(ctx: CanvasRenderingContext2D, poly: Pt[]): void {
   ctx.fillStyle = '#e4e3f2';
   for (let x = 38; x < W - 30; x += 40) for (const y of [38, H - 38]) { ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   for (let y = 78; y < H - 60; y += 40) for (const x of [38, W - 38]) { ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  // franjas de precaución en las esquinas y luz de fuga
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(22, 22, W - 44, H - 44, 8); ctx.clip();
+  for (const [cx0, cy0] of [[22, 22], [W - 22, 22], [22, H - 22], [W - 22, H - 22]]) {
+    ctx.fillStyle = '#ffcb47';
+    ctx.beginPath(); ctx.arc(cx0, cy0, 54, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0e0b33';
+    for (let k = -3; k < 4; k++) { ctx.save(); ctx.translate(cx0, cy0); ctx.rotate(Math.PI / 4); ctx.fillRect(k * 18, -60, 9, 120); ctx.restore(); }
+  }
+  ctx.restore();
+  ctx.fillStyle = '#ff6b7a'; ctx.strokeStyle = '#0e0b33'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(W / 2, 40, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   // grieta
   const line = (w: number, c: string): void => {
     ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round';

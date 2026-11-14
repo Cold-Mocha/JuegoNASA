@@ -123,6 +123,7 @@ export class SelectScene extends Phaser.Scene {
     const grid = this.ui.q('[data-grid]');
     this.stopPreview();
     grid.classList.toggle('is-roster', step.key === 'character');
+    grid.classList.toggle('is-compact', step.key === 'difficulty');
     if (step.key === 'character') {
       // michis en vertical a la izquierda y, al lado, el michi completo haciendo cosas
       const cards = step.options.map((o) => `

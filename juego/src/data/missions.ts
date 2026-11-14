@@ -31,7 +31,7 @@ export interface Mission {
 /** Plazo de cada jornada científica (días lunares comprimidos). */
 export const MISSION_DAYS = 7;
 
-const act = (id: string, action: ActionId, count: number, label: string): ResearchTask => ({ id, kind: 'action', action, count, label });
+const act = (id: string, action: ActionId, count: number, label: string, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, label, stage });
 
 /** Tres jornadas: las dos primeras con el Sol tranquilo y la tercera con llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
@@ -42,7 +42,8 @@ export const MISSIONS: Mission[] = [
     tasks: [
       act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 días'),
       act('huerto-cosecha', 'harvest', 1, 'Cosechar el invernadero'),
-      act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
+      act('huerto-polvo', 'cleanDust', 1, 'Limpiar los paneles solares'),
+      act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
     ],
   },
   {
@@ -50,9 +51,10 @@ export const MISSIONS: Mission[] = [
     question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
     brief: 'Mantén limpios los paneles solares.',
     tasks: [
-      act('paneles-polvo', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
+      act('paneles-prueba', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
+      act('paneles-polvo', 'cleanDust', 1, 'Limpiar los paneles de la estación'),
       act('paneles-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
-      act('paneles-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
+      act('paneles-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
     ],
   },
   {
@@ -62,7 +64,8 @@ export const MISSIONS: Mission[] = [
     tasks: [
       act('hielo-muestras', 'eva', 2, 'Recoger muestras de hielo 2 días'),
       act('hielo-polvo', 'cleanDust', 1, 'Limpiar los paneles antes de salir'),
-      act('hielo-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra'),
+      act('hielo-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
+      act('hielo-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
     ],
   },
 ];

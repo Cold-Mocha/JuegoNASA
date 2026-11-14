@@ -11,8 +11,6 @@ export type Zone = 'ship' | 'greenhouse' | 'surface';
 export type ActionId =
   | 'repairAntenna' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair';
 
-export type ResupplyChoice = 'oxygen' | 'food' | 'energy' | 'health';
-
 /**
  * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).
  * La salud baja cuando falta oxígeno o comida, o la radiación es alta; con salud 0 la misión termina.
@@ -44,10 +42,14 @@ export interface SolarEvent {
  * Tarea de una investigación (jornada científica). Se cumple al llegar a `count`:
  * - action: veces que se hizo una acción; science: puntos de ciencia; shelter: llamaradas pasadas dentro de la nave.
  */
-export type TaskGoal =
+export type TaskGoal = (
   | { id: string; kind: 'action'; action: ActionId; count: number }
   | { id: string; kind: 'science'; count: number }
-  | { id: string; kind: 'shelter'; count: number };
+  | { id: string; kind: 'shelter'; count: number }
+) & {
+  /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra", disponible solo cuando se terminan todas las de la etapa 1. */
+  stage?: 1 | 2;
+};
 
 export interface SimConfig {
   days: number;         // plazo de la jornada científica (días lunares comprimidos)
@@ -69,8 +71,6 @@ export type SimEvent =
   | { type: 'flareEnd'; event: SolarEvent; dose: number }
   | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> & { science?: number } }
   | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
-  | { type: 'resupplyOffer'; day: number }
-  | { type: 'resupplyMissed'; day: number }
   | { type: 'critical'; resource: keyof Resources }
   | { type: 'breachOpened'; room: RoomId }
   | { type: 'breachRepaired' }
@@ -79,12 +79,13 @@ export type SimEvent =
   | { type: 'suitLow' }
   | { type: 'suitEmpty'; oxygenLost: number }
   | { type: 'taskDone'; id: string }
+  | { type: 'stageUnlocked' }
   | { type: 'gameOver'; cause: DeathCause }
   | { type: 'missionComplete' };
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'locked' | 'ended';
 }
 
 export interface SimStats {
@@ -92,7 +93,6 @@ export interface SimStats {
   unshieldedFlares: number;
   evas: number;
   antennaAligns: number;
-  resupplies: number;
   actions: number;
   actionsBy: Partial<Record<ActionId, number>>;
 }

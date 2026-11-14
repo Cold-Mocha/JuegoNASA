@@ -195,7 +195,6 @@ button { font-family: inherit; }
 .controls__pointer { margin: 0 0 var(--space-3); font: 500 15px/20px var(--font-display); color: var(--ink-muted); }
 
 
-.resupply { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-top: var(--space-4); }
 .option--small { min-height: 120px; justify-content: center; }
 
 /* ---------- Archivo científico ---------- */
@@ -342,19 +341,14 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 
 /* ---------- Colores propios de cada stat (barras, iconos y cajas del envío) ---------- */
 :root { --stat-energy: var(--star-gold); --stat-oxygen: var(--comet-cyan); --stat-food: var(--solar-coral); --stat-health: #7ed957; --stat-radiation: var(--nebula-magenta); --stat-suit: var(--nebula-violet); }
-.hud__stats .mn-bar--energy, .resupply__opt--energy { --bar-color: var(--stat-energy); }
-.hud__stats .mn-bar--oxygen, .resupply__opt--oxygen { --bar-color: var(--stat-oxygen); }
-.hud__stats .mn-bar--hunger, .resupply__opt--food { --bar-color: var(--stat-food); }
-.hud__stats .mn-bar--health, .resupply__opt--health { --bar-color: var(--stat-health); }
+.hud__stats .mn-bar--energy { --bar-color: var(--stat-energy); }
+.hud__stats .mn-bar--oxygen { --bar-color: var(--stat-oxygen); }
+.hud__stats .mn-bar--hunger { --bar-color: var(--stat-food); }
+.hud__stats .mn-bar--health { --bar-color: var(--stat-health); }
 .hud__stats .mn-bar--radiation { --bar-color: var(--stat-radiation); }
 .hud__suit .mn-bar--oxygen { --bar-color: var(--stat-suit); }
 .hud__stats .mn-bar__label .mn-icon, .hud__suit .mn-bar__label .mn-icon, .hud__stats .mn-bar__value { color: var(--bar-color); }
 .hud__stats .mn-bar.is-critical .mn-bar__value, .hud__stats .mn-bar.is-critical .mn-bar__label .mn-icon { color: var(--danger); }
-.resupply__opt { border-color: var(--bar-color); }
-.resupply__icon { display: inline-flex; color: var(--bar-color); }
-.resupply__icon .mn-icon { width: 32px; height: 32px; }
-.resupply__opt .option__subtitle { color: var(--bar-color); }
-@media (max-width: 760px) { .resupply { grid-template-columns: repeat(2, 1fr); } }
 
 /* ---------- Selector de tripulante: michis en vertical a la izquierda y vista previa al lado (cabe en 1280×720) ---------- */
 .select { min-height: 0; }
@@ -436,3 +430,53 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .dust__brush.is-demo { animation: dust-demo 1.6s ease-in-out infinite alternate; }
 @keyframes dust-demo { from { transform: translate(150px, 150px) rotate(0deg); } to { transform: translate(250px, 230px) rotate(8deg); } }
 @media (prefers-reduced-motion: reduce) { .dust__brush.is-demo { animation: none; } .mini-full__done { animation: none; } }
+
+/* ---------- Elección de dificultad: tarjetas y letra más chicas ---------- */
+.select__grid.is-compact { grid-template-columns: repeat(3, minmax(0, 300px)); justify-content: center; gap: var(--space-5); max-width: 1000px; }
+.is-compact .option { padding: var(--space-5) var(--space-4); gap: var(--space-1); min-height: 300px; }
+.is-compact .option__art { height: auto; gap: var(--space-1); }
+.is-compact .option__icon .mn-icon { width: 76px; height: 76px; }
+.is-compact .mn-stars .mn-star { width: 30px; height: 30px; }
+.is-compact .option__title { margin-top: var(--space-2); font-size: 26px; line-height: 30px; }
+.is-compact .option__subtitle { font-size: 18px; line-height: 22px; }
+.is-compact .option__body { font-size: 16px; line-height: 21px; }
+
+/* Dificultad: título, fichas, iconos y textos centrados en la pantalla */
+.select:has(.select__grid.is-compact) .select__heading { margin-top: auto; text-align: center; }
+.select__grid.is-compact { flex: 0 0 auto; width: auto; margin: 0 auto auto; align-content: center; justify-items: center; }
+.is-compact .option { width: 100%; text-align: center; align-items: center; justify-content: center; }
+.is-compact .option__art, .is-compact .option__art:has(.option__icon) { width: 100%; display: grid; place-items: center; justify-items: center; }
+.is-compact .mn-stars { display: flex; justify-content: center; }
+.is-compact .option__title, .is-compact .option__subtitle, .is-compact .option__body { text-align: center; }
+
+/* ---------- Minijuego de curarse (sin texto): puntos rojos que laten y se cierran al mantenerlos apretados ---------- */
+.heal { position: relative; flex: none; touch-action: none; user-select: none; }
+.heal__body { position: absolute; inset: 0; width: 100%; height: 100%; }
+.heal__spot { --p: 0; position: absolute; width: 68px; height: 68px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center; background: radial-gradient(circle, rgba(255, 107, 122, .95) 58%, transparent 60%); animation: heal-beat 1s ease-in-out infinite; }
+.heal__ring { position: absolute; inset: -6px; border-radius: 50%; background: conic-gradient(var(--aurora-teal) calc(var(--p) * 360deg), rgba(14, 11, 51, .35) 0); -webkit-mask: radial-gradient(circle, transparent 56%, #000 58%); mask: radial-gradient(circle, transparent 56%, #000 58%); }
+.heal__spot.is-healed { animation: none; background: radial-gradient(circle, var(--aurora-teal) 58%, transparent 60%); }
+.heal__spot.is-healed svg path { d: path("M5 12.5l4.5 4.5L19 7.5"); }
+@keyframes heal-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+@media (prefers-reduced-motion: reduce) { .heal__spot { animation: none; } }
+
+/* ---------- Minijuegos refinados: sin texto; antena y cosecha con más detalle ---------- */
+.wires { background: none; border: 0; border-radius: 0; }
+.wires__back { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wires__label { display: none; }
+.wires__lines { z-index: 1; }
+.wire { z-index: 2; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--wire) 55%, #fff) 0 18%, var(--wire) 55%); }
+.wire--socket::after { content: ""; position: absolute; inset: 9px; border-radius: 8px; border: 3px dashed rgba(14, 11, 51, .55); }
+.harvest { grid-template-rows: auto 1fr auto; background: linear-gradient(#18144e, #241d6b); }
+.harvest__grid { background: repeating-linear-gradient(to bottom, transparent 0 calc(33.33% - 8px), #9a98c8 calc(33.33% - 8px) 33.33%); border-radius: var(--radius-md); }
+.plant { background: rgba(14, 11, 51, .35); border-color: transparent; }
+.harvest__basket { display: flex; justify-content: center; gap: 6px; padding: 6px 0 2px; }
+.harvest__basket i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #0e0b33; background: rgba(245, 245, 242, .15); }
+.harvest__basket i.is-full { background: #ff6b7a; box-shadow: 0 0 10px rgba(255, 107, 122, .7); }
+.harvest__time { height: 14px; }
+.harvest__time i { background: linear-gradient(90deg, #ff7a59, #ffcb47); }
+
+/* Pestañas de tareas: la investigación y, cuando se termina, "Avisar a la Tierra" */
+.hud__tabs { display: flex; gap: 6px; }
+.hud__tab { appearance: none; flex: 1; border: 2px solid var(--line); border-radius: var(--radius-pill); background: transparent; color: var(--ink-muted); font: 600 13px/16px var(--font-display); padding: 5px 10px; cursor: pointer; }
+.hud__tab[hidden] { display: none; }
+.hud__tab.is-current { background: var(--star-gold); border-color: var(--star-gold); color: var(--ink-dark); }

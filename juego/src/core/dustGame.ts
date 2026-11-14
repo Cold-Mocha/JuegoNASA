@@ -1,11 +1,13 @@
 /**
- * Minijuego de limpiar los paneles: un panel solar grande (con su soporte) cubierto de polvo y un cepillo.
+ * Minijuego de limpiar los paneles: dos paneles solares con su pata de abajo, cubiertos de polvo, y un cepillo.
  * Se limpia a mano: arrastrando el ratón o el dedo, o con las flechas del teclado. Al sacar casi todo el polvo, termina.
  * Solo usa DOM y canvas (sin Phaser): lo monta la escena de la estación dentro de un panel.
  */
 const W = 380;
 const H = 500;
-const PANEL = { x: 92, y: 22, w: 262, h: 456 };   // marco del panel dentro del canvas
+/** Dos paneles solares a los lados de un mástil, con su pata de abajo (como el panel del mapa). */
+const PANELS = [{ x: 22, y: 26, w: 150, h: 330 }, { x: 208, y: 26, w: 150, h: 330 }];
+const AREA = { x: 22, y: 26, w: 336, h: 330 };    // zona con celdas (los dos paneles juntos): ahí cae el polvo
 const BRUSH_R = 22;                               // radio de limpieza del cepillo
 const DONE_AT = 0.96;                             // fracción de polvo limpiada para terminar
 const KEY_STEP = 18;
@@ -33,60 +35,72 @@ const BRUSH_SVG = `<svg viewBox="0 0 96 96" width="86" height="86" aria-hidden="
 
 function drawPanel(ctx: CanvasRenderingContext2D): void {
   ctx.clearRect(0, 0, W, H);
-  // soporte (cercha) a la izquierda
-  ctx.strokeStyle = '#0e0b33';
-  ctx.lineWidth = 8;
   ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(40, 40); ctx.lineTo(40, 470);
-  ctx.moveTo(74, 60); ctx.lineTo(74, 450);
-  ctx.stroke();
-  ctx.strokeStyle = '#9a98c8';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(40, 40); ctx.lineTo(40, 470);
-  ctx.moveTo(74, 60); ctx.lineTo(74, 450);
-  ctx.stroke();
+  ctx.lineCap = 'round';
+  // pata de abajo: mástil central, tirantes diagonales, caja de conexiones y placa de apoyo en el suelo
+  ctx.fillStyle = '#9a98c8';
   ctx.strokeStyle = '#0e0b33';
   ctx.lineWidth = 6;
-  ctx.beginPath();
-  for (let y = 70; y < 440; y += 62) { ctx.moveTo(40, y); ctx.lineTo(74, y + 31); ctx.lineTo(40, y + 62); }
-  ctx.stroke();
-  ctx.strokeStyle = '#c4c2e0';
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-  // marco y vidrio del panel
-  const { x, y, w, h } = PANEL;
-  ctx.fillStyle = '#c4c2e0';
-  ctx.strokeStyle = '#0e0b33';
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.roundRect(x - 10, y - 10, w + 20, h + 20, 10); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#2a3f8f';
-  ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.fill(); ctx.stroke();
-  // celdas: 4 columnas × 6 filas
-  ctx.strokeStyle = '#4cc3f5';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  for (let i = 1; i < 4; i++) { ctx.moveTo(x + (w / 4) * i, y); ctx.lineTo(x + (w / 4) * i, y + h); }
-  for (let j = 1; j < 6; j++) { ctx.moveTo(x, y + (h / 6) * j); ctx.lineTo(x + w, y + (h / 6) * j); }
-  ctx.stroke();
-  ctx.strokeStyle = '#0e0b33';
-  ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke();
-  // brillo
-  ctx.fillStyle = 'rgba(255,255,255,.10)';
-  ctx.beginPath(); ctx.moveTo(x + 20, y + 20); ctx.lineTo(x + 120, y + 20); ctx.lineTo(x + 60, y + 150); ctx.lineTo(x + 20, y + 150); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(190, 470, 92, 18, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#0e0b33'; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.moveTo(190, 456); ctx.lineTo(120, 462); ctx.moveTo(190, 456); ctx.lineTo(260, 462); ctx.moveTo(190, 420); ctx.lineTo(132, 458); ctx.moveTo(190, 420); ctx.lineTo(248, 458); ctx.stroke();
+  ctx.strokeStyle = '#c4c2e0'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(190, 456); ctx.lineTo(120, 462); ctx.moveTo(190, 456); ctx.lineTo(260, 462); ctx.moveTo(190, 420); ctx.lineTo(132, 458); ctx.moveTo(190, 420); ctx.lineTo(248, 458); ctx.stroke();
+  ctx.fillStyle = '#c4c2e0'; ctx.strokeStyle = '#0e0b33'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.roundRect(176, 340, 28, 128, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9a98c8';
+  ctx.beginPath(); ctx.roundRect(160, 380, 60, 34, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffcb47'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(190, 397, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#18144e';
+  ctx.beginPath(); ctx.roundRect(208, 420, 34, 22, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#5ad6b2';
+  ctx.beginPath(); ctx.arc(225, 431, 4, 0, Math.PI * 2); ctx.fill();
+  // brazos que unen cada panel con el mástil
+  ctx.strokeStyle = '#0e0b33'; ctx.lineWidth = 9;
+  ctx.beginPath(); ctx.moveTo(176, 352); ctx.lineTo(120, 340); ctx.moveTo(204, 352); ctx.lineTo(260, 340); ctx.stroke();
+  ctx.strokeStyle = '#c4c2e0'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(176, 352); ctx.lineTo(120, 340); ctx.moveTo(204, 352); ctx.lineTo(260, 340); ctx.stroke();
+  // los dos paneles
+  for (const { x, y, w, h } of PANELS) {
+    ctx.fillStyle = '#c4c2e0';
+    ctx.strokeStyle = '#0e0b33';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.roundRect(x - 9, y - 9, w + 18, h + 18, 10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2a3f8f';
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 6); ctx.fill(); ctx.stroke();
+    const glass = ctx.createLinearGradient(x, y, x + w, y + h);
+    glass.addColorStop(0, 'rgba(76,195,245,.24)'); glass.addColorStop(0.5, 'rgba(76,195,245,0)'); glass.addColorStop(1, 'rgba(14,11,51,.32)');
+    ctx.fillStyle = glass;
+    ctx.fillRect(x, y, w, h);
+    // celdas: 3 columnas × 6 filas
+    ctx.strokeStyle = '#4cc3f5';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 1; i < 3; i++) { ctx.moveTo(x + (w / 3) * i, y); ctx.lineTo(x + (w / 3) * i, y + h); }
+    for (let j = 1; j < 6; j++) { ctx.moveTo(x, y + (h / 6) * j); ctx.lineTo(x + w, y + (h / 6) * j); }
+    ctx.stroke();
+    ctx.strokeStyle = '#0e0b33';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke();
+    // tornillos del marco y brillo
+    ctx.fillStyle = '#e4e3f2';
+    ctx.lineWidth = 2;
+    for (const [bx, by] of [[x - 4, y - 4], [x + w + 4, y - 4], [x - 4, y + h + 4], [x + w + 4, y + h + 4]]) { ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.10)';
+    ctx.beginPath(); ctx.moveTo(x + 12, y + 12); ctx.lineTo(x + 78, y + 12); ctx.lineTo(x + 36, y + 120); ctx.lineTo(x + 12, y + 120); ctx.fill();
+  }
 }
 
 /** Manchas de polvo irregulares (como en el boceto) y granitos sueltos sobre el vidrio. */
 function drawDust(ctx: CanvasRenderingContext2D, dust: number): void {
   ctx.clearRect(0, 0, W, H);
-  const patches = 6 + Math.round(Math.min(1, dust) * 8);
-  const { x, y, w, h } = PANEL;
+  const patches = 8 + Math.round(Math.min(1, dust) * 8);
   for (let p = 0; p < patches; p++) {
-    const cx = x + 30 + Math.random() * (w - 60);
-    const cy = y + 30 + Math.random() * (h - 60);
-    const r = 20 + Math.random() * 20;
+    const panel = PANELS[p % 2]; // las manchas se reparten entre los dos paneles
+    const cx = panel.x + 24 + Math.random() * (panel.w - 48);
+    const cy = panel.y + 24 + Math.random() * (panel.h - 48);
+    const r = 17 + Math.random() * 15;
     ctx.fillStyle = Math.random() < 0.5 ? '#b4ae9e' : '#9c9684';
     ctx.beginPath();
     const n = 9;
@@ -104,12 +118,13 @@ function drawDust(ctx: CanvasRenderingContext2D, dust: number): void {
   }
   ctx.fillStyle = '#b4ae9e';
   for (let i = 0; i < 40 + dust * 60; i++) {
-    ctx.beginPath(); ctx.arc(x + 8 + Math.random() * (w - 16), y + 8 + Math.random() * (h - 16), 1.5 + Math.random() * 2.5, 0, Math.PI * 2); ctx.fill();
+    const panel = PANELS[i % 2];
+    ctx.beginPath(); ctx.arc(panel.x + 8 + Math.random() * (panel.w - 16), panel.y + 8 + Math.random() * (panel.h - 16), 1.5 + Math.random() * 2.5, 0, Math.PI * 2); ctx.fill();
   }
 }
 
 function dustPixels(ctx: CanvasRenderingContext2D): number {
-  const data = ctx.getImageData(PANEL.x, PANEL.y, PANEL.w, PANEL.h).data;
+  const data = ctx.getImageData(AREA.x, AREA.y, AREA.w, AREA.h).data;
   let n = 0;
   for (let i = 3; i < data.length; i += 16) if (data[i] > 40) n++; // se muestrea 1 de cada 4 píxeles
   return n;
@@ -128,8 +143,8 @@ export function mountDustGame(root: HTMLElement, opts: Options): DustGame {
   const dctx = dirt.getContext('2d', { willReadFrequently: true })!;
   drawDust(dctx, opts.dust);
   const total = Math.max(1, dustPixels(dctx));
-  let cx = PANEL.x + PANEL.w + 30;
-  let cy = PANEL.y + PANEL.h - 30;
+  let cx = AREA.x + AREA.w / 2;
+  let cy = AREA.y + AREA.h + 60;
   let drawing = false;
   let finished = false;
   let last: { x: number; y: number } | null = null;

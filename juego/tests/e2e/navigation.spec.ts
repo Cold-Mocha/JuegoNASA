@@ -123,16 +123,11 @@ test.describe('carga y navegación', () => {
     const problems = watchConsole(page);
     await seedStorage(page, {}, { tutorialDone: true, best: {}, achievements: [], readEntries: [] });
     await startMission(page, { mission: 'hielo-lunar', difficulty: 'cadete', timescale: 50 });
-    // los envíos de la Tierra detienen el reloj hasta elegir una caja: el test elige oxígeno
-    await expect(async () => {
-      const crate = page.locator('[data-action="resupply"][data-id="oxygen"]');
-      if (await crate.isVisible()) await crate.click();
-      await expect(page.locator('[data-report]')).toBeVisible({ timeout: 1_000 });
-    }).toPass({ timeout: 45_000 });
+    await expect(page.locator('[data-report]')).toBeVisible({ timeout: 45_000 });
     await expect(page.locator('[data-score]')).toHaveText(/\d+/);
     // sin hacer las tareas se acaba el plazo: el informe muestra la investigación incompleta y sus tareas
     await expect(page.locator('[data-report]')).toContainText('Investigación incompleta');
-    await expect(page.locator('.report__tasks .mn-check')).toHaveCount(3);
+    await expect(page.locator('.report__tasks .mn-check')).toHaveCount(4);
     await expect(page.getByRole('heading', { name: 'Lo que aprendiste' })).toBeVisible();
     const best = await page.evaluate(() => JSON.parse(localStorage.getItem('michinautas:progress:v1') ?? '{}').best);
     expect(best['hielo-lunar']).toBeDefined();

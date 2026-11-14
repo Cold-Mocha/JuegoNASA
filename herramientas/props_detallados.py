@@ -405,16 +405,14 @@ def monitor_radiacion():
     return w, h, b
 
 
-def fractura():
-    """Fractura en el casco: placa de pared con una grieta zigzag y bocanadas de aire que se escapan."""
-    w, h = 170, 150
-    b = rr(10, 10, 150, 130, 10, METAL) + rr(18, 18, 134, 114, 6, METAL_D, 3) + path('M85 18 V132 M18 75 H152', stroke=OUT, sw=2.5)
-    b += rivets(26, 26, 2, 118, 2.2) + rivets(26, 124, 2, 118, 2.2)
-    b += path('M92 18 L78 46 L96 62 L74 88 L92 104 L80 132', 'none', OUT, 9) + path('M92 18 L78 46 L96 62 L74 88 L92 104 L80 132', 'none', '#0b0c0f', 5)
-    b += path('M92 18 L78 46 L96 62 L74 88 L92 104 L80 132', 'none', GOLD, 1.8, 'opacity=".8"')
-    b += ''.join(circ(112 + i * 14, 54 + (i % 2) * 22 - i * 6, 7 - i, '#dff3ff', 2.2, OUT, 'opacity=".85"') for i in range(4))
-    b += path('M100 70 q16 -6 28 -20', 'none', CYAN, 3, 'opacity=".7"')
-    b += rr(54, 4, 62, 16, 6, GOLD, 3) + text(85, 16, 'FUGA', 10, NAVY)
+def reciclador_roto():
+    """El reciclador de oxígeno roto: grieta en la columna, aire que se escapa y luz de alarma. De aquí sale la fractura."""
+    w, h, b = reciclador_aire()
+    b += path('M62 96 L50 124 L68 142 L48 170 L66 184', 'none', OUT, 9) + path('M62 96 L50 124 L68 142 L48 170 L66 184', 'none', '#0b0c0f', 5)
+    b += path('M62 96 L50 124 L68 142 L48 170 L66 184', 'none', GOLD, 1.8, 'opacity=".8"')
+    b += ''.join(circ(80 + i * 16, 118 + (i % 2) * 18 - i * 8, 8 - i, '#dff3ff', 2.2, OUT, 'opacity=".9"') for i in range(4))
+    b += path('M84 132 q20 -8 34 -26', 'none', CYAN, 3.5, 'opacity=".7"')
+    b += circ(130, 62, 7, RED, 2.5) + rr(50, 4, 90, 16, 6, GOLD, 3) + text(95, 16, 'FUGA', 10, NAVY)
     return w, h, b
 
 
@@ -423,7 +421,7 @@ PROPS = {
     'reciclador-aire': (reciclador_aire, True), 'estacion-comida': (estacion_comida, True),
     'tanque-algas': (tanque_algas, True), 'rack-plantas': (rack_plantas, True),
     'consola-puente': (consola_puente, True), 'consola-antena': (consola_antena, True),
-    'camilla-medica': (camilla_medica, True), 'fractura': (fractura, True), 'roca': (roca, False),
+    'camilla-medica': (camilla_medica, True), 'reciclador-roto': (reciclador_roto, True), 'roca': (roca, False),
     'panel-solar': (panel_solar, True), 'roca-hielo': (roca_hielo, True), 'estacion-limpieza': (estacion_limpieza, True),
     'casillero': (casillero, False), 'casillero-trajes': (casillero_trajes, False), 'planta': (planta, False),
     'mesa-comedor': (mesa_comedor, False), 'cajas': (cajas, False), 'bandeja-cultivo': (bandeja_cultivo, False),

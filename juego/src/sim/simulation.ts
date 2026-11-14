@@ -2,14 +2,14 @@ import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
   BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_DAY, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, ONCE_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, RESUPPLY_AMOUNT, RESUPPLY_DAYS, ROOM_ZONE, SHELTER_FACTOR,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
 import { flareDose } from './flares';
 import { between, createRng } from './rng';
 import type {
-  ActionCheck, ActionId, Components, DeathCause, ResupplyChoice, Resources, RoomId, SimConfig, SimEvent, SimStats, SolarEvent, TaskGoal, Zone,
+  ActionCheck, ActionId, Components, DeathCause, Resources, RoomId, SimConfig, SimEvent, SimStats, SolarEvent, TaskGoal, Zone,
 } from './types';
 
 export type ActionDelta = Partial<Resources> & { science?: number };
@@ -50,12 +50,12 @@ export class Simulation {
   zone: Zone = 'ship';
   /** Oxígeno del traje (0–100). Solo baja en la superficie. */
   suit = 100;
-  res: Resources = { energy: 60, oxygen: 70, food: 70, health: 100, radiation: 0 };
+  res: Resources = { energy: 100, oxygen: 70, food: 70, health: 100, radiation: 0 };
   comp: Components = { antenna: 1, dust: 0 };
   science = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, resupplies: 0, actions: 0, actionsBy: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -71,10 +71,10 @@ export class Simulation {
   private travelTo: RoomId | null = null;
   private hall = false;
   private doneTasks = new Set<string>();
-  private resupplyDay = 0;
   private critical = new Set<keyof Resources>();
   private suitWarned = false;
   private panelsWereOk = true;
+  private stageAnnounced = false;
   /** Sala donde hay una fractura (el oxígeno no se regenera, ni en la nave ni en el traje) o null. */
   breach: RoomId | null = null;
 
@@ -118,6 +118,16 @@ export class Simulation {
     return taskProgress(t, this.stats, this.science);
   }
 
+  /** ¿Se terminaron las tareas de la investigación? Entonces se desbloquea "Avisar a la Tierra" (etapa 2). */
+  get stage2Unlocked(): boolean {
+    return this.tasks.filter((t) => (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
+  }
+
+  /** La acción pertenece a una tarea de la etapa 2 que todavía no está disponible. */
+  private stageLocked(action: ActionId): boolean {
+    return !this.stage2Unlocked && this.tasks.some((t) => t.stage === 2 && t.kind === 'action' && t.action === action);
+  }
+
   get tasksDone(): number {
     return this.tasks.filter((t) => this.taskProgress(t) >= t.count).length;
   }
@@ -142,10 +152,6 @@ export class Simulation {
     return this.comp.antenna >= LINK_MIN_RADIO;
   }
 
-  get resupplyOpen(): boolean {
-    return this.resupplyDay === this.day && !this.ended;
-  }
-
   /** Dentro de la nave las paredes frenan la radiación. */
   get sheltered(): boolean {
     return this.zone === 'ship';
@@ -158,6 +164,30 @@ export class Simulation {
 
   get flareActive(): boolean {
     return this.active.length > 0;
+  }
+
+  /** ¿Se puede hacer ahora, sin importar dónde esté el michi? (cooldown, límite diario, energía o comida) */
+  available(action: ActionId): boolean {
+    if (this.ended) return false;
+    if (action === 'repair' && !this.breach) return false;
+    if (this.stageLocked(action)) return false;
+    if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
+    if (ONCE_PER_DAY.has(action) && this.lastDone.get(action) === this.day) return false;
+    const d = this.preview(action);
+    if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return false;
+    if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return false;
+    return true;
+  }
+
+  /** ¿Sirve de algo hacerla ahora? (curarse con la salud llena, cosechar con la comida llena o limpiar paneles limpios no) */
+  useful(action: ActionId): boolean {
+    switch (action) {
+      case 'heal': return this.res.health < 100;
+      case 'harvest': return this.res.food < 100;
+      case 'cleanDust': case 'cleanTestPanel': return this.comp.dust > 0.05;
+      case 'repairAntenna': return this.comp.antenna < 0.95;
+      default: return true;
+    }
   }
 
   isPending(action: ActionId): boolean {
@@ -196,6 +226,7 @@ export class Simulation {
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
+    if (this.stageLocked(action)) return { ok: false, reason: 'locked' };
     if (ONCE_PER_DAY.has(action) && this.lastDone.get(action) === this.day) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
     return { ok: true };
   }
@@ -247,14 +278,6 @@ export class Simulation {
     return secs;
   }
 
-  chooseResupply(choice: ResupplyChoice): boolean {
-    if (!this.resupplyOpen || (choice === 'oxygen' && this.breach)) return false;
-    this.apply({ [choice]: RESUPPLY_AMOUNT });
-    this.resupplyDay = 0;
-    this.stats.resupplies++;
-    return true;
-  }
-
   // ---------- tiempo ----------
   tick(dt: number): void {
     if (this.ended || dt <= 0) return;
@@ -285,7 +308,7 @@ export class Simulation {
     const shield = this.sheltered ? SHELTER_FACTOR : 1;
     this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k + PANEL_REGEN_PER_DAY * this.panelEfficiency * (dt / len));
     this.checkPanels();
-    this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.breach ? 0 : OXYGEN_REGEN_PER_DAY * (dt / len)) + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
+    this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.breach ? OXYGEN_LEAK_PER_DAY * k : OXYGEN_REGEN_PER_DAY * (dt / len)) + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
     this.res.food = clamp(this.res.food + PASSIVE_PER_DAY.food * k);
     this.updateHealth(k);
     this.res.radiation = clamp(this.res.radiation + BACKGROUND_RADIATION_PER_DAY * (dt / len) * shield);
@@ -318,7 +341,7 @@ export class Simulation {
     let loss = 0;
     if (this.res.oxygen <= HEALTH_DANGER_AT) loss += HEALTH_LOSS_PER_DAY.oxygen;
     if (this.res.food <= HEALTH_DANGER_AT) loss += HEALTH_LOSS_PER_DAY.food;
-    if (this.res.radiation >= HEALTH_RADIATION_AT) loss += HEALTH_LOSS_PER_DAY.radiation;
+    if (this.res.radiation > HEALTH_RADIATION_AT) loss += HEALTH_LOSS_PER_DAY.radiation * ((this.res.radiation - HEALTH_RADIATION_AT) / (100 - HEALTH_RADIATION_AT));
     if (loss) this.res.health = clamp(this.res.health + loss * k);
   }
 
@@ -357,7 +380,6 @@ export class Simulation {
   /** El traje gasta oxígeno en la superficie y se recarga en la nave o el invernadero. Vacío = rescate. */
   private updateSuit(dt: number): void {
     if (this.zone !== 'surface') {
-      if (this.breach) return; // con una fractura el traje no se recarga ni en la nave ni en el invernadero
       this.suit = Math.min(100, this.suit + SUIT_REFILL_PER_SEC * dt);
       if (this.suit > SUIT_LOW) this.suitWarned = false;
       return;
@@ -397,7 +419,7 @@ export class Simulation {
       const causes: DeathCause[] = [];
       if (this.res.oxygen <= HEALTH_DANGER_AT) causes.push('oxygen');
       if (this.res.food <= HEALTH_DANGER_AT) causes.push('food');
-      if (this.res.radiation >= HEALTH_RADIATION_AT) causes.push('radiation');
+      if (this.res.radiation > HEALTH_RADIATION_AT) causes.push('radiation');
       this.finish(false, causes.length === 1 ? causes[0] : 'mixed');
     }
   }
@@ -426,15 +448,8 @@ export class Simulation {
       return;
     }
     this.day++;
-    this.resupplyDay = 0;
     this.events.push({ type: 'dayStart', day: this.day, light: this.light });
     this.rollBreach();
-    if ((RESUPPLY_DAYS as readonly number[]).includes(this.day)) {
-      if (this.radioOk) {
-        this.resupplyDay = this.day;
-        this.events.push({ type: 'resupplyOffer', day: this.day });
-      } else this.events.push({ type: 'resupplyMissed', day: this.day });
-    }
   }
 
   /** Avisa cada tarea recién cumplida; con todas cumplidas, la tripulación vuelve a la Tierra. */
@@ -444,6 +459,10 @@ export class Simulation {
       if (this.doneTasks.has(t.id) || this.taskProgress(t) < t.count) continue;
       this.doneTasks.add(t.id);
       this.events.push({ type: 'taskDone', id: t.id });
+    }
+    if (!this.stageAnnounced && this.tasks.some((t) => t.stage === 2) && this.stage2Unlocked) {
+      this.stageAnnounced = true;
+      this.events.push({ type: 'stageUnlocked' });
     }
     if (this.doneTasks.size === this.tasks.length) this.finish(true);
   }

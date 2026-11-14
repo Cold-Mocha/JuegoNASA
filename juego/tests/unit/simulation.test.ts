@@ -136,7 +136,7 @@ describe('paneles solares', () => {
 });
 
 describe('fractura del casco', () => {
-  it('sin fractura el oxígeno se regenera; con fractura solo baja y el traje no se recarga', () => {
+  it('sin fractura el oxígeno se regenera; con fractura se escapa y baja claramente (el traje se recarga igual dentro de la nave)', () => {
     const ok = makeSim({ drain: 1 });
     ok.res.oxygen = 50;
     run(ok, DAY * 0.5, 0.1);
@@ -147,30 +147,21 @@ describe('fractura del casco', () => {
     broken.res.oxygen = 50;
     broken.suit = 40;
     run(broken, DAY * 0.5, 0.1);
-    expect(broken.res.oxygen).toBeLessThan(50);
-    expect(broken.suit).toBe(40);
+    expect(broken.res.oxygen).toBeLessThan(40);   // baja bastante más que solo el consumo normal
+    expect(broken.suit).toBe(100);
   });
 
-  it('sellar la fractura en su sala la elimina y el traje vuelve a recargarse', () => {
-    const sim = makeSim({ drain: 0 });
+  it('sellar la fractura en su sala la elimina y el oxígeno vuelve a regenerarse', () => {
+    const sim = makeSim({ drain: 1 });
     sim.breach = 'soporte';
     expect(sim.canAct('repair').reason).toBe('busy'); // no estás en Soporte vital
     goTo(sim, 'soporte');
-    sim.suit = 40;
     sim.act('repair');
     expect(sim.breach).toBeNull();
     expect(types(sim.drainEvents())).toContain('breachRepaired');
-    run(sim, 3, 0.1);
-    expect(sim.suit).toBeGreaterThan(40);
-  });
-
-  it('con fractura no se puede pedir la caja de oxígeno del envío', () => {
-    const sim = makeSim({ drain: 0 });
-    sim.breach = 'soporte';
-    sim.tick(DAY * 2 + 0.1); // día 3: llega el envío
-    expect(sim.resupplyOpen).toBe(true);
-    expect(sim.chooseResupply('oxygen')).toBe(false);
-    expect(sim.chooseResupply('food')).toBe(true);
+    sim.res.oxygen = 50;
+    run(sim, DAY * 0.5, 0.1);
+    expect(sim.res.oxygen).toBeGreaterThan(50);
   });
 
   it('puede abrirse una fractura al empezar una jornada (probabilidad BREACH_CHANCE)', () => {
@@ -206,6 +197,67 @@ describe('llamaradas y protección', () => {
     sim.enter('exterior', 'surface');
     run(sim, 60, 0.1);
     expect(sim.room).toBe('esclusa');
+  });
+});
+
+describe('la salud baja por falta de oxígeno o comida y por radiación alta', () => {
+  it('con oxígeno o comida en 0 la salud baja; con 1 todavía no', () => {
+    const ok = makeSim({ drain: 1 });
+    ok.res.oxygen = 1;
+    ok.res.food = 1;
+    run(ok, DAY * 0.05, 0.1);
+    expect(ok.res.health).toBe(100);
+    const bad = makeSim({ drain: 1 });
+    bad.breach = 'soporte'; // sin fractura el oxígeno se regenera solo y no se queda en 0
+    bad.res.oxygen = 0;
+    run(bad, DAY * 0.2, 0.1);
+    expect(bad.res.health).toBeLessThan(100);
+  });
+
+  it('con radiación sobre 50 % la salud baja de a poco, y más rápido mientras más alta', () => {
+    const low = makeSim({ drain: 1 });
+    low.res.radiation = 40;
+    run(low, DAY * 0.5, 0.1);
+    expect(low.res.health).toBe(100); // hasta 50 no pasa nada
+    const mid = makeSim({ drain: 1 });
+    mid.res.radiation = 60;
+    run(mid, DAY * 0.5, 0.1);
+    const high = makeSim({ drain: 1 });
+    high.res.radiation = 90;
+    run(high, DAY * 0.5, 0.1);
+    expect(mid.res.health).toBeLessThan(100);
+    expect(high.res.health).toBeLessThan(mid.res.health);
+  });
+
+  it('la radiación no baja nunca', () => {
+    const sim = makeSim({ drain: 1 });
+    sim.res.radiation = 30;
+    run(sim, DAY * 2, 0.25);
+    expect(sim.res.radiation).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe('tareas en dos etapas: "Avisar a la Tierra" solo se desbloquea al terminar las demás', () => {
+  const tasks = [
+    { id: 'a', kind: 'action' as const, action: 'heal' as const, count: 1 },
+    { id: 'b', kind: 'action' as const, action: 'repairAntenna' as const, count: 1, stage: 2 as const },
+  ];
+
+  it('la antena está bloqueada hasta cumplir la etapa 1; al cumplirla avisa y se puede usar', () => {
+    const sim = makeSim({ drain: 0, tasks });
+    goTo(sim, 'comunicaciones');
+    expect(sim.stage2Unlocked).toBe(false);
+    expect(sim.canAct('repairAntenna').reason).toBe('locked');
+    expect(sim.available('repairAntenna')).toBe(false);
+    goTo(sim, 'enfermeria');
+    sim.act('heal');
+    expect(sim.stage2Unlocked).toBe(true);
+    expect(types(sim.drainEvents())).toContain('stageUnlocked');
+    goTo(sim, 'comunicaciones');
+    expect(sim.canAct('repairAntenna').ok).toBe(true);
+    expect(sim.ended).toBeNull(); // todavía falta avisar a la Tierra
+    sim.act('repairAntenna');
+    expect(sim.ended).toBe('won');
   });
 });
 

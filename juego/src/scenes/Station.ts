@@ -9,17 +9,17 @@ import { settingsHtml, bindSettings } from '../core/settingsPanel';
 import { michiSvg, michiFaceSvg, addSvgTexture } from '../core/art';
 import { MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
-import { MISSIONS, MISSION_DAYS, missionEvents, realDate, sourceCredit, type Mission } from '../data/missions';
+import { MISSIONS, MISSION_DAYS, missionEvents, realDate, type Mission } from '../data/missions';
 import { DIFFICULTIES, type Difficulty } from '../data/difficulties';
 import { CHARACTERS } from '../data/characters';
-import { BREACH_SLOTS, ROOMS, ROOM_IDS, propPosition, roomProps, textureAsset, type RoomProp } from '../data/rooms';
-import { ACTION_TEXT, BLOCK_REASON, MACHINE_INFO, RESOURCE_TEXT, RESUPPLY_TEXT } from '../data/actions';
+import { ROOMS, ROOM_IDS, propPosition, roomProps, textureAsset, type RoomProp } from '../data/rooms';
+import { ACTION_TEXT, BLOCK_REASON, MACHINE_INFO, RESOURCE_TEXT } from '../data/actions';
 import { CONTROLS, POINTER_HINT } from '../data/controls';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
-import { FLARE_DURATION_SEC, RESUPPLY_AMOUNT, SUIT_LOW, WALK_SPEED } from '../sim/rules';
+import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED } from '../sim/rules';
 import {
-  GRAVITY, PX_PER_METER, DASH, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, canDash, type DashState,
+  GRAVITY, PX_PER_METER, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, type DashState,
 } from '../sim/physics';
 import {
   HALLS, MAP_H, MAP_W, ROOM_RECTS, WALL_H, findRoute, isWalkable, moveOnMap, roomAt, roomCenter, zoneAt, type Obstacle, type Point,
@@ -28,15 +28,15 @@ import { severity } from '../sim/flares';
 import { Pool } from '../sim/pool';
 import { computeScore } from '../sim/score';
 import { earnedAchievements } from '../sim/achievements';
-import type { ActionId, ResupplyChoice, Resources, RoomId, SimEvent, Zone } from '../sim/types';
+import type { ActionId, Resources, RoomId, SimEvent, Zone } from '../sim/types';
 import { icon } from '../core/icons';
 import { mountDustGame, type DustGame } from '../core/dustGame';
 import { mountSealGame, type SealGame } from '../core/sealGame';
-import { mountAntennaGame, mountHarvestGame, type MiniCallbacks, type MiniGameHandle } from '../core/miniGames';
-import { ACTION_ICON, MISSION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
+import { mountAntennaGame, mountHarvestGame, mountHealGame, type MiniCallbacks, type MiniGameHandle } from '../core/miniGames';
+import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
-const PROP_SIZE = 0.8;           // tamaño en el mapa respecto del dibujo 1x
+const PROP_SIZE = 0.62;          // tamaño en el mapa respecto del dibujo 1x
 const PROP_PAPER_MARGIN = 17.5;  // px de textura bajo el objeto (borde de papel de 14 px a 1x, exportado a 1,25×)
 const MICHI_SCALE = 0.6;
 const JUMP_V0 = 1.8;             // m/s: con g lunar sube ~1 m (en la Tierra serían ~16 cm)
@@ -49,12 +49,12 @@ const CAMERA_ZOOM = 0.8;         // cámara alejada: se ve más estación alrede
 const CAMERA_LOOK_DOWN = -90;     // px de mapa que la cámara mira bajo los pies del michi (negativo: el michi queda más abajo en la pantalla)
 const CAMERA_MARGIN = 450;       // la cámara puede pasar un poco del borde del mapa para que el michi no se quede arriba cerca de los bordes
 
-interface Machine { room: RoomId; at: Point; sprite: Phaser.GameObjects.Image; prop: RoomProp; }
+interface Machine { room: RoomId; at: Point; sprite: Phaser.GameObjects.Image; prop: RoomProp; active?: boolean; }
 interface TutorialStep { text: string; done: () => boolean; }
 
-type Overlay = 'none' | 'pause' | 'settings' | 'map' | 'actions' | 'resupply' | 'intro' | 'controls' | 'minigame';
+type Overlay = 'none' | 'pause' | 'settings' | 'map' | 'actions' | 'intro' | 'controls' | 'minigame';
 /** Paneles que detienen el reloj de la misión. */
-const PAUSING: ReadonlySet<Overlay> = new Set(['pause', 'settings', 'resupply', 'intro', 'controls', 'minigame']);
+const PAUSING: ReadonlySet<Overlay> = new Set(['pause', 'settings', 'intro', 'controls', 'minigame']);
 
 export class StationScene extends Phaser.Scene {
   private sim!: Simulation;
@@ -98,6 +98,9 @@ export class StationScene extends Phaser.Scene {
   private ending = false;
   private miniGame?: DustGame | SealGame | MiniGameHandle;
   private breachProp?: Machine;
+  private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
+  private pulses = new Map<Machine, Phaser.Tweens.Tween>();
+  private taskTab: 1 | 2 = 1;
   private disposers: (() => void)[] = [];
 
   constructor() {
@@ -131,7 +134,7 @@ export class StationScene extends Phaser.Scene {
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, miniGame: undefined });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, pulses: new Map(), taskTab: 1 });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -193,12 +196,13 @@ export class StationScene extends Phaser.Scene {
       for (const p of roomProps(room, this.mission.id)) {
         let at = propPosition(room, p);
         // el PNG trae un margen de papel bajo el objeto: se baja ese margen para que quede apoyado en el piso
-        const img = this.add.image(at.x, at.y + PROP_PAPER_MARGIN * k, propKey(textureAsset(p))).setOrigin(0.5, 1).setScale(k).setDepth(at.y);
+        const img = this.add.image(at.x, at.y + PROP_PAPER_MARGIN * k, propKey(textureAsset(p, !!p.missions))).setOrigin(0.5, 1) // los objetos de la jornada siempre llevan contorno.setScale(k).setDepth(at.y);
         // el objeto no se sale de su sala: su dibujo (sin el margen transparente) queda dentro del piso, sin montarse sobre las paredes
         const r = ROOM_RECTS[room];
         const half = img.displayWidth / 2 - PROP_PAPER_MARGIN * k;
         at = { x: Phaser.Math.Clamp(at.x, r.x + half, r.x + r.w - half), y: at.y };
         img.setX(at.x);
+        if (p.asset === 'reciclador-aire') this.recycler = { sprite: img, at };
         if (p.kind === 'wall') {
           img.setDepth(at.y - 500); // colgado de la pared: siempre detrás del michi
           continue;
@@ -223,8 +227,17 @@ export class StationScene extends Phaser.Scene {
   }
 
   /** Lista de tareas: las hechas quedan tachadas. */
+  /** Lista de tareas en dos pestañas: las propias de la investigación y, solo cuando se terminan, "Avisar a la Tierra". */
   private renderTasks(): void {
-    const html = this.mission.tasks.map((t) => {
+    const unlocked = this.sim.stage2Unlocked && this.mission.tasks.some((t) => t.stage === 2);
+    if (!unlocked && this.taskTab === 2) this.taskTab = 1;
+    this.ui.q('[data-tab2]').hidden = !unlocked;
+    this.ui.el.querySelectorAll<HTMLElement>('.hud__tab').forEach((b) => {
+      const on = Number(b.dataset.tab) === this.taskTab;
+      b.classList.toggle('is-current', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    const html = this.mission.tasks.filter((t) => (t.stage ?? 1) === this.taskTab).map((t) => {
       const n = this.sim.taskProgress(t);
       const done = n >= t.count;
       return `<li class="mn-check ${done ? 'is-done' : ''}"><span class="mn-check__box" aria-hidden="true">${done ? icon('check') : ''}</span>
@@ -246,7 +259,7 @@ export class StationScene extends Phaser.Scene {
     const outside = !this.sim.sheltered;
     if (outside && this.sim.flareActive) add(DOOR_ASSET, 'Llamarada');
     else if (outside && incoming) add(DOOR_ASSET, `Llamarada en ${Math.ceil(incoming.inSec)} s`);
-    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'Oxígeno del traje');
+    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'Oxígeno');
     for (const asset of needs.keys()) if (this.guideTarget(asset)?.room === this.here) needs.delete(asset); // ya estás ahí
     if (this.sim.ended || PAUSING.has(this.overlay)) needs.clear();
 
@@ -466,19 +479,38 @@ export class StationScene extends Phaser.Scene {
     return best;
   }
 
+  /**
+   * Las máquinas se ven normales; cuando se puede interactuar con ellas (se pueden hacer, sirven de algo o una tarea las pide)
+   * toman su contorno blanco y palpitan (los objetos propios de la jornada llevan el contorno siempre y solo palpitan al poder usarse).
+   * Con movimiento reducido solo cambia el contorno.
+   */
+  private updateMachines(): void {
+    const base = PROP_SIZE / PROP_TEXTURE_SCALE;
+    for (const m of this.machines) {
+      const want = !this.sim.ended && (m.prop.actions ?? []).some((a) => this.sim.available(a)
+        && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count)));
+      if (want === !!m.active) continue;
+      m.active = want;
+      m.sprite.setTexture(propKey(textureAsset(m.prop, want || !!m.prop.missions))); // los de la jornada mantienen el contorno
+      const old = this.pulses.get(m);
+      if (old) {
+        old.stop();
+        this.pulses.delete(m);
+        m.sprite.setScale(base);
+      }
+      if (want && !state.calm) {
+        this.pulses.set(m, this.tweens.add({ targets: m.sprite, scale: base * 1.07, duration: 560, yoyo: true, repeat: -1, ease: 'Sine.inOut' }));
+      }
+    }
+  }
+
   /** Resalta la máquina a mano (pulso suave) y muestra la pista de la tecla E. */
   private updateFocus(): void {
     const m = this.overlay === 'none' || this.overlay === 'actions' ? this.nearestMachine() : null;
     if (m !== this.focused) {
-      if (this.focused) {
-        this.tweens.killTweensOf(this.focused.sprite);
-        this.focused.sprite.setScale(PROP_SIZE / PROP_TEXTURE_SCALE).clearTint();
-      }
+      this.focused?.sprite.clearTint();
       this.focused = m;
-      if (m) {
-        m.sprite.setTint(0xfff3c4);
-        if (!state.calm) this.tweens.add({ targets: m.sprite, scale: (PROP_SIZE / PROP_TEXTURE_SCALE) * 1.05, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-      }
+      m?.sprite.setTint(0xfff3c4);
       if (!m && this.overlay === 'actions') this.closeOverlay();
     }
     const prompt = this.ui.q('[data-prompt]');
@@ -491,16 +523,12 @@ export class StationScene extends Phaser.Scene {
     if (this.overlay !== 'none' && this.overlay !== 'actions') return;
     if (this.sim.ended) return;
     if (!startDash(this.dash)) {
-      const bar = this.ui.q('[data-dash]');
-      bar.classList.remove('is-denied');
-      void bar.offsetWidth; // reinicia la animación de "sin carga"
-      bar.classList.add('is-denied');
+      audio.play('error'); // sin carga: el impulso se recarga solo
       return;
     }
     if (!this.route.length) this.dashDir = this.dashDir.x || this.dashDir.y ? this.dashDir : { x: this.face, y: 0 };
     this.ghostTimer = 0;
     audio.play('jump');
-    this.renderDash();
   }
 
   /** Estela del impulso: copias del michi que se desvanecen (pool; se omite en Ultra Ligero o con movimiento reducido). */
@@ -562,18 +590,18 @@ export class StationScene extends Phaser.Scene {
         audio.play('radio');
         this.alert('Antena reparada: la señal con la Tierra es fuerte.', 'ok');
         break;
-      case 'resupplyOffer':
-        this.openResupply();
-        break;
-      case 'resupplyMissed':
-        this.alert('El envío de la Tierra no llegó: la radio estaba mala.', 'danger');
-        this.tip('Con la radio mala no llegan los envíos. Arréglala en Comunicaciones antes de los días 3 y 6.');
+      case 'stageUnlocked':
+        audio.play('achievement');
+        this.taskTab = 2;
+        this.renderTasks();
+        this.alert('¡Investigación lista! Ahora avisa a la Tierra: repara la antena.', 'ok');
         break;
       case 'taskDone': {
         const t = this.mission.tasks.find((x) => x.id === ev.id);
         audio.play('achievement');
         if (t) this.alert(`✓ Tarea cumplida: ${t.label}`, 'ok');
         this.renderTasks();
+    this.updateMachines();
         break;
       }
       case 'critical': {
@@ -592,13 +620,13 @@ export class StationScene extends Phaser.Scene {
       case 'breachOpened':
         audio.play('alarm');
         this.spawnBreach(ev.room);
-        this.alert(`⚠ ¡Fractura en ${ROOMS[ev.room].name}! El aire se escapa: el oxígeno no se regenera, ni en la nave ni en el traje.`, 'danger');
-        this.tip(`Ve a ${ROOMS[ev.room].name} y sella la grieta con el sellador.`);
+        this.alert(`⚠ ¡Se rompió el reciclador de oxígeno! Se escapa el aire: el oxígeno de la nave baja hasta que lo repares.`, 'danger');
+        this.tip(`Ve a ${ROOMS[ev.room].name}, al reciclador roto, y sella la grieta con el sellador.`);
         break;
       case 'breachRepaired':
         this.removeBreach();
         audio.play('confirm');
-        this.alert('Fractura sellada: el oxígeno vuelve a regenerarse.', 'ok');
+        this.alert('Reciclador reparado: el oxígeno de la nave vuelve a regenerarse.', 'ok');
         break;
       case 'panelsFailing':
         audio.play('error');
@@ -666,56 +694,15 @@ export class StationScene extends Phaser.Scene {
     if (id === 'repair') return this.openSealGame();
     if (id === 'repairAntenna') return this.openAntennaGame();
     if (id === 'harvest') return this.openHarvestGame();
+    if (id === 'heal') return this.openHealGame();
     this.sim.act(id);
     for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
     this.renderActions();
   }
 
-  // ---------- minijuegos (el reloj se detiene mientras se juegan; el costo y el efecto se aplican al terminar)
-  /** Panel de un minijuego: dibujo a la izquierda; a la derecha, qué hacer, el avance y el resultado. */
-  private openMini(cfg: {
-    title: string; iconName: Parameters<typeof icon>[0]; body: string; hint: string; barLabel: string; barClass: string; result: string;
-    mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void;
-  }): void {
-    this.closeOverlay();
-    this.openModal(`
-      <div class="dust-layout">
-        <div data-dust-root></div>
-        <div class="dust-side">
-          <h2 class="mn-panel__title">${icon(cfg.iconName)}${esc(cfg.title)}</h2>
-          <p class="mn-panel__body">${esc(cfg.body)}</p>
-          <p class="body-sm">${esc(cfg.hint)}</p>
-          <div class="mn-bar ${cfg.barClass} dust-progress" role="progressbar" aria-label="${esc(cfg.barLabel)}" aria-valuemin="0" aria-valuemax="100" data-dust-bar>
-            <span class="mn-bar__label">${esc(cfg.barLabel)}</span>
-            <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
-            <span class="mn-bar__value" data-value>0%</span>
-          </div>
-          <p class="dust-result" data-dust-result hidden>${icon('check')}${esc(cfg.result)}</p>
-          <div class="mn-panel__footer"><button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="dust-cancel">${icon('close')}Cancelar</button></div>
-        </div>
-      </div>`, 'minigame', 'modal__panel--wide');
-    const bar = this.ui.q('[data-dust-bar]');
-    this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
-      onProgress: (f) => {
-        const v = Math.round(f * 100);
-        bar.setAttribute('aria-valuenow', String(v));
-        (bar.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
-        (bar.querySelector('[data-value]') as HTMLElement).textContent = `${v}%`;
-      },
-      onDone: (result) => {
-        audio.play('achievement');
-        this.ui.q('[data-dust-result]').hidden = false;
-        cfg.finish(result);
-        for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
-        this.time.delayedCall(1300, () => {
-          if (this.overlay === 'minigame') this.closeOverlay();
-        });
-      },
-    });
-  }
-
+  // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
   /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: () => void }): void {
+  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void }): void {
     this.closeOverlay();
     this.openModal(`
       <div class="mini-full" aria-label="Minijuego">
@@ -724,11 +711,11 @@ export class StationScene extends Phaser.Scene {
       </div>`, 'minigame', 'modal__panel--full');
     this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: () => undefined,
-      onDone: () => {
+      onDone: (result) => {
         audio.play('achievement');
         this.ui.q('[data-dust-result]').hidden = false;
         this.ui.q('.mini-full').classList.add('is-done');
-        cfg.finish();
+        cfg.finish(result);
         for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
         this.time.delayedCall(1100, () => {
           if (this.overlay === 'minigame') this.closeOverlay();
@@ -745,44 +732,31 @@ export class StationScene extends Phaser.Scene {
   }
 
   private openSealGame(): void {
-    this.openMini({
-      title: 'Sella la fractura', iconName: 'gear', barLabel: 'Sellado', barClass: 'mn-bar--oxygen',
-      body: 'Una grieta deja escapar el aire de la nave. Mientras esté abierta, el oxígeno no se recupera. Sigue la grieta con el sellador de arriba hacia abajo.',
-      hint: 'Arrastra con el ratón o el dedo, o usa las flechas del teclado.', result: '¡Fractura sellada! El oxígeno vuelve a regenerarse.',
-      mount: (root, cb) => mountSealGame(root, cb),
-      finish: () => void this.sim.act('repair'),
-    });
+    this.openFullMini({ mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
   }
 
   private openAntennaGame(): void {
-    this.openMini({
-      title: 'Repara la antena', iconName: 'antenna', barLabel: 'Cables', barClass: 'mn-bar--oxygen',
-      body: 'La antena se desajustó y la señal con la Tierra es débil. Conecta cada cable con el enchufe de su mismo color y forma.',
-      hint: 'Toca un cable y después su enchufe. Funciona con ratón, dedo o teclado (Tab y Enter).', result: '¡Antena reparada! Enviando la señal a la Tierra…',
-      mount: (root, cb) => mountAntennaGame(root, cb),
-      finish: () => void this.sim.act('repairAntenna'),
-    });
+    this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => void this.sim.act('repairAntenna') });
+  }
+
+  /** Curarse: tratar cada herida manteniendo apretado. */
+  private openHealGame(): void {
+    this.openFullMini({ mount: (root, cb) => mountHealGame(root, cb), finish: () => void this.sim.act('heal') });
   }
 
   private openHarvestGame(): void {
-    this.openMini({
-      title: 'Cosecha', iconName: 'sprout', barLabel: 'Cosechado', barClass: 'mn-bar--hunger',
-      body: 'Recoge solo las plantas maduras, las de frutos rojos y brillo. Las verdes todavía no están listas y te hacen perder tiempo.',
-      hint: 'Tienes 20 segundos. Toca "Listo" cuando termines. Más cosecha, más comida.', result: 'Cosecha terminada: ¡comida para la tripulación!',
-      mount: (root, cb) => mountHarvestGame(root, cb),
-      finish: (result) => void this.sim.act('harvest', Math.max(0.1, result ?? 1)),
-    });
+    this.openFullMini({ mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', Math.max(0.1, result ?? 1)) });
   }
 
-  /** La fractura aparece como un objeto interactivo en su sala y desaparece al repararla. */
+  /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */
   private spawnBreach(room: RoomId): void {
-    const slot = BREACH_SLOTS[room];
-    if (!slot || this.breachProp) return;
+    const rec = this.recycler;
+    if (!rec || room !== 'soporte' || this.breachProp) return;
     const k = PROP_SIZE / PROP_TEXTURE_SCALE;
-    const prop: RoomProp = { asset: 'fractura', kind: 'interactive', x: slot.x, y: slot.y, actions: ['repair'], name: 'Fractura en el casco' };
-    const at = propPosition(room, prop);
-    const sprite = this.add.image(at.x, at.y + PROP_PAPER_MARGIN * k, propKey('fractura-marcado')).setOrigin(0.5, 1).setScale(k).setDepth(at.y);
-    const m: Machine = { room, at, sprite, prop };
+    const prop: RoomProp = { asset: 'reciclador-roto', kind: 'interactive', x: 0, y: 0, actions: ['repair'], name: 'Reciclador de oxígeno roto' };
+    rec.sprite.setVisible(false);
+    const sprite = this.add.image(rec.at.x, rec.at.y + PROP_PAPER_MARGIN * k, propKey('reciclador-roto')).setOrigin(0.5, 1).setScale(k).setDepth(rec.at.y);
+    const m: Machine = { room, at: rec.at, sprite, prop };
     sprite.setInteractive({ useHandCursor: true });
     sprite.on('pointerdown', () => {
       if (this.overlay !== 'none' && this.overlay !== 'actions') return;
@@ -794,13 +768,16 @@ export class StationScene extends Phaser.Scene {
     this.breachProp = m;
   }
 
+  /** Reparado: el reciclador vuelve a verse entero. */
   private removeBreach(): void {
     const m = this.breachProp;
     if (!m) return;
-    this.tweens.killTweensOf(m.sprite);
+    this.pulses.get(m)?.stop();
+    this.pulses.delete(m);
     m.sprite.destroy();
     this.machines = this.machines.filter((x) => x !== m);
     if (this.focused === m) this.focused = null;
+    this.recycler?.sprite.setVisible(true);
     this.breachProp = undefined;
   }
 
@@ -823,33 +800,24 @@ export class StationScene extends Phaser.Scene {
         <div class="hud__guides" data-guides aria-live="polite"></div>
         <div class="hud__left">
           <section class="hud__stats mn-panel" aria-label="Estado de la misión">
-            ${bar('energy', 'mn-bar--energy')}${bar('oxygen', 'mn-bar--oxygen')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
-            <button class="mn-bar mn-bar--dash hud__dash" data-action="dash" data-dash role="progressbar" aria-label="Impulso (Shift)" aria-valuemin="0" aria-valuemax="${DASH.max}">
-              <span class="mn-bar__label">${icon('dash')}Impulso</span>
-              <span class="mn-bar__track"><span class="mn-bar__fill" data-fill></span></span>
-              <span class="mn-bar__value" data-value>100</span>
-            </button>
-            <div class="hud__telemetry">
-            <span class="hud__tele" data-tele="panels" title="Paneles solares: renuevan la energía">${icon('panel')}Paneles <b data-v></b></span>
-            <span class="hud__tele" data-tele="signal" title="Señal de la antena con la Tierra">${icon('antenna')}Señal <b data-v></b></span>
-            </div>
+            ${bar('energy', 'mn-bar--energy')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
           </section>
-          <section class="hud__suit mn-panel" data-suit hidden aria-label="Oxígeno del traje">
-            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="Oxígeno del traje" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
-              <span class="mn-bar__label">${icon('helmet')}Oxígeno del traje</span>
+          <section class="hud__suit mn-panel" data-suit hidden aria-label="Oxígeno">
+            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="Oxígeno" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
+              <span class="mn-bar__label">${icon('helmet')}Oxígeno</span>
               <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
               <span class="mn-bar__value" data-value></span>
             </div>
-            <span class="hud__suit-note" data-suit-note></span>
           </section>
         </div>
         <div class="hud__top-right">
           <section class="hud__tasks mn-panel" aria-label="Investigación">
-            <span class="hud__tasks-kicker">Investigación</span>
-            <span class="hud__tasks-name">${icon(MISSION_ICON[this.mission.id])}${esc(this.mission.name)}</span>
-            <p class="hud__tasks-question">${esc(this.mission.question)}</p>
+            <span class="hud__tasks-name">${esc(this.mission.name)}</span>
+            <div class="hud__tabs" role="tablist" aria-label="Tareas">
+              <button class="hud__tab is-current" role="tab" data-action="tasks-tab" data-tab="1">Investigación</button>
+              <button class="hud__tab" role="tab" data-action="tasks-tab" data-tab="2" data-tab2 hidden>Avisar a la Tierra</button>
+            </div>
             <ul class="mn-checklist" data-tasks></ul>
-            <span class="caption-mono hud__tasks-source">${esc(sourceCredit(this.mission))}</span>
           </section>
           <span class="caption-mono hud__fps" data-fps hidden></span>
         </div>
@@ -885,10 +853,8 @@ export class StationScene extends Phaser.Scene {
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
-      .on('dust-cancel', () => this.closeOverlay())
-      .on('resupply', (el) => this.chooseResupply(el.dataset.id as ResupplyChoice))
+      .on('tasks-tab', (el) => { this.taskTab = el.dataset.tab === '2' ? 2 : 1; this.renderTasks(); })
       .on('read-info', (el) => this.openArchive(el.dataset.entry))
-      .on('dash', () => this.tryDash())
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
     this.disposers.push(bindSettings(this.ui, () => undefined));
@@ -896,7 +862,7 @@ export class StationScene extends Phaser.Scene {
 
   private renderHud(): void {
     const s = this.sim;
-    for (const key of ['energy', 'oxygen', 'food', 'health', 'radiation'] as (keyof Resources)[]) {
+    for (const key of ['energy', 'food', 'health', 'radiation'] as (keyof Resources)[]) {
       const v = Math.round(s.res[key]);
       const id = `res-${key}`;
       if (this.hudCache.get(id) === String(v)) continue;
@@ -907,12 +873,9 @@ export class StationScene extends Phaser.Scene {
       (el.querySelector('[data-value]') as HTMLElement).textContent = key === 'radiation' ? `${v}%` : String(v);
       el.classList.toggle('is-critical', key === 'radiation' ? v >= 80 : v <= 20);
     }
-    this.renderDash();
     this.setText('[data-day]', `Día ${s.day}/${s.config.days}`);
     this.setText('[data-light]', s.light >= 1 ? '☀ Día' : s.light > 0 ? '◐ Atardecer' : '☾ Noche');
     (this.ui.q('[data-daybar]') as HTMLElement).style.width = `${Math.round(s.dayProgress * 100)}%`;
-    this.tele('panels', s.panelsOk ? 'bien' : 'fallan', !s.panelsOk);
-    this.tele('signal', `${Math.round(s.comp.antenna * 100)}%`, !s.radioOk);
     this.renderSuit();
     const incoming = s.incomingFlare;
     const countdown = this.ui.q('[data-countdown]');
@@ -932,39 +895,23 @@ export class StationScene extends Phaser.Scene {
   }
 
   /** Barra del traje: aparece al salir de la nave y se esconde cuando vuelve a estar llena adentro. */
+  /**
+   * Barra de Oxígeno debajo de las stats: afuera muestra el del traje; adentro solo aparece si el oxígeno de la nave está bajo
+   * o hay una fractura, y entonces muestra el de la nave. Sin textos.
+   */
   private renderSuit(): void {
     const s = this.sim;
+    const suitMode = this.zone === 'surface' || s.suit < 99.5;
+    const stationMode = !suitMode && (!!s.breach || s.res.oxygen <= 30);
     const panel = this.ui.q('[data-suit]');
-    panel.hidden = this.zone === 'ship' && s.suit >= 99.5;
+    panel.hidden = !suitMode && !stationMode;
     if (panel.hidden) return;
-    const v = Math.round(s.suit);
+    const v = Math.round(suitMode ? s.suit : s.res.oxygen);
     const bar = this.ui.q('[data-suit-bar]');
     bar.setAttribute('aria-valuenow', String(v));
     (bar.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
-    this.setText('[data-suit-bar] [data-value]', `${Math.ceil(s.suitSecondsLeft)} s`);
-    bar.classList.toggle('is-critical', this.zone === 'surface' && v <= SUIT_LOW);
-    this.setText('[data-suit-note]', s.breach && this.zone !== 'surface' ? 'Hay una fractura: el traje no se recarga hasta repararla.' : this.zone === 'surface' ? 'Vuelve a la nave o al invernadero antes de que se vacíe.'
-      : this.zone === 'greenhouse' ? 'En el invernadero hay aire: el traje se recarga.' : 'Dentro de la nave el traje se recarga.');
-  }
-
-  /** Barra de impulso: se llena sola; brilla cuando alcanza para un impulso. */
-  private renderDash(): void {
-    const v = Math.round(this.dash.charge);
-    if (this.hudCache.get('dash') === String(v)) return;
-    this.hudCache.set('dash', String(v));
-    const el = this.ui.q('[data-dash]');
-    el.setAttribute('aria-valuenow', String(v));
-    (el.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
-    (el.querySelector('[data-value]') as HTMLElement).textContent = String(v);
-    el.classList.toggle('is-ready', canDash(this.dash));
-  }
-
-  private tele(id: string, value: string, alert: boolean): void {
-    const el = this.ui.q(`[data-tele="${id}"]`);
-    if (this.hudCache.get(`tele-${id}`) === value + alert) return;
-    this.hudCache.set(`tele-${id}`, value + alert);
-    (el.querySelector('[data-v]') as HTMLElement).textContent = value;
-    el.classList.toggle('is-alert', alert);
+    this.setText('[data-suit-bar] [data-value]', suitMode ? `${Math.ceil(s.suitSecondsLeft)} s` : `${v}`);
+    bar.classList.toggle('is-critical', suitMode ? this.zone === 'surface' && v <= SUIT_LOW : v <= 20);
   }
 
   private setText(sel: string, text: string): void {
@@ -1098,30 +1045,6 @@ export class StationScene extends Phaser.Scene {
     this.scene.pause();
   }
 
-  private openResupply(): void {
-    this.closeOverlay();
-    this.overlay = 'resupply';
-    audio.play('radio');
-    const opts = (['energy', 'oxygen', 'food', 'health'] as ResupplyChoice[])
-      .map((id) => `<button class="option option--small resupply__opt resupply__opt--${id}" data-action="resupply" data-id="${id}" ${id === 'oxygen' && this.sim.breach ? 'disabled title="Con la fractura abierta el oxígeno no se regenera"' : ''}>
-        <span class="resupply__icon" aria-hidden="true">${icon(RESOURCE_ICON[id])}</span>
-        <span class="title">${RESUPPLY_TEXT[id]}</span>
-        <span class="heading option__subtitle">+${RESUPPLY_AMOUNT} ${RESOURCE_TEXT[id].label} (ahora: ${Math.round(this.sim.res[id])})</span></button>`)
-      .join('');
-    this.openModal(`
-      <h2 class="mn-panel__title">Llega un envío de la Tierra</h2>
-      <p class="mn-panel__body">El cohete de carga solo trae espacio para <strong>una</strong> caja. Elige la que más falta: mira tus barras. (El tiempo está detenido.)</p>
-      <div class="resupply">${opts}</div>`, 'resupply', 'modal__panel--wide');
-  }
-
-  private chooseResupply(choice: ResupplyChoice): void {
-    if (this.sim.chooseResupply(choice)) {
-      audio.play('achievement');
-      this.float(`+${RESUPPLY_AMOUNT} ${RESOURCE_TEXT[choice].short}`, 'star-gold');
-    }
-    this.closeOverlay();
-  }
-
   private openModal(html: string, overlay: Overlay, extra = ''): void {
     this.overlay = overlay;
     this.ui.q('[data-actions]').hidden = true;
@@ -1134,7 +1057,6 @@ export class StationScene extends Phaser.Scene {
   private closeOverlay(): void {
     this.miniGame?.destroy();
     this.miniGame = undefined;
-    if (this.overlay === 'resupply' && this.sim.resupplyOpen) return; // hay que elegir una caja
     this.overlay = 'none';
     this.ui.q('[data-overlay]').hidden = true;
     this.ui.q('[data-actions]').hidden = true;
@@ -1260,7 +1182,7 @@ export class StationScene extends Phaser.Scene {
     audio.play(summary.won ? 'achievement' : 'hurt');
     this.playAnim(summary.won ? 'smile' : 'hurt', true);
     this.alert(summary.won ? '¡Investigación completa! Volviendo a la Tierra…' : 'La tripulación debe volver a la Tierra…', summary.won ? 'ok' : 'danger');
-    this.time.delayedCall(1600, () => fadeTo(this, SCENES.report, 500));
+    this.time.delayedCall(1600, () => fadeTo(this, SCENES.returnTrip, 500)); // viaje de regreso a la Tierra y después el informe
   }
 }
 
@@ -1271,7 +1193,7 @@ const GUIDE_ASSET: Record<Exclude<keyof Resources, 'radiation'>, string> = {
 };
 /** La Esclusa: adonde guía la flecha cuando hay que volver a la nave. */
 const DOOR_ASSET = 'esclusa';
-const BREACH_GUIDE = 'fractura';
+const BREACH_GUIDE = 'reciclador-roto';
 /** Sala donde empieza cada jornada. */
 const START_ROOM: RoomId = 'puente';
 /** Nombre que se muestra de una máquina: el suyo propio o el de su sala. */

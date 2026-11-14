@@ -25,7 +25,7 @@ export const michiKey = (helmet: boolean, anim: MichiAnim): string => `michi-${h
  */
 export function queueStationAssets(load: Phaser.Loader.LoaderPlugin, loadout: Loadout): void {
   const { plain, marked } = propAssetsFor(loadout.mission);
-  for (const asset of [...plain, ...marked, 'fractura-marcado']) if (!load.textureManager.exists(propKey(asset))) load.svg(propKey(asset), `game/props/${asset}.svg`, { scale: 1.25 });
+  for (const asset of [...plain, ...marked, 'reciclador-roto', 'reciclador-roto-marcado']) if (!load.textureManager.exists(propKey(asset))) load.svg(propKey(asset), `game/props/${asset}.svg`, { scale: 1.25 });
   for (const helmet of [false, true]) {
     for (const anim of Object.keys(MICHI_ANIMS) as MichiAnim[]) {
       const key = michiKey(helmet, anim);

@@ -18,13 +18,19 @@ export const BACKGROUND_RADIATION_PER_DAY = 2;
 /** El reciclador renueva el oxígeno solo: genera esto por jornada mientras no tenga una fractura abierta. Con la fractura, el oxígeno solo baja. */
 export const OXYGEN_REGEN_PER_DAY = 14;
 
+/** Con una fractura abierta el aire se escapa: el oxígeno de la nave baja esto extra por jornada (además del consumo normal). */
+export const OXYGEN_LEAK_PER_DAY = -30;
+
 /** Sin energía, el soporte vital rinde menos: el oxígeno baja más rápido. */
 export const NO_ENERGY_EXTRA_OXYGEN_PER_DAY = -10;
 
-/** Salud: baja por jornada si falta oxígeno o comida (≤ HEALTH_DANGER_AT) o si la radiación pasa del umbral. */
-export const HEALTH_DANGER_AT = 15;
+/**
+ * Salud: baja por jornada cuando el oxígeno o la comida llegan a 0, y con la radiación a partir de HEALTH_RADIATION_AT:
+ * de a poco al principio y más rápido mientras más alta (la pérdida máxima por jornada se da con 100 %). La radiación no se puede sacar.
+ */
+export const HEALTH_DANGER_AT = 0;
 export const HEALTH_LOSS_PER_DAY = { oxygen: -45, food: -25, radiation: -30 } as const;
-export const HEALTH_RADIATION_AT = 70;
+export const HEALTH_RADIATION_AT = 50;
 
 /** Polvo en los paneles por jornada (rango; se sortea con la semilla). Cada 100 % de polvo quita DUST_MAX_LOSS de la energía. */
 export const DUST_PER_DAY: readonly [number, number] = [0.08, 0.14];
@@ -38,8 +44,6 @@ export const ANTENNA_DRIFT_PER_DAY: readonly [number, number] = [0.12, 0.2];
 
 /** Bajo este enlace (60 %) no llegan el pronóstico ni los envíos. */
 export const LINK_MIN_RADIO = 0.6;
-export const RESUPPLY_DAYS = [3, 6] as const;
-export const RESUPPLY_AMOUNT = 25;
 
 /** Ida y vuelta de una señal Tierra–Luna (384 400 km / c ≈ 1,28 s por sentido). */
 export const EARTH_MOON_ROUND_TRIP_SEC = 2.56;

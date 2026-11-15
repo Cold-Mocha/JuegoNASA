@@ -1,0 +1,11 @@
+# Dependencias y builds (el juego también tiene su propio .gitignore)
+node_modules/
+juego/dist/
+juego/coverage/
+juego/test-results/
+juego/playwright-report/
+juego/blob-report/
+
+# Sistema y editores
+.DS_Store
+*.log

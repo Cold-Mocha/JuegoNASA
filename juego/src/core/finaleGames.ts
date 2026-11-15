@@ -1,17 +1,24 @@
 import { t } from './i18n';
 import {
-  BELT_H, BELT_SECONDS, BELT_SHIP_Y, CRATER_W, ROCKS, ROVER_LEN, beltDone, beltScore, createBelt, createRover, craters, hintSeconds,
-  moveBelt, roverDone, roverScore, stepBelt, stepRover, terrainY, type BeltState, type RoverState,
+  BELT_SECONDS, BELT_SHIP_Y, CRATER_W, ROCKS, ROVER_LEN, beltDone, beltScore, createBelt, createRover, craters, hintSeconds,
+  moveBelt, roverDone, roverScore, stepBelt, stepRover, terrainY, type BeltState, type BeltThing, type RoverState,
 } from '../sim/finale';
 import type { MiniGameHandle } from './miniGames';
+
 /**
- * La sonda: el cinturón de asteroides y el rover lunar, en canvas de 380 × 500 (sin Phaser).
- * La lógica vive en `sim/finale.ts`; aquí solo se dibuja y se leen los controles (teclado, ratón o dedo).
+ * La sonda: el cinturón de asteroides, el alunizaje y el rover lunar, en un canvas apaisado de 940 × 590 que aprovecha la pantalla del PC
+ * (la estación lo monta con el marco ancho, al lado de las barras). La lógica vive en `sim/finale.ts`; aquí solo se dibuja y se leen los controles.
+ * [DIBUJO] En el cinturón las rocas están mucho más juntas que en la realidad.
  */
-const W = 380;
-const H = BELT_H;
-const LANE_X = [W * 0.2, W * 0.5, W * 0.8];
+export const FINALE_W = 940;
+export const FINALE_H = 590;
+const W = FINALE_W;
+const H = FINALE_H;
 const INK = '#0e0b33';
+const PAPER = '#f5f5f2';
+const GOLD = '#ffcb47';
+const TEAL = '#5ad6b2';
+const CYAN = '#7fe3ff';
 
 export interface BeltResult { score: number; batteries: number; chips: number; algae: number; hull: number; }
 export interface RoverResult { score: number; rocks: number; flips: number; }
@@ -19,7 +26,7 @@ export interface RoverResult { score: number; rocks: number; flips: number; }
 interface Loop { destroy(): void; }
 
 /** Bucle de animación con límite de dt; `step` devuelve true al terminar (la llamada de cierre se guarda para que `destroy` la cancele). */
-function runLoop(step: (dt: number) => boolean, draw: () => void, finish: () => void): Loop {
+function runLoop(step: (dt: number) => boolean, draw: (dt: number) => void, finish: () => void): Loop {
   let raf = 0;
   let timer = 0;
   let dead = false;
@@ -29,7 +36,7 @@ function runLoop(step: (dt: number) => boolean, draw: () => void, finish: () => 
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const over = step(dt);
-    draw();
+    draw(dt);
     if (over) { timer = window.setTimeout(() => { if (!dead) finish(); }, 900); return; }
     raf = requestAnimationFrame(frame);
   };
@@ -38,30 +45,100 @@ function runLoop(step: (dt: number) => boolean, draw: () => void, finish: () => 
 }
 
 function makeCanvas(root: HTMLElement, label: string, extra = ''): { c: CanvasRenderingContext2D; el: HTMLCanvasElement; box: HTMLElement } {
-  root.innerHTML = `<div class="finale" style="position:relative;width:${W}px;height:${H}px"><canvas width="${W}" height="${H}" role="img" aria-label="${label}" style="display:block;border:4px solid ${INK};border-radius:14px;touch-action:none"></canvas>${extra}</div>`;
+  root.innerHTML = `<div class="finale" style="position:relative;width:${W}px;height:${H}px"><canvas width="${W}" height="${H}" role="img" aria-label="${label}" style="display:block;border:4px solid ${INK};border-radius:16px;touch-action:none"></canvas>${extra}</div>`;
   const el = root.querySelector('canvas')!;
   return { c: el.getContext('2d')!, el, box: root.querySelector<HTMLElement>('.finale')! };
 }
 
-const text = (c: CanvasRenderingContext2D, s: string, x: number, y: number, size = 15, align: CanvasTextAlign = 'left'): void => {
-  c.font = `700 ${size}px Arial, Helvetica, sans-serif`;
+// ------------------------------------------------------------------ utilidades de dibujo
+const text = (c: CanvasRenderingContext2D, s: string, x: number, y: number, size = 20, align: CanvasTextAlign = 'left', color = PAPER): void => {
+  c.font = `700 ${size}px Fredoka, Arial, Helvetica, sans-serif`;
   c.textAlign = align;
-  c.fillStyle = '#f5f5f2';
+  c.lineWidth = 5;
+  c.strokeStyle = INK;
+  c.strokeText(s, x, y);
+  c.fillStyle = color;
   c.fillText(s, x, y);
 };
 
-const stars = (c: CanvasRenderingContext2D, t0: number): void => {
-  c.fillStyle = '#0b0830';
-  c.fillRect(0, 0, W, H);
-  c.fillStyle = '#e4e3f2';
-  for (let i = 0; i < 40; i++) c.fillRect((i * 97) % W, (i * 53 + t0 * 40 * (1 + (i % 3))) % H, 2, 2);
+/** Píldora del HUD sobre el canvas (fondo oscuro translúcido con borde). */
+const pill = (c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void => {
+  c.fillStyle = 'rgba(14, 11, 51, .72)';
+  c.strokeStyle = 'rgba(245, 245, 242, .35)';
+  c.lineWidth = 2;
+  c.beginPath(); c.roundRect(x, y, w, h, h / 2); c.fill(); c.stroke();
 };
 
-// ------------------------------------------------------------------ la sonda (dibujo compartido)
+const heart = (c: CanvasRenderingContext2D, x: number, y: number, r: number, full: boolean): void => {
+  c.beginPath();
+  c.moveTo(x, y + r * 0.9);
+  c.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.7, y - r * 1.3, x, y - r * 0.45);
+  c.bezierCurveTo(x + r * 0.7, y - r * 1.3, x + r * 1.6, y - r * 0.2, x, y + r * 0.9);
+  c.fillStyle = full ? '#ff6b7a' : 'rgba(245,245,242,.18)';
+  c.fill();
+  c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke();
+};
+
 const smooth = (a: number, b: number, x: number): number => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+/** Ruido determinista 0–1 a partir de un número (para manchas, estrellas y rocas estables). */
+const hash = (n: number): number => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+
+/** Cielo con estrellas en tres capas de paralaje; `scroll` avanza en px (hacia la izquierda). */
+function starfield(c: CanvasRenderingContext2D, scroll: number, top: string, bottom: string): void {
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, top); g.addColorStop(1, bottom);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  for (let layer = 0; layer < 3; layer++) {
+    const speed = [0.15, 0.4, 1][layer];
+    const size = [1.2, 1.8, 2.6][layer];
+    c.fillStyle = layer === 2 ? '#ffffff' : '#c9c6ec';
+    c.globalAlpha = [0.5, 0.75, 1][layer];
+    for (let i = 0; i < 46; i++) {
+      const x = ((hash(i + layer * 100) * (W + 40) - scroll * speed) % (W + 40) + (W + 40)) % (W + 40) - 20;
+      const y = hash(i * 3.7 + layer * 50) * H;
+      c.fillRect(x, y, size, size);
+    }
+  }
+  c.globalAlpha = 1;
+}
+
+function nebula(c: CanvasRenderingContext2D, x: number, y: number, r: number, color: string): void {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+}
+
+function moonDisc(c: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  const g = c.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+  g.addColorStop(0, '#f1efff'); g.addColorStop(0.7, '#bdbad8'); g.addColorStop(1, '#8a87ad');
+  c.fillStyle = g; c.strokeStyle = INK; c.lineWidth = 3;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = 'rgba(110,106,150,.55)';
+  for (const [dx, dy, k] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.16], [-0.05, 0.4, 0.12], [0.4, -0.35, 0.09], [-0.45, 0.25, 0.1]]) {
+    c.beginPath(); c.arc(x + dx * r, y + dy * r, k * r, 0, Math.PI * 2); c.fill();
+  }
+}
+
+function earthDisc(c: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  const g = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  g.addColorStop(0, '#7fc1ff'); g.addColorStop(1, '#2d63c4');
+  c.fillStyle = g; c.strokeStyle = INK; c.lineWidth = 3;
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  c.save(); c.clip();
+  c.fillStyle = '#7ed957';
+  c.beginPath(); c.ellipse(x - r * 0.3, y - r * 0.1, r * 0.35, r * 0.22, 0.5, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(x + r * 0.35, y + r * 0.35, r * 0.25, r * 0.15, -0.4, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.75)';
+  c.beginPath(); c.ellipse(x + r * 0.1, y - r * 0.5, r * 0.5, r * 0.1, 0.1, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(x - r * 0.2, y + r * 0.6, r * 0.45, r * 0.08, -0.1, 0, Math.PI * 2); c.fill();
+  c.restore();
+  c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke();
+}
+
+// ------------------------------------------------------------------ la sonda (dibujo compartido)
 interface ProbeLook { scale?: number; legs?: number; flame?: number; tilt?: number; sink?: number; panels?: boolean; t: number; }
 
-/** [DIBUJO] Sonda propia y sin logo: cuerpo dorado, ojo-cámara, antena, paneles y cuatro patas que se despliegan. Origen = centro del cuerpo. */
+/** [DIBUJO] Sonda propia y sin logo: cuerpo dorado con lámina térmica, ojo-cámara, antena, paneles y cuatro patas que se despliegan. Origen = centro del cuerpo; el motor apunta hacia abajo. */
 function drawProbe(c: CanvasRenderingContext2D, x: number, y: number, o: ProbeLook): void {
   const d = o.legs ?? 0;
   const sink = o.sink ?? 0;
@@ -70,10 +147,13 @@ function drawProbe(c: CanvasRenderingContext2D, x: number, y: number, o: ProbeLo
   c.rotate(o.tilt ?? 0);
   c.scale(o.scale ?? 1, o.scale ?? 1);
   c.lineJoin = 'round'; c.lineCap = 'round';
-  // llama del motor central (violeta por fuera, naranja y núcleo claro)
+  // llama del motor (violeta por fuera, naranja y núcleo claro), con brillo
   const f = o.flame ?? 0;
   if (f > 0.02) {
     const fl = Math.sin(o.t * 52) * 2.2 + Math.sin(o.t * 31) * 1.4;
+    const glow = c.createRadialGradient(0, 30, 2, 0, 30, 40 + 30 * f);
+    glow.addColorStop(0, 'rgba(255,190,90,.55)'); glow.addColorStop(1, 'rgba(255,120,60,0)');
+    c.fillStyle = glow; c.beginPath(); c.arc(0, 34, 40 + 30 * f, 0, Math.PI * 2); c.fill();
     const flame = (len: number, w: number, col: string, a: number): void => {
       c.globalAlpha = a; c.fillStyle = col;
       c.beginPath(); c.moveTo(-w, 22); c.quadraticCurveTo(-w * 0.9, 22 + len * 0.55, 0, 22 + len); c.quadraticCurveTo(w * 0.9, 22 + len * 0.55, w, 22); c.closePath(); c.fill();
@@ -84,132 +164,283 @@ function drawProbe(c: CanvasRenderingContext2D, x: number, y: number, o: ProbeLo
     c.globalAlpha = 1;
   }
   const ink = (w: number, col: string): void => { c.lineWidth = w; c.strokeStyle = col; };
-  // patas (4 en total: se ven 2 de frente, las otras 2 detrás y más cortas)
+  // patas con amortiguador y pie
   for (const sg of [-1, 1]) {
     const hx = sg * 14, hy = 10;
     const fx = sg * (17 + 19 * d), fy = 30 + 11 * d - sink;
     ink(5.5, INK); c.beginPath(); c.moveTo(hx, hy); c.lineTo(fx, fy); c.stroke();
     ink(2.4, '#cfcde6'); c.beginPath(); c.moveTo(hx, hy); c.lineTo(fx, fy); c.stroke();
-    ink(4, INK); c.beginPath(); c.moveTo(fx - 7, fy + 2); c.lineTo(fx + 7, fy + 2); c.stroke();
-    ink(1.8, '#8d8aa8'); c.beginPath(); c.moveTo(fx - 6, fy + 2); c.lineTo(fx + 6, fy + 2); c.stroke();
+    ink(3, INK); c.beginPath(); c.moveTo(hx * 0.6, hy + 4); c.lineTo((hx + fx) / 2, (hy + fy) / 2); c.stroke();
+    c.fillStyle = '#8d8aa8'; ink(2.5, INK);
+    c.beginPath(); c.ellipse(fx, fy + 2, 8, 3, 0, 0, Math.PI * 2); c.fill(); c.stroke();
   }
-  // paneles solares con su puntal
+  // paneles solares con celdas y puntal
   if (o.panels !== false) {
     for (const sg of [-1, 1]) {
       ink(3, INK); c.beginPath(); c.moveTo(sg * 15, -4); c.lineTo(sg * 24, -4); c.stroke();
-      c.fillStyle = '#3b5bd9'; ink(3, INK);
-      c.beginPath(); c.rect(sg > 0 ? 24 : -46, -11, 22, 15); c.fill(); c.stroke();
+      const x0 = sg > 0 ? 24 : -50;
+      const pg = c.createLinearGradient(x0, -12, x0 + 26, 6);
+      pg.addColorStop(0, '#4f74f0'); pg.addColorStop(1, '#2a3f8f');
+      c.fillStyle = pg; ink(3, INK);
+      c.beginPath(); c.rect(x0, -12, 26, 17); c.fill(); c.stroke();
       ink(1.2, '#9fb3ff');
-      const x0 = sg > 0 ? 24 : -46;
-      c.beginPath(); c.moveTo(x0 + 7.3, -11); c.lineTo(x0 + 7.3, 4); c.moveTo(x0 + 14.6, -11); c.lineTo(x0 + 14.6, 4); c.moveTo(x0, -3.5); c.lineTo(x0 + 22, -3.5); c.stroke();
+      c.beginPath();
+      for (const k of [1, 2, 3]) { c.moveTo(x0 + k * 6.5, -12); c.lineTo(x0 + k * 6.5, 5); }
+      c.moveTo(x0, -3.5); c.lineTo(x0 + 26, -3.5); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x0 + 2, -10, 8, 4);
     }
   }
   // tobera
   c.fillStyle = '#6f6c8c'; ink(3, INK);
-  c.beginPath(); c.moveTo(-6, 14); c.lineTo(6, 14); c.lineTo(9, 23); c.lineTo(-9, 23); c.closePath(); c.fill(); c.stroke();
+  c.beginPath(); c.moveTo(-6, 14); c.lineTo(6, 14); c.lineTo(10, 24); c.lineTo(-10, 24); c.closePath(); c.fill(); c.stroke();
   // antena parabólica
   ink(3, INK); c.beginPath(); c.moveTo(7, -20); c.lineTo(13, -33); c.stroke();
-  c.fillStyle = '#f5f5f2'; c.beginPath(); c.ellipse(13, -35, 8, 3.6, -0.5, 0, 7); c.fill(); c.stroke();
-  // cuerpo dorado (trapecio redondeado) y cubierta plateada
-  c.translate(0, sink * 0.0);
-  c.fillStyle = '#e9b949'; ink(3, INK);
+  c.fillStyle = PAPER; c.beginPath(); c.ellipse(13, -35, 9, 4, -0.5, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = '#ff6b7a'; c.beginPath(); c.arc(13, -35, 2, 0, Math.PI * 2); c.fill();
+  // cuerpo dorado con lámina térmica arrugada
+  const body = c.createLinearGradient(-21, -20, 21, 14);
+  body.addColorStop(0, '#ffe08a'); body.addColorStop(0.5, '#e9b949'); body.addColorStop(1, '#b8862a');
+  c.fillStyle = body; ink(3, INK);
   c.beginPath(); c.moveTo(-16, -20); c.lineTo(16, -20); c.lineTo(21, 14); c.lineTo(-21, 14); c.closePath(); c.fill(); c.stroke();
-  c.fillStyle = '#f6d77a'; c.beginPath(); c.moveTo(-12, -16); c.lineTo(-4, -16); c.lineTo(-8, 10); c.lineTo(-17, 10); c.closePath(); c.fill();
+  ink(1.2, 'rgba(120,80,20,.55)');
+  c.beginPath(); c.moveTo(-14, -8); c.lineTo(-6, -2); c.lineTo(-12, 6); c.moveTo(8, -14); c.lineTo(14, -4); c.lineTo(10, 8); c.stroke();
   c.fillStyle = '#cfcde6'; ink(3, INK);
   c.beginPath(); c.rect(-16, -25, 32, 8); c.fill(); c.stroke();
+  c.fillStyle = TEAL; c.beginPath(); c.arc(-10, -21, 1.8, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ff6b7a'; c.beginPath(); c.arc(10, -21, 1.8, 0, Math.PI * 2); c.fill();
   // ojo-cámara
-  c.fillStyle = '#2a2570'; ink(2.6, INK); c.beginPath(); c.arc(0, -3, 10, 0, 7); c.fill(); c.stroke();
-  c.fillStyle = '#7fe3ff'; c.beginPath(); c.arc(0, -3, 6.2, 0, 7); c.fill();
-  c.fillStyle = '#0e0b33'; c.beginPath(); c.ellipse(0, -3, 2.2, 5.6, 0, 0, 7); c.fill();
-  c.fillStyle = '#fff'; c.beginPath(); c.arc(2.6, -6, 2, 0, 7); c.fill(); c.beginPath(); c.arc(-2.4, -0.4, 1, 0, 7); c.fill();
+  c.fillStyle = '#2a2570'; ink(2.6, INK); c.beginPath(); c.arc(0, -3, 10, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = CYAN; c.beginPath(); c.arc(0, -3, 6.2, 0, Math.PI * 2); c.fill();
+  c.fillStyle = INK; c.beginPath(); c.ellipse(0, -3, 2.2, 5.6, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(2.6, -6, 2, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(-2.4, -0.4, 1, 0, Math.PI * 2); c.fill();
   c.restore();
 }
 
-/** Rover pequeño que asoma de detrás de la sonda y rueda hacia la derecha. */
-function drawRoverSmall(c: CanvasRenderingContext2D, x: number, groundY: number): void {
-  c.save(); c.translate(x, groundY); c.lineJoin = 'round'; c.lineCap = 'round';
-  c.strokeStyle = INK; c.lineWidth = 3;
-  c.fillStyle = '#3b5bd9'; c.beginPath(); c.rect(-12, -27, 24, 6); c.fill(); c.stroke();
-  c.fillStyle = '#f5f5f2'; c.beginPath(); c.rect(-14, -21, 28, 11); c.fill(); c.stroke();
-  c.beginPath(); c.moveTo(8, -21); c.lineTo(8, -32); c.stroke();
-  c.fillStyle = '#7fe3ff'; c.beginPath(); c.arc(8, -33, 3.2, 0, 7); c.fill(); c.stroke();
-  c.fillStyle = '#6f6c8c';
-  for (const dx of [-9, 0, 9]) { c.beginPath(); c.arc(dx, -5, 5.4, 0, 7); c.fill(); c.stroke(); }
+/**
+ * [DIBUJO] Rover lunar de seis ruedas (suspensión balancín como los róveres reales): chasis con lámina dorada, cubierta de paneles,
+ * mástil con cabeza-cámara y antena. Origen = punto de apoyo en el suelo; `angle` lo inclina con la pendiente; `wheel` gira las ruedas.
+ */
+function drawRover(c: CanvasRenderingContext2D, x: number, y: number, angle: number, wheel: number, scale = 1): void {
+  c.save();
+  c.translate(x, y); c.rotate(angle); c.scale(scale, scale);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const ink = (w: number, col: string): void => { c.lineWidth = w; c.strokeStyle = col; };
+  // balancines de la suspensión
+  ink(6, INK); c.beginPath(); c.moveTo(-34, -12); c.lineTo(-10, -30); c.lineTo(8, -14); c.moveTo(-10, -30); c.lineTo(34, -12); c.stroke();
+  ink(3, '#b9b5d0'); c.beginPath(); c.moveTo(-34, -12); c.lineTo(-10, -30); c.lineTo(8, -14); c.moveTo(-10, -30); c.lineTo(34, -12); c.stroke();
+  // seis ruedas (se ven tres) con rayos que giran
+  for (const wx of [-34, 0, 34]) {
+    c.fillStyle = '#3b3b4f'; ink(3, INK);
+    c.beginPath(); c.arc(wx, -12, 12, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = '#6f6c8c'; c.beginPath(); c.arc(wx, -12, 6.5, 0, Math.PI * 2); c.fill();
+    ink(2, '#9a98c8'); c.beginPath();
+    for (let k = 0; k < 3; k++) { const a = wheel + k * (Math.PI / 3) * 2; c.moveTo(wx + Math.cos(a) * 3, -12 + Math.sin(a) * 3); c.lineTo(wx + Math.cos(a) * 11, -12 + Math.sin(a) * 11); }
+    c.stroke();
+    for (let k = 0; k < 8; k++) { const a = wheel + k * Math.PI / 4; c.fillStyle = INK; c.beginPath(); c.arc(wx + Math.cos(a) * 12, -12 + Math.sin(a) * 12, 1.6, 0, Math.PI * 2); c.fill(); }
+  }
+  // chasis con lámina dorada
+  const foil = c.createLinearGradient(-38, -52, 38, -30);
+  foil.addColorStop(0, '#ffe08a'); foil.addColorStop(1, '#c7922f');
+  c.fillStyle = foil; ink(3.5, INK);
+  c.beginPath(); c.roundRect(-38, -52, 76, 22, 6); c.fill(); c.stroke();
+  ink(1.2, 'rgba(120,80,20,.5)'); c.beginPath(); c.moveTo(-28, -48); c.lineTo(-18, -40); c.lineTo(-24, -34); c.moveTo(14, -48); c.lineTo(22, -38); c.stroke();
+  // cubierta de paneles solares
+  const deck = c.createLinearGradient(-44, -62, 44, -52);
+  deck.addColorStop(0, '#4f74f0'); deck.addColorStop(1, '#2a3f8f');
+  c.fillStyle = deck; ink(3, INK);
+  c.beginPath(); c.moveTo(-46, -54); c.lineTo(46, -54); c.lineTo(40, -62); c.lineTo(-40, -62); c.closePath(); c.fill(); c.stroke();
+  ink(1, '#9fb3ff'); c.beginPath(); for (let k = -30; k <= 30; k += 15) { c.moveTo(k, -54); c.lineTo(k * 0.88, -62); } c.stroke();
+  // mástil con cabeza-cámara de dos ojos
+  ink(5, INK); c.beginPath(); c.moveTo(24, -60); c.lineTo(24, -86); c.stroke();
+  ink(2.5, PAPER); c.beginPath(); c.moveTo(24, -60); c.lineTo(24, -86); c.stroke();
+  c.fillStyle = PAPER; ink(3, INK);
+  c.beginPath(); c.roundRect(12, -100, 26, 15, 4); c.fill(); c.stroke();
+  for (const ex of [19, 31]) { c.fillStyle = '#2a2570'; c.beginPath(); c.arc(ex, -92.5, 4.2, 0, Math.PI * 2); c.fill(); c.fillStyle = CYAN; c.beginPath(); c.arc(ex, -92.5, 2.4, 0, Math.PI * 2); c.fill(); }
+  // antena y caja de instrumentos
+  ink(3, INK); c.beginPath(); c.moveTo(-26, -62); c.lineTo(-30, -82); c.stroke();
+  c.fillStyle = PAPER; c.beginPath(); c.ellipse(-30, -84, 9, 3.5, 0.3, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = '#cfcde6'; c.beginPath(); c.roundRect(-8, -72, 18, 10, 3); c.fill(); c.stroke();
+  c.fillStyle = TEAL; c.beginPath(); c.arc(-2, -67, 2, 0, Math.PI * 2); c.fill();
   c.restore();
 }
 
-// ------------------------------------------------------------------ cinturón
+// ------------------------------------------------------------------ cinturón (horizontal: la sonda va hacia la derecha)
+const BELT_LANE_Y = [H * 0.3, H * 0.53, H * 0.76];
+const SHIP_X = 170;
+/** La lógica mide el avance en y (0 arriba, la sonda en BELT_SHIP_Y); en pantalla ese eje va de derecha a izquierda. */
+const BELT_K = (W + 50 - SHIP_X) / (BELT_SHIP_Y + 30);
+const beltX = (y: number): number => SHIP_X + (BELT_SHIP_Y - y) * BELT_K;
+
+function drawAsteroid(c: CanvasRenderingContext2D, x: number, y: number, seed: number, rot: number): void {
+  const n = 11;
+  const pts = Array.from({ length: n }, (_, i) => {
+    const a = rot + (i / n) * Math.PI * 2;
+    const r = 34 * (0.74 + 0.34 * hash(seed * 13 + i));
+    return [x + Math.cos(a) * r, y + Math.sin(a) * r * 0.92] as const;
+  });
+  c.fillStyle = 'rgba(0,0,0,.25)';
+  c.beginPath(); pts.forEach(([px, py], i) => (i ? c.lineTo(px + 6, py + 7) : c.moveTo(px + 6, py + 7))); c.closePath(); c.fill();
+  const g = c.createRadialGradient(x - 12, y - 14, 4, x, y, 40);
+  g.addColorStop(0, '#c9c6de'); g.addColorStop(0.6, '#8d8aa8'); g.addColorStop(1, '#5b587a');
+  c.fillStyle = g; c.strokeStyle = INK; c.lineWidth = 3.5; c.lineJoin = 'round';
+  c.beginPath(); pts.forEach(([px, py], i) => (i ? c.lineTo(px, py) : c.moveTo(px, py))); c.closePath(); c.fill(); c.stroke();
+  for (let k = 0; k < 3; k++) {
+    const a = rot * 0.6 + seed + k * 2.1;
+    const cx = x + Math.cos(a) * 13, cy = y + Math.sin(a) * 11, r = 5 + 3 * hash(seed + k);
+    c.fillStyle = 'rgba(70,66,100,.75)'; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(220,218,240,.6)'; c.lineWidth = 1.5; c.beginPath(); c.arc(cx, cy, r, Math.PI * 0.9, Math.PI * 1.7); c.stroke();
+  }
+}
+
+function drawCargo(c: CanvasRenderingContext2D, th: BeltThing, x: number, y: number, tt: number): void {
+  const pulse = 1 + 0.08 * Math.sin(tt * 6 + th.lane);
+  const halo = th.kind === 'battery' ? 'rgba(255,203,71,.45)' : th.kind === 'chip' ? 'rgba(90,214,178,.45)' : 'rgba(126,217,87,.45)';
+  nebula(c, x, y, 42 * pulse, halo);
+  c.lineWidth = 3; c.strokeStyle = INK; c.lineJoin = 'round';
+  if (th.kind === 'battery') {
+    c.fillStyle = '#cfcde6'; c.beginPath(); c.roundRect(x - 6, y - 26, 12, 6, 2); c.fill(); c.stroke();
+    c.fillStyle = GOLD; c.beginPath(); c.roundRect(x - 17, y - 21, 34, 44, 7); c.fill(); c.stroke();
+    for (let k = 0; k < 3; k++) { c.fillStyle = '#7a5a10'; c.fillRect(x - 10, y + 10 - k * 11, 20, 7); }
+    c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(x - 13, y - 17, 5, 34);
+  } else if (th.kind === 'chip') {
+    c.strokeStyle = INK; c.lineWidth = 3;
+    for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(x - 26, y + k * 7); c.lineTo(x + 26, y + k * 7); c.moveTo(x + k * 7, y - 26); c.lineTo(x + k * 7, y + 26); c.stroke(); }
+    c.fillStyle = TEAL; c.beginPath(); c.roundRect(x - 19, y - 19, 38, 38, 5); c.fill(); c.stroke();
+    c.fillStyle = '#1f5f52'; c.beginPath(); c.roundRect(x - 10, y - 10, 20, 20, 3); c.fill();
+    c.fillStyle = CYAN; c.fillRect(x - 5, y - 5, 10, 10);
+  } else {
+    c.fillStyle = 'rgba(191,230,255,.55)'; c.beginPath(); c.roundRect(x - 15, y - 24, 30, 48, 15); c.fill(); c.stroke();
+    c.fillStyle = '#2f8f3a'; c.beginPath(); c.roundRect(x - 11, y - 4, 22, 24, 10); c.fill();
+    c.fillStyle = '#7ed957';
+    for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(x - 5 + (k % 2) * 10, y + 4 + Math.floor(k / 2) * 8, 3, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = '#fff'; c.globalAlpha = 0.8;
+    for (let k = 0; k < 3; k++) { const by = y - 6 - ((tt * 30 + k * 12) % 26); c.beginPath(); c.arc(x - 4 + k * 4, by, 2, 0, Math.PI * 2); c.fill(); }
+    c.globalAlpha = 1;
+  }
+}
+
 export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number; calm?: boolean; onDone(r: BeltResult): void }): MiniGameHandle {
   const { c, el } = makeCanvas(root, t('probe.beltLabel'));
   const s: BeltState = createBelt(opts.seed, opts.hard);
+  const ids = new WeakMap<BeltThing, number>();
+  let nextId = 1;
+  const idOf = (th: BeltThing): number => { let v = ids.get(th); if (!v) { v = nextId++; ids.set(th, v); } return v; };
   const onKey = (e: KeyboardEvent): void => {
     const k = e.key.toLowerCase();
-    if (k === 'arrowleft' || k === 'a') { moveBelt(s, -1); e.preventDefault(); }
-    if (k === 'arrowright' || k === 'd') { moveBelt(s, 1); e.preventDefault(); }
+    if (k === 'arrowup' || k === 'w' || k === 'arrowleft' || k === 'a') { moveBelt(s, -1); e.preventDefault(); }
+    if (k === 'arrowdown' || k === 's' || k === 'arrowright' || k === 'd') { moveBelt(s, 1); e.preventDefault(); }
   };
   const onPointer = (e: PointerEvent): void => {
     const r = el.getBoundingClientRect();
-    moveBelt(s, e.clientX - r.left < r.width / 2 ? -1 : 1);
+    moveBelt(s, e.clientY - r.top < r.height / 2 ? -1 : 1);
   };
   window.addEventListener('keydown', onKey);
   el.addEventListener('pointerdown', onPointer);
-  let sx = LANE_X[s.lane];
-  let lastDraw = performance.now();
-  const shapes = new WeakMap<object, number[]>();
-  const shapeOf = (th: object, lane: number): number[] => {   // contorno irregular estable por roca
-    let v = shapes.get(th);
-    if (!v) { v = Array.from({ length: 9 }, (_, i) => 0.78 + 0.3 * Math.abs(Math.sin((lane + 1.7) * (i + 2.3) * 12.9898))); shapes.set(th, v); }
-    return v;
-  };
-  const draw = (): void => {
-    const now = performance.now(); const dt = Math.min(0.05, (now - lastDraw) / 1000); lastDraw = now;
-    stars(c, s.t);
-    for (const th of s.things) {
-      const x = LANE_X[th.lane];
-      c.lineWidth = 3; c.strokeStyle = INK; c.lineJoin = 'round';
-      if (th.kind === 'rock') {
-        const sh = shapeOf(th, th.lane); const rot = th.y * 0.012 + th.lane;
-        c.fillStyle = '#8d8aa8'; c.beginPath();
-        sh.forEach((k, i) => { const an = rot + (i / sh.length) * Math.PI * 2; const px = x + Math.cos(an) * 24 * k, py = th.y + Math.sin(an) * 22 * k; if (i) c.lineTo(px, py); else c.moveTo(px, py); });
-        c.closePath(); c.fill(); c.stroke();
-        c.fillStyle = '#6f6c8c'; c.beginPath(); c.arc(x + Math.cos(rot + 1) * 8, th.y + Math.sin(rot + 1) * 7, 5, 0, 7); c.fill();
-        c.fillStyle = '#a9a6c4'; c.beginPath(); c.arc(x + Math.cos(rot + 3.6) * 9, th.y + Math.sin(rot + 3.6) * 8, 3, 0, 7); c.fill();
-      }
-      else if (th.kind === 'battery') { c.fillStyle = '#ffcb47'; c.fillRect(x - 11, th.y - 14, 22, 28); c.strokeRect(x - 11, th.y - 14, 22, 28); }
-      else if (th.kind === 'chip') { c.fillStyle = '#5ad6b2'; c.fillRect(x - 13, th.y - 13, 26, 26); c.strokeRect(x - 13, th.y - 13, 26, 26); }
-      else { c.fillStyle = '#7ed957'; c.beginPath(); c.arc(x, th.y, 13, 0, 7); c.fill(); c.stroke(); }
+  let sy = BELT_LANE_Y[s.lane];
+  let scroll = 0;
+  let shake = 0;
+  let lastHull = s.hull;
+  const draw = (dt: number): void => {
+    scroll += dt * 260;
+    if (s.hull < lastHull) shake = 0.35;
+    lastHull = s.hull;
+    shake = Math.max(0, shake - dt);
+    c.save();
+    if (shake > 0) c.translate((hash(scroll) - 0.5) * 14 * shake / 0.35, (hash(scroll + 9) - 0.5) * 14 * shake / 0.35);
+    starfield(c, scroll, '#070523', '#1d1257');
+    nebula(c, W * 0.35, H * 0.25, 260, 'rgba(155,92,255,.18)');
+    nebula(c, W * 0.75, H * 0.8, 220, 'rgba(238,95,214,.12)');
+    // la Luna se acerca a medida que pasa el tiempo
+    const near = Math.min(1, s.t / BELT_SECONDS);
+    moonDisc(c, W + 40 - near * 70, H * 0.42, 70 + near * 120);
+    earthDisc(c, 70, 90, 22);
+    // estelas de velocidad
+    c.strokeStyle = 'rgba(201,198,236,.35)'; c.lineWidth = 2;
+    for (let i = 0; i < 14; i++) {
+      const x = ((hash(i * 9.1) * W * 1.4 - scroll * 2.2) % (W * 1.4) + W * 1.4) % (W * 1.4) - 100;
+      const y = hash(i * 4.3) * H;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + 60, y); c.stroke();
     }
-    // la sonda se desliza entre carriles (amortiguado) e inclina un poco hacia donde va
-    const target = LANE_X[s.lane];
-    const err = target - sx;
-    sx += err * (1 - Math.exp(-dt * 11));
-    if (Math.abs(err) > 7) {   // chorritos de gas frío del lado contrario
+    // carriles
+    c.setLineDash([10, 16]); c.strokeStyle = 'rgba(245,245,242,.12)'; c.lineWidth = 2;
+    for (const ly of BELT_LANE_Y) { c.beginPath(); c.moveTo(0, ly); c.lineTo(W, ly); c.stroke(); }
+    c.setLineDash([]);
+    for (const th of s.things) {
+      const x = beltX(th.y), y = BELT_LANE_Y[th.lane];
+      if (th.kind === 'rock') drawAsteroid(c, x, y, idOf(th), th.y * 0.01 + idOf(th));
+      else drawCargo(c, th, x, y, s.t);
+    }
+    // la sonda se desliza entre carriles (amortiguado) e inclina la nariz hacia donde va
+    const target = BELT_LANE_Y[s.lane];
+    const err = target - sy;
+    sy += err * (1 - Math.exp(-dt * 11));
+    if (Math.abs(err) > 6) { // chorritos de gas frío del lado contrario
       const side = err > 0 ? -1 : 1;
       c.fillStyle = '#e9d6ff';
-      for (let i = 0; i < 3; i++) { c.globalAlpha = 0.8 - i * 0.25; c.beginPath(); c.arc(sx + side * (22 + i * 7), BELT_SHIP_Y - 4 + (i % 2) * 3, 4 - i, 0, 7); c.fill(); }
+      for (let i = 0; i < 4; i++) { c.globalAlpha = 0.8 - i * 0.2; c.beginPath(); c.arc(SHIP_X + 4 - i * 3, sy + side * (34 + i * 8), 5 - i, 0, Math.PI * 2); c.fill(); }
       c.globalAlpha = 1;
     }
     c.globalAlpha = s.invuln > 0 && Math.floor(s.t * 10) % 2 ? 0.4 : 1;
-    drawProbe(c, sx, BELT_SHIP_Y + 4 + Math.sin(s.t * 3) * 1.5, { scale: 0.8, legs: 0, flame: 0.0, tilt: Math.max(-0.22, Math.min(0.22, err / 260)), t: s.t });
+    drawProbe(c, SHIP_X, sy, { scale: 1.35, legs: 0, flame: 0.45, tilt: Math.PI / 2 + Math.max(-0.25, Math.min(0.25, err / 240)), t: s.t });
     c.globalAlpha = 1;
-    text(c, `${Math.max(0, Math.ceil(BELT_SECONDS - s.t))} s`, 14, 28);
-    text(c, '♥'.repeat(s.hull) + '·'.repeat(3 - s.hull), W - 14, 28, 18, 'right');
-    text(c, `▮ ${s.got.battery}  ▪ ${s.got.chip}  ● ${s.got.algae}`, W / 2, 28, 14, 'center');
+    c.restore();
+    // HUD: tiempo, casco, carga y avance hacia la Luna
+    pill(c, 16, 14, 120, 40); text(c, `${Math.max(0, Math.ceil(BELT_SECONDS - s.t))} s`, 76, 43, 24, 'center');
+    pill(c, W - 156, 14, 140, 40); for (let i = 0; i < 3; i++) heart(c, W - 124 + i * 40, 36, 11, i < s.hull);
+    pill(c, W / 2 - 170, 14, 340, 40);
+    text(c, `▮ ${s.got.battery}`, W / 2 - 120, 43, 22, 'center', GOLD);
+    text(c, `▪ ${s.got.chip}`, W / 2, 43, 22, 'center', TEAL);
+    text(c, `● ${s.got.algae}`, W / 2 + 120, 43, 22, 'center', '#7ed957');
+    c.fillStyle = 'rgba(14,11,51,.72)'; c.beginPath(); c.roundRect(160, H - 26, W - 320, 12, 6); c.fill();
+    c.fillStyle = CYAN; c.beginPath(); c.roundRect(160, H - 26, (W - 320) * near, 12, 6); c.fill();
   };
   const loop = runLoop((dt) => { stepBelt(s, dt * (opts.calm ? 0.8 : 1)); return beltDone(s); }, draw, () =>
     opts.onDone({ score: beltScore(s), batteries: s.got.battery, chips: s.got.chip, algae: s.got.algae, hull: s.hull }));
   // las flechas las lee el propio juego: `nudge` vacío evita que la estación mueva el foco entre botones mientras se maneja
-  return { nudge: () => undefined, keys: ['← →'], gesture: 'tap', destroy() { loop.destroy(); window.removeEventListener('keydown', onKey); el.removeEventListener('pointerdown', onPointer); } };
+  return { nudge: () => undefined, keys: ['↑ ↓'], gesture: 'tap', destroy() { loop.destroy(); window.removeEventListener('keydown', onKey); el.removeEventListener('pointerdown', onPointer); } };
 }
 
-// ------------------------------------------------------------------ rover lunar
+// ------------------------------------------------------------------ rover lunar (horizontal, cámara que lo sigue)
+const GROUND_OFFSET = 90;
+const ROVER_X = 230;
+const groundY = (x: number): number => terrainY(x) + GROUND_OFFSET;
+const inCrater = (list: readonly number[], x: number): boolean => list.some((cr) => x > cr && x < cr + CRATER_W);
+
+function mountains(c: CanvasRenderingContext2D, cam: number, k: number, base: number, amp: number, color: string, seed: number): void {
+  c.fillStyle = color;
+  c.beginPath(); c.moveTo(0, H);
+  for (let px = 0; px <= W; px += 8) {
+    const wx = (cam * k + px) / 90 + seed;
+    c.lineTo(px, base - amp * (0.55 * Math.abs(Math.sin(wx)) + 0.3 * Math.abs(Math.sin(wx * 2.3 + 1)) + 0.15 * Math.sin(wx * 5.1)));
+  }
+  c.lineTo(W, H); c.closePath(); c.fill();
+}
+
+function drawCrystal(c: CanvasRenderingContext2D, x: number, y: number, tt: number): void {
+  nebula(c, x, y - 6, 30 + 4 * Math.sin(tt * 4), 'rgba(255,233,160,.55)');
+  c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = 3;
+  const shards: [number, number, number][] = [[-8, 18, -0.3], [0, 26, 0], [9, 16, 0.35]];
+  for (const [dx, h, a] of shards) {
+    c.save(); c.translate(x + dx, y + 4); c.rotate(a);
+    c.fillStyle = '#ffe9a0'; c.beginPath(); c.moveTo(-5, 0); c.lineTo(-4, -h * 0.75); c.lineTo(0, -h); c.lineTo(4, -h * 0.75); c.lineTo(5, 0); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.moveTo(-2, -2); c.lineTo(-2, -h * 0.7); c.lineTo(0, -h * 0.9); c.closePath(); c.fill();
+    c.restore();
+  }
+  c.fillStyle = '#8d8aa8'; c.beginPath(); c.ellipse(x, y + 5, 16, 5, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+}
+
 export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: number; chips: number; onDone(r: RoverResult): void }): MiniGameHandle {
-  const btn = (id: string, label: string, side: string): string => `<button class="mn-btn mn-btn--sm" data-rv="${id}" aria-label="${label}" style="position:absolute;bottom:12px;${side};min-width:96px;min-height:56px;touch-action:none">${label}</button>`;
-  const { c, box } = makeCanvas(root, t('probe.roverLabel'),
-    btn('brake', t('probe.brake'), 'left:12px') + btn('jump', t('probe.jump'), 'right:12px'));
+  const btn = (id: string, label: string, side: string): string => `<button class="mn-btn" data-rv="${id}" aria-label="${label}" style="position:absolute;bottom:16px;${side};min-width:140px;min-height:64px;font-size:20px;touch-action:none">${label}</button>`;
+  const { c, box } = makeCanvas(root, t('probe.roverLabel'), btn('brake', t('probe.brake'), 'left:16px') + btn('jump', t('probe.jump'), 'right:16px'));
   const s: RoverState = createRover(opts.batteries, opts.chips, opts.hard);
   const input = { brake: false, jump: false };
   let hint = hintSeconds(s.chips);
+  let tt = 0;
+  let lastX = 0;
+  let wheel = 0;
+  const sparkles: { x: number; y: number; t: number }[] = [];
+  const dust: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
+  const seen = new Set<number>();
   const keyMap = (k: string): 'brake' | 'jump' | null => (k === 'arrowup' || k === 'w' || k === ' ' ? 'jump' : k === 'arrowdown' || k === 's' || k === 'arrowleft' ? 'brake' : null);
   const onKey = (down: boolean) => (e: KeyboardEvent): void => {
     const m = keyMap(e.key.toLowerCase());
@@ -228,37 +459,77 @@ export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: 
   };
   bind('brake'); bind('jump');
   const craterList = craters(opts.hard);
-  const draw = (): void => {
-    const cam = s.x - 90;
-    c.fillStyle = '#0b0830'; c.fillRect(0, 0, W, H);
-    c.fillStyle = '#e4e3f2';
-    for (let i = 0; i < 30; i++) c.fillRect(((i * 131 - cam * 0.1) % W + W) % W, (i * 37) % 200, 2, 2);
-    // suelo gris con cráteres
-    c.fillStyle = '#8d8aa8'; c.strokeStyle = INK; c.lineWidth = 3;
+  const draw = (dt: number): void => {
+    tt += dt;
+    const cam = s.x - ROVER_X;
+    const moved = s.x - lastX;
+    lastX = s.x;
+    wheel += moved / 12;
+    starfield(c, cam * 0.05, '#05031a', '#16124a');
+    earthDisc(c, W - 150, 110, 38);
+    mountains(c, cam, 0.12, 330, 120, '#3b3770', 3);
+    mountains(c, cam, 0.3, 380, 90, '#5a5690', 11);
+    // suelo con cráteres, borde claro y manchas
+    const ground = c.createLinearGradient(0, 300, 0, H);
+    ground.addColorStop(0, '#a9a6c9'); ground.addColorStop(1, '#6f6c95');
+    c.fillStyle = ground; c.strokeStyle = INK; c.lineWidth = 3.5;
     c.beginPath(); c.moveTo(0, H);
-    for (let px = 0; px <= W; px += 4) {
-      const wx = cam + px;
-      const inCrater = craterList.some((cr) => wx > cr && wx < cr + CRATER_W);
-      c.lineTo(px, inCrater ? terrainY(wx) + 40 : terrainY(wx));
-    }
+    for (let px = 0; px <= W; px += 4) { const wx = cam + px; c.lineTo(px, inCrater(craterList, wx) ? groundY(wx) + 42 : groundY(wx)); }
     c.lineTo(W, H); c.closePath(); c.fill(); c.stroke();
-    ROCKS.forEach((rx, i) => {
-      if (s.rocks.has(i) || rx < cam - 20 || rx > cam + W + 20) return;
-      const px = rx - cam, py = terrainY(rx) - 12;
-      c.fillStyle = '#ffe9a0'; c.globalAlpha = 0.35; c.beginPath(); c.arc(px, py, 20 + 3 * Math.sin(s.x / 15), 0, 7); c.fill(); c.globalAlpha = 1;
-      c.fillStyle = '#b9b5d0'; c.beginPath(); c.arc(px, py, 10, 0, 7); c.fill(); c.stroke();
-    });
-    const rx = 90, ry = terrainY(s.x) - s.h;
-    c.fillStyle = '#f5f5f2'; c.fillRect(rx - 22, ry - 28, 44, 16); c.strokeRect(rx - 22, ry - 28, 44, 16);
-    c.fillStyle = '#5ad6b2'; c.fillRect(rx - 8, ry - 40, 16, 12); c.strokeRect(rx - 8, ry - 40, 16, 12);
-    c.fillStyle = '#3b3b4f'; for (const dx of [-16, 16]) { c.beginPath(); c.arc(rx + dx, ry - 8, 9, 0, 7); c.fill(); c.stroke(); }
-    if (hint > 0) {
-      const next = ROCKS.findIndex((_, i) => !s.rocks.has(i));
-      if (next >= 0) text(c, '→', W - 20, 70, 28, 'right');
+    for (let i = 0; i < 40; i++) { // piedritas que pasan con el suelo
+      const wx = Math.floor(cam / 60) * 60 + i * 60 + hash(i + Math.floor(cam / 60)) * 40;
+      const px = wx - cam;
+      if (px < -10 || px > W + 10 || inCrater(craterList, wx)) continue;
+      c.fillStyle = 'rgba(80,76,115,.7)'; c.beginPath(); c.ellipse(px, groundY(wx) + 14 + hash(wx) * 50, 3 + hash(wx * 2) * 5, 2 + hash(wx * 3) * 2, 0, 0, Math.PI * 2); c.fill();
     }
-    text(c, `${Math.max(0, Math.ceil(s.left))} s`, 14, 28);
-    text(c, `◆ ${s.rocks.size}/${ROCKS.length}`, W - 14, 28, 15, 'right');
-    text(c, `${Math.min(100, Math.round((s.x / ROVER_LEN) * 100))} %`, W / 2, 28, 14, 'center');
+    for (const cr of craterList) { // borde y fondo de los cráteres
+      const px = cr - cam;
+      if (px < -CRATER_W - 20 || px > W + 20) continue;
+      const gy = groundY(cr + CRATER_W / 2);
+      c.fillStyle = 'rgba(40,36,80,.55)'; c.beginPath(); c.ellipse(px + CRATER_W / 2, gy + 34, CRATER_W / 2 + 6, 12, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#d6d4ee'; c.lineWidth = 3;
+      c.beginPath(); c.arc(px - 6, groundY(cr) + 2, 10, Math.PI, Math.PI * 1.8); c.arc(px + CRATER_W + 6, groundY(cr + CRATER_W) + 2, 10, Math.PI * 1.2, Math.PI * 2); c.stroke();
+    }
+    ROCKS.forEach((rx, i) => {
+      if (s.rocks.has(i)) {
+        if (!seen.has(i)) { seen.add(i); sparkles.push({ x: rx, y: groundY(rx) - 14, t: 0 }); }
+        return;
+      }
+      if (rx < cam - 30 || rx > cam + W + 30) return;
+      drawCrystal(c, rx - cam, groundY(rx) - 4, tt + i);
+    });
+    for (const sp of sparkles) { // destello al recoger una roca
+      sp.t += dt;
+      if (sp.t > 0.8) continue;
+      const px = sp.x - cam;
+      c.strokeStyle = GOLD; c.lineWidth = 3; c.globalAlpha = 1 - sp.t / 0.8;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; const r0 = 10 + sp.t * 40, r1 = r0 + 12; c.beginPath(); c.moveTo(px + Math.cos(a) * r0, sp.y + Math.sin(a) * r0); c.lineTo(px + Math.cos(a) * r1, sp.y + Math.sin(a) * r1); c.stroke(); }
+      c.globalAlpha = 1;
+    }
+    // el rover: sombra al saltar, inclinación con la pendiente y polvo que levantan las ruedas
+    const gy = groundY(s.x);
+    const slope = Math.atan2(groundY(s.x + 20) - groundY(s.x - 20), 40);
+    const sh = Math.max(0.3, 1 - s.h / 160);
+    c.fillStyle = `rgba(14,11,51,${0.35 * sh})`; c.beginPath(); c.ellipse(ROVER_X, gy + 2, 46 * sh, 7 * sh, 0, 0, Math.PI * 2); c.fill();
+    if (s.h === 0 && moved > 0) {
+      for (let k = 0; k < 2; k++) dust.push({ x: ROVER_X - 40, y: gy - 4, vx: -40 - Math.random() * 60, vy: -30 - Math.random() * 50, life: 0.9 });
+    }
+    for (const p of dust) { p.life -= dt; p.x += p.vx * dt; p.vy += 60 * dt; p.y += p.vy * dt; } // en la Luna el polvo cae en arcos (sin aire que lo frene)
+    for (let i = dust.length - 1; i >= 0; i--) if (dust[i].life <= 0 || dust.length > 80) dust.splice(i, 1);
+    for (const p of dust) { c.globalAlpha = Math.max(0, p.life) * 0.7; c.fillStyle = '#d8d6f0'; c.beginPath(); c.arc(p.x, p.y, 3, 0, Math.PI * 2); c.fill(); }
+    c.globalAlpha = 1;
+    drawRover(c, ROVER_X, gy - s.h, s.h > 0 ? slope * 0.3 : slope, wheel, 1.3);
+    if (hint > 0) { // pista: flecha hacia la próxima roca (los chips del cinturón dan segundos de pista)
+      const next = ROCKS.findIndex((_, i) => !s.rocks.has(i));
+      if (next >= 0) {
+        const dist = Math.round((ROCKS[next] - s.x) / 10);
+        pill(c, W - 170, 70, 154, 40); text(c, `◆ → ${Math.max(0, dist)} m`, W - 93, 98, 22, 'center', GOLD);
+      }
+    }
+    pill(c, 16, 14, 120, 40); text(c, `${Math.max(0, Math.ceil(s.left))} s`, 76, 43, 24, 'center');
+    pill(c, W - 156, 14, 140, 40); text(c, `◆ ${s.rocks.size}/${ROCKS.length}`, W - 86, 43, 22, 'center', GOLD);
+    c.fillStyle = 'rgba(14,11,51,.72)'; c.beginPath(); c.roundRect(W / 2 - 200, 26, 400, 14, 7); c.fill();
+    c.fillStyle = CYAN; c.beginPath(); c.roundRect(W / 2 - 200, 26, 400 * Math.min(1, s.x / ROVER_LEN), 14, 7); c.fill();
   };
   const loop = runLoop((dt) => { stepRover(s, dt, { brake: input.brake, jump: input.jump }); hint = Math.max(0, hint - dt); return roverDone(s); }, draw, () =>
     opts.onDone({ score: roverScore(s), rocks: s.rocks.size, flips: s.flips }));
@@ -271,50 +542,55 @@ export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: 
  */
 export function mountDelivery(root: HTMLElement, onDone: () => void): MiniGameHandle {
   const { c } = makeCanvas(root, t('probe.deliveryLabel'));
-  const TOTAL = 4.2, DESC = 2.6, GROUND = 430, REST_Y = GROUND - 42 - 2;
+  const TOTAL = 4.2, DESC = 2.6, GROUND = 470, S = 1.7, REST_Y = GROUND - 42 * S;
   let tt = 0;
-  const craters: [number, number, number][] = [[60, 452, 38], [300, 468, 46], [190, 488, 30], [345, 440, 20]];
+  const pits: [number, number, number][] = [[120, 500, 60], [620, 520, 80], [400, 556, 46], [820, 492, 34]];
   const loop = runLoop((dt) => { tt += dt; return tt >= TOTAL; }, () => {
-    stars(c, tt * 0.25);
-    // Tierra pequeña en el cielo
-    c.fillStyle = '#3d7bd9'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.arc(318, 78, 22, 0, 7); c.fill(); c.stroke();
-    c.fillStyle = '#7ed957'; c.beginPath(); c.arc(311, 74, 7, 0, 7); c.fill(); c.beginPath(); c.arc(325, 86, 5, 0, 7); c.fill();
-    // suelo lunar con cráteres
-    c.fillStyle = '#9a98c8'; c.fillRect(0, GROUND, W, H - GROUND);
-    c.fillStyle = '#8280b0'; for (const [cx, cy, r] of craters) { c.beginPath(); c.ellipse(cx, cy, r, r * 0.22, 0, 0, 7); c.fill(); }
-    c.fillStyle = '#b4b2dc'; c.fillRect(0, GROUND, W, 3);
+    starfield(c, tt * 6, '#05031a', '#16124a');
+    earthDisc(c, W - 140, 100, 44);
+    mountains(c, 0, 0, 400, 110, '#3b3770', 5);
+    mountains(c, 0, 0, 440, 70, '#5a5690', 17);
+    const ground = c.createLinearGradient(0, GROUND, 0, H);
+    ground.addColorStop(0, '#b4b2dc'); ground.addColorStop(1, '#7c79a8');
+    c.fillStyle = ground; c.fillRect(0, GROUND, W, H - GROUND);
+    c.strokeStyle = INK; c.lineWidth = 3.5; c.beginPath(); c.moveTo(0, GROUND); c.lineTo(W, GROUND); c.stroke();
+    for (const [cx, cy, r] of pits) {
+      c.fillStyle = 'rgba(70,66,110,.5)'; c.beginPath(); c.ellipse(cx, cy, r, r * 0.22, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(230,228,250,.7)'; c.lineWidth = 2; c.beginPath(); c.ellipse(cx, cy, r, r * 0.22, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    }
 
     const p = Math.min(1, tt / DESC);
-    const y = -50 + (REST_Y + 50) * (1 - Math.pow(1 - p, 2.4));      // frena hasta velocidad cero al tocar
+    const y = -80 + (REST_Y + 80) * (1 - Math.pow(1 - p, 2.4)); // frena hasta velocidad cero al tocar
     const landed = tt >= DESC;
     const k = tt - DESC;
     const sink = landed ? 4 * Math.exp(-7 * k) * Math.cos(15 * k) : 0; // las patas amortiguan el toque
     const flame = landed ? 0 : p < 0.9 ? 0.3 + 0.7 * Math.pow(1 - p, 1.2) : (0.3 + 0.7 * Math.pow(0.1, 1.2)) * ((1 - p) / 0.1); // el motor se corta justo antes de tocar
     const legs = smooth(0.5, 1.7, tt);
-    const sway = landed ? 0 : Math.sin(tt * 2.2) * 5 * (1 - p);
+    const sway = landed ? 0 : Math.sin(tt * 2.2) * 8 * (1 - p);
 
     // polvo: sale cuando la sonda está cerca del suelo y vuela en arcos bajos (g lunar)
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 40; i++) {
       const dir = i % 2 ? 1 : -1;
       const t0 = 1.9 + (i % 9) * 0.075;
       const age = tt - t0;
-      if (age < 0 || age > 1.5 || (t0 > DESC + 0.25)) continue;
-      const sp = 38 + ((i * 37) % 70), vy = 10 + ((i * 53) % 26);
-      const px = W / 2 + sway + dir * (18 + sp * age), py = GROUND - Math.max(0, vy * age - 0.5 * 34 * age * age);
+      if (age < 0 || age > 1.5 || t0 > DESC + 0.25) continue;
+      const sp = 60 + ((i * 37) % 110), vy = 16 + ((i * 53) % 40);
+      const px = W / 2 + sway + dir * (28 + sp * age), py = GROUND - Math.max(0, vy * age - 0.5 * 34 * age * age);
       c.globalAlpha = 0.65 * (1 - age / 1.5); c.fillStyle = '#d8d6f0';
-      c.beginPath(); c.arc(px, py - 1, 2 + (i % 3) * 0.9, 0, 7); c.fill();
+      c.beginPath(); c.arc(px, py - 1, 2.5 + (i % 3), 0, Math.PI * 2); c.fill();
     }
     c.globalAlpha = 1;
 
-    // el rover asoma por detrás de la sonda y rueda hacia la derecha (ease-out)
+    // el rover sale por una rampa y rueda hacia la derecha (ease-out)
     if (tt > DESC + 0.35) {
       const r = smooth(DESC + 0.35, TOTAL, tt);
-      c.strokeStyle = INK; c.lineWidth = 3; c.lineCap = 'round';   // rampa
-      c.beginPath(); c.moveTo(W / 2 + 18, REST_Y + 6); c.lineTo(W / 2 + 58, GROUND); c.stroke();
-      drawRoverSmall(c, W / 2 + 18 + 62 * r, GROUND + 1);
+      c.strokeStyle = INK; c.lineWidth = 4; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(W / 2 + 30, REST_Y + 10); c.lineTo(W / 2 + 110, GROUND); c.stroke();
+      drawRover(c, W / 2 + 40 + 150 * r, GROUND + 1, 0, r * 12, 0.8);
     }
-    drawProbe(c, W / 2 + sway, y + sink, { legs, flame, sink, tilt: sway * 0.004, t: tt });
-    text(c, t('probe.noAir'), W / 2, 478, 15, 'center');
+    drawProbe(c, W / 2 + sway, y + sink, { scale: S, legs, flame, sink, tilt: sway * 0.003, t: tt });
+    pill(c, W / 2 - 200, H - 52, 400, 40);
+    text(c, t('probe.noAir'), W / 2, H - 23, 20, 'center');
   }, onDone);
   return { destroy: () => loop.destroy() };
 }

@@ -904,3 +904,7 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 
 /* Capítulo final de «Laboratorio Chile» (pantalla de «Casa»): mensaje de la Tierra y enlace a su ficha real */
 .casa__chapter { display: grid; gap: var(--space-2); max-width: 560px; padding: var(--space-3); border: 2px dashed var(--ink-muted); border-radius: var(--radius-md); justify-items: start; }
+
+/* Minijuegos de la sonda: apaisados (940 × 590) para la pantalla del PC, a la derecha de las barras (que ocupan 16–280 px) */
+.mini-full--wide { width: 940px; height: 590px; transform: translateX(150px); }
+.mini-full--wide .mini-full__stage { width: 940px; height: 590px; transform: none; }

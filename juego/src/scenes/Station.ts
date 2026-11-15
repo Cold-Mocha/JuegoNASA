@@ -904,12 +904,14 @@ export class StationScene extends Phaser.Scene {
    * Minijuego a pantalla completa con el marco común: el juego, la pista de los primeros segundos (gesto y teclas) y el botón Salir.
    * Al terminar muestra 1 a 3 estrellas y la ganancia real; `finish` aplica la acción y devuelve su efecto.
    */
-  private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => ActionDelta | null | undefined; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
-    this.closeOverlay();
+  private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => ActionDelta | null | undefined; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null; wide?: boolean; mood?: Mood }): void {
+    this.closeOverlay(!!cfg.mood);
     this.miniOutdoor = !!cfg.outdoor;
+    if (cfg.mood) { this.miniMood = cfg.mood; audio.setMood(cfg.mood); } // la sonda trae su propia música
     this.openModal(`${miniFrameHtml('close-actions')}
       ${cfg.outdoor ? `<div class="mini-suit" aria-label="${t('mini.suit')}">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
     const frame = this.ui.q('[data-overlay]');
+    if (cfg.wide) frame.querySelector('.mini-full')?.classList.add('mini-full--wide'); // apaisado: aprovecha la pantalla del PC
     const msgs = this.ui.q('[data-msgs]');
     msgs.innerHTML = miniMsgsHtml(cfg.hint);
     this.ui.q('[data-hud]').classList.add('is-mini'); // las stats y los mensajes quedan a la vista sobre el minijuego
@@ -1044,6 +1046,7 @@ export class StationScene extends Phaser.Scene {
     let belt: BeltResult = { score: 0, batteries: 0, chips: 0, algae: 0, hull: 3 };
     const rover = (): void => this.openFullMini({
       hint: t('hint.rover'),
+      wide: true, mood: 'moon',
       mount: (root, cb) => mountRover(root, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r) => {
         this.sim.completeProbe(finaleScore(1, belt.score, r.score), r.rocks, belt.batteries + belt.chips + belt.algae);
         if (this.sim.stats.probe) this.toast('stage', t('probe.done'), 'ok');
@@ -1051,9 +1054,9 @@ export class StationScene extends Phaser.Scene {
       } }),
       finish: () => undefined,
     });
-    const delivery = (): void => this.openFullMini({ hint: t('hint.delivery'), mount: (root, cb) => mountDelivery(root, () => cb.onDone()), finish: () => undefined, next: rover });
+    const delivery = (): void => this.openFullMini({ hint: t('hint.delivery'), wide: true, mood: 'space', mount: (root, cb) => mountDelivery(root, () => cb.onDone()), finish: () => undefined, next: rover });
     const asteroids = (): void => this.openFullMini({
-      hint: t('hint.belt'),
+      hint: t('hint.belt'), wide: true, mood: 'space',
       mount: (root, cb) => mountBelt(root, { hard, seed, calm: state.calm, onDone: (r) => { belt = r; cb.onDone(r.score); } }),
       finish: () => undefined, next: delivery,
     });
@@ -1603,12 +1606,13 @@ export class StationScene extends Phaser.Scene {
     this.ui.focusFirst('.modal [data-action]');
   }
 
-  private closeOverlay(): void {
+  /** `keepMood`: el siguiente minijuego encadenado trae su música (la sonda), así que no se vuelve a la de la zona entre fases. */
+  private closeOverlay(keepMood = false): void {
     this.miniGame?.destroy();
     this.miniGame = undefined;
     this.miniOutdoor = false;
-    if (this.miniMood) audio.setMood(ZONE_MOOD[this.zone]);
-    this.miniMood = null;
+    if (this.miniMood && !keepMood) audio.setMood(ZONE_MOOD[this.zone]);
+    if (!keepMood) this.miniMood = null;
     this.ui.q('[data-msgs]').innerHTML = '';
     this.ui.q('[data-hud]').classList.remove('is-mini');
     this.overlay = 'none';

@@ -2,9 +2,21 @@
 
 Juego web 2D para el reto **Build a Junior Astronaut Mission Trainer** del **NASA Space Apps Challenge 2026** (sede Temuco), hecho por un equipo de estudiantes de ingeniería de la Universidad de La Frontera.
 
-Niñas y niños de 7 a 12 años entran a una estación espacial en órbita lunar como un tripulante animal (el primero: un **michi astronauta**) y la mantienen funcionando. Caminan entre módulos, hacen tareas y deciden cómo gastar recursos que nunca alcanzan para todo. **Ninguna decisión es gratis**: así aprenden los trade-offs reales que enfrentan los astronautas y los planificadores de misión.
+Niñas y niños de 7 a 12 años entran a una base en la superficie de la Luna como un tripulante animal (el primero: un **michi astronauta**) y la mantienen funcionando. Caminan entre módulos, hacen tareas y deciden cómo gastar recursos que nunca alcanzan para todo. **Ninguna decisión es gratis**: así aprenden los trade-offs reales que enfrentan los astronautas y los planificadores de misión.
 
-> Estado: base funcional armada durante la hackatón (14 de noviembre de 2026). El desafío oficial completo está en [`DESAFIO.md`](DESAFIO.md).
+> Estado: juego jugable de punta a punta, en español e inglés (15 de noviembre de 2026). English version: [`README.en.md`](README.en.md). El desafío oficial completo está en [`DESAFIO.md`](DESAFIO.md).
+
+## Datos usados
+
+| Dataset | Qué hace en el juego | En qué pantalla se ve | Enlace |
+|---|---|---|---|
+| **NASA DONKI** (llamaradas solares) y reportes NASA / NOAA SWPC | Tres semanas reales del Sol son el «clima» de las jornadas: cada llamarada cae en su día y hora reales, y su clase GOES fija cuánta radiación llega | Estación: aviso de cada llamarada con su fecha, pie del HUD con la fuente, comparación «con escudo / afuera». Informe final. Archivo científico | [api.nasa.gov](https://api.nasa.gov/) · [NOAA SWPC](https://www.swpc.noaa.gov/phenomena/solar-flares-radio-blackouts) |
+| **Zhang et al. 2020**, *Science Advances* (Chang’e 4) | Radiación de fondo de la superficie lunar: la barra sube un poco cada jornada aunque no haya llamaradas | Barra de radiación; ficha «Radiación en la superficie lunar» | [doi:10.1126/sciadv.aaz1334](https://doi.org/10.1126/sciadv.aaz1334) |
+| **NASA Moon Fact Sheet** | Gravedad lunar del salto (1,62 m/s²) y ciclo de luz de 7 jornadas (3 de día, 1 de atardecer, 3 de noche sin paneles) | Salto del michi; reloj del HUD; fichas «Gravedad lunar» y «Un día lunar dura un mes» | [nssdc.gsfc.nasa.gov](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| **Demora Tierra–Luna** (384 400 km / c) | La antena y el pronóstico solar responden tras 2,56 s, la ida y vuelta real de la señal | Comunicaciones; ficha «Mensajes que tardan» | [NASA: Communicating with Missions](https://www.nasa.gov/communicating-with-missions/) |
+| **NASA OSDR** | Solo lectura recomendada: ningún número del juego sale de ahí, y la ficha lo dice | Archivo científico | [osdr.nasa.gov](https://osdr.nasa.gov/bio/) |
+
+Las llamaradas son un **archivo histórico, no datos en vivo**, y el juego lo dice en pantalla. Todavía no se pudieron contrastar con la API de DONKI (no respondió en dos intentos): el detalle está en [`SOURCES.md`](SOURCES.md).
 
 ---
 
@@ -40,11 +52,11 @@ JuegoNASA/
 
 | Lo que pide el reto | Cómo lo cubrimos |
 |---|---|
-| Gestionar un puesto avanzado en la Luna o Marte | Estación en **órbita lunar**. El reto acepta interpretaciones creativas si el objetivo educativo se mantiene. |
-| Trade-offs reales; ninguna opción gratis | Cada consola cuesta algo: comer, beber, curarse o ajustar la antena gastan energía; orientar los paneles recarga energía pero suma radiación; caminar entre salas cuesta tiempo. |
-| 2–3 recursos centrales, sin abrumar | Base: **energía, oxígeno/soporte vital y blindaje/radiación**. Hambre, sed y demora de comunicaciones entran de forma gradual con la progresión. |
-| Datos reales de la NASA, citados en el juego | Plan: eventos solares reales de **DONKI** guardados dentro del juego y etiquetados como históricos (el reto lo acepta explícitamente). Pendiente de implementar. |
-| Rejugable, aprender del error sin castigo | Eventos que cambian entre partidas y modo libre con escenarios reales (propuesta de progresión). |
+| Gestionar un puesto avanzado en la Luna o Marte | La **Estación Central**, una base ficticia en la superficie lunar. |
+| Trade-offs reales; ninguna opción gratis | El blindaje contra una llamarada gasta energía y sin energía protege la mitad; de noche los paneles no producen y pedalear cambia comida por energía; salir a la superficie da ciencia y suma radiación; el pronóstico solar cuesta energía y solo llega con la antena en buen estado. |
+| 2–3 recursos centrales, sin abrumar | 5 barras (energía, oxígeno, comida, salud y radiación); los equipos solo aparecen en el HUD cuando fallan, y el tutorial muestra 3 controles. |
+| Datos reales de la NASA, citados en el juego | Semanas reales de llamaradas guardadas en el juego y etiquetadas como históricas; la fuente está siempre al pie del HUD y en cada aviso (ver «Datos usados»). |
+| Rejugable, aprender del error sin castigo | Tormentas de polvo y fracturas al azar, 3 jornadas y 3 dificultades. El informe explica la causa real y «Reintentar» vuelve directo a la estación. |
 | Navegador, sin descargas ni cuentas | Sitio estático; no pide registro ni recolecta datos. |
 | Edad 7–12, lenguaje simple | Textos cortos, términos técnicos explicados en contexto, texto mínimo de 18 px, iconos además de colores. |
 
@@ -99,16 +111,17 @@ JuegoNASA/
 | Build | **Vite 8** | Servidor de desarrollo instantáneo y sitio estático, sin backend. |
 | Interfaz | **HTML/CSS sobre el canvas** | Texto nítido y accesible, y diseño editable sin tocar el motor. Usa las clases `mn-*` del design system. |
 | Tokens | `design/tokens.json` → `tokens.css` | Una sola fuente de verdad para colores y tipos; el canvas lee los mismos colores en tiempo de ejecución. |
-| Mapa (pendiente) | **Tiled** | Editor de mapas gratuito; alguien sin experiencia en programación puede diseñar la estación. |
-| Simulación (pendiente) | `src/sim/` en TypeScript puro + **Vitest** | Reglas de recursos sin Phaser y probadas, por ejemplo con un test de que "subir el blindaje siempre cuesta energía". Así se puede trabajar en paralelo. |
-| Deploy | GitHub Pages / Netlify | Space Apps pide un enlace público. |
+| Mapa | `src/sim/stationMap.ts` + SVG | Un solo plano continuo definido en código y dibujado como SVG: sin editor externo ni pantallas de carga. |
+| Simulación | `src/sim/` en TypeScript puro + **Vitest** | Reglas de recursos sin Phaser y probadas, por ejemplo con un test de que "subir el blindaje siempre cuesta energía". Así se puede trabajar en paralelo. |
+| Idiomas | `src/core/i18n.ts` + `src/data/locales/` | Español e inglés; las claves están tipadas, así un texto sin traducir no compila. |
+| Deploy | Sitio estático (nginx) | Space Apps pide un enlace público. |
 
 Detalles y cómo correrlo: [`juego/README.md`](juego/README.md).
 
-### 3.6 Datos reales de la NASA (plan)
-- **DONKI** (Space Weather Database): llamaradas solares, eyecciones de masa coronal y tormentas de partículas reales. Un script descarga los eventos **una vez, en desarrollo**, y los guarda como JSON dentro del juego. La API key **no va en el frontend**.
-- **OSDR:** datos de dosis de radiación y salud de astronautas para explicar qué significa la barra de radiación.
-- Cada dato real se cita en pantalla con estilo `caption-mono` ("FUENTE: NASA DONKI"). Lo simulado se declara como simulado; nunca se presentan datos guardados como "en vivo".
+### 3.6 Datos reales de la NASA
+- **Llamaradas:** tres semanas reales (diciembre de 2019, mayo de 2024 y octubre de 2024) guardadas en `juego/src/data/donki-archive.ts`. `npm run data:donki` las reemplaza por los datos exactos de DONKI y las marca como verificadas; la API key **no va en el frontend**.
+- **OSDR:** lectura recomendada en el Archivo científico; no alimenta ningún número del juego.
+- Cada dato real se cita en pantalla («Clima solar real: NASA / NOAA, archivo histórico (no en vivo)»). Lo simulado se declara como simulado; nunca se presentan datos guardados como «en vivo».
 
 ---
 
@@ -130,12 +143,11 @@ Detalles y cómo correrlo: [`juego/README.md`](juego/README.md).
 
 ---
 
-## 6. Iteración 1 (14-11-2026)
-Juego jugable de punta a punta: 4 misiones con semanas reales del Sol, la estación 2.5D integrada en Phaser, simulación en `juego/src/sim/` con tests, Archivo científico, logros, guardado local, audio procedural y modo Ultra Ligero. Ver [`GDD.md`](GDD.md), [`SOURCES.md`](SOURCES.md) y [`REPORTE-CALIDAD.md`](REPORTE-CALIDAD.md).
+## 6. Estado (15-11-2026)
+Juego jugable de punta a punta: 3 jornadas científicas con semanas reales del Sol y la misión final «Casa», estación 2.5D en Phaser, simulación en `juego/src/sim/`, Archivo científico con 29 fichas, logros, guardado local, audio procedural, modo Ultra Ligero, controles táctiles y español e inglés. Ver [`GDD.md`](GDD.md), [`SOURCES.md`](SOURCES.md) y [`REPORTE-CALIDAD.md`](REPORTE-CALIDAD.md).
 
-## 7. Pendiente (próximas decisiones del equipo)
-1. **Progresión:** propuesta híbrida, con una campaña "De la Luna a Marte" de 5 misiones que suma un sistema por misión y termina con la demora de comunicaciones en Marte, más un modo libre con escenarios de clima espacial real. Falta confirmarla.
-2. **Integrar la estación** del prototipo al código de Phaser (mapa en Tiled, simulación en `src/sim/` con pruebas).
-3. **Datos DONKI** guardados dentro del juego y citados en pantalla.
-4. **Más animales** sobre el mismo rig y arte final de la historia.
-5. **Explicación breve de los datasets** usados, para el jurado (el reto lo valora).
+## 7. Deuda conocida
+1. **Verificar el archivo de llamaradas contra DONKI** cuando la API responda.
+2. **Tests de balance:** `tests/unit/balance.test.ts`, `simulation.test.ts` y el e2e de navegación quedaron escritos para las reglas anteriores (energía inicial 100, paneles de noche, blindaje gratis).
+3. **Prueba con niños:** los valores de comida, energía y blindaje son estimaciones; falta ajustarlos jugando.
+4. **Progresión:** campaña «De la Luna a Marte» y más animales sobre el mismo rig.

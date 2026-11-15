@@ -432,6 +432,9 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .mini-full__stage { width: 380px; height: 500px; transform: scale(1.3); transform-origin: top left; }
 .mini-full__done { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: var(--aurora-teal); animation: mini-pop .5s var(--ease-spring) both; }
 .mini-full__done[hidden] { display: none; }
+/* pista de qué hacer: unos segundos al abrir el minijuego */
+.mini-full__hint { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); margin: 0; padding: var(--space-2) var(--space-5); width: max-content; max-width: 480px; text-align: center;
+  border-radius: var(--radius-pill); background: var(--space-700); border: 2px solid var(--line); color: var(--ink); font: 600 20px/26px var(--font-display); pointer-events: none; }
 .mini-full__done .mn-icon { width: 160px; height: 160px; filter: drop-shadow(0 0 24px rgba(90, 214, 178, .8)); }
 .mini-full.is-done .mini-full__stage { filter: brightness(1.25) saturate(1.2); transition: filter .4s ease-out; }
 @keyframes mini-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }

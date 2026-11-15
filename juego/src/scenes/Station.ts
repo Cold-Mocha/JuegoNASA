@@ -566,13 +566,13 @@ export class StationScene extends Phaser.Scene {
       case 'flareWarning': {
         audio.play('radio');
         const where = !this.sim.sheltered ? '¡Vuelve a la nave!' : this.sim.res.energy > 0 ? 'Estás dentro de la nave: el blindaje va a gastar energía.' : 'Sin energía, el blindaje protege la mitad.';
-        this.alert(`⚠ Llamarada ${flareName(ev.event.classType)} en ${Math.ceil(ev.inSec)} s. ${where}`, 'danger');
+        this.alert(`⚠ Viene una llamarada ${flareName(ev.event.classType)}. ${where}`, 'danger', ev.inSec * 1000); // la cuenta regresiva va aparte; el aviso queda hasta que llega
         if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en Comunicaciones, el aviso llega mucho antes.');
         break;
       }
       case 'flareStart': {
         const sev = severity(ev.event.classType);
-        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)} a las ${ev.event.peakTime.slice(11, 16)} UTC${!this.sim.sheltered ? '. ¡Vuelve a la nave!' : this.sim.res.energy > 0 ? '. Estás protegido: el blindaje gasta energía.' : '. Sin energía el blindaje protege la mitad.'}`, 'danger');
+        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)}${!this.sim.sheltered ? '. ¡Vuelve a la nave!' : this.sim.res.energy > 0 ? '. Estás protegido: el blindaje gasta energía.' : '. Sin energía el blindaje protege la mitad.'}`, 'danger', FLARE_DURATION_SEC * 1000);
         audio.play('alarm');
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
         this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);
@@ -723,16 +723,19 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
-  /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
+  /** Minijuego a pantalla completa: solo el juego y, los primeros segundos, una pista corta de qué hacer (se sale con Esc). Termina con un destello y una marca de listo. */
+  private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
       <div class="mini-full" aria-label="Minijuego">
         <div class="mini-full__stage" data-dust-root></div>
         <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
+        <p class="mini-full__hint" data-mini-hint>${esc(cfg.hint)}</p>
       </div>
       ${cfg.outdoor ? `<div class="mini-suit" aria-label="Oxígeno del traje">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
+    const hint = this.ui.q('[data-mini-hint]');
+    this.time.delayedCall(MINI_HINT_MS, () => hint.isConnected && (hint.hidden = true));
     this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: () => undefined,
       onDone: (result) => {
@@ -758,6 +761,7 @@ export class StationScene extends Phaser.Scene {
 
   private openDustGame(action: 'cleanDust'): void {
     this.openFullMini({
+      hint: 'Pasa el cepillo sobre el polvo',
       mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
       finish: () => void this.sim.act(action),
       outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
@@ -766,16 +770,16 @@ export class StationScene extends Phaser.Scene {
 
   /** Panel de pruebas (Energía del Sol): limpiarlo y orientarlo al Sol. Se juega afuera: el traje sigue gastando. */
   private openTestPanelGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ hint: 'Limpia el panel y gíralo hacia el Sol', mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
   }
 
   /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja. */
   private openAlgaeGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
+    this.openFullMini({ hint: 'Mantén apretado para subir la aguja', mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
   }
 
   private openSealGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
+    this.openFullMini({ hint: 'Sigue la grieta con el sellador', mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
   }
 
   /**
@@ -783,19 +787,20 @@ export class StationScene extends Phaser.Scene {
    * El aviso (la acción) se cobra al terminar el mensaje; su calidad cuenta para la ganancia.
    */
   private openAntennaFlow(): void {
-    const message = (): void => this.openFullMini({ mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
-    if (this.sim.comp.antenna < 0.7) this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
+    const message = (): void => this.openFullMini({ hint: 'Elige el símbolo que sigue el patrón', mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
+    if (this.sim.comp.antenna < 0.7) this.openFullMini({ hint: 'Une los cables del mismo color', mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
     else message();
   }
 
   /** Taladro de hielo: emparejar los picos del espectro; la ciencia ganada escala con la calidad. Se juega afuera: el traje sigue gastando. */
   private openBiosignatureGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => void this.sim.act('eva', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ hint: 'Une cada pico con su huella', mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => void this.sim.act('eva', quality(r ?? 1)), outdoor: true });
   }
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
   private openPedalGame(): void {
     this.openFullMini({
+      hint: 'Toca el pedal cuando llegue la nota',
       mount: (root, cb) => mountPedal(root, cb),
       finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
       failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : `No pedaleaste lo suficiente: hay que llenar más del ${PEDAL_PASS * 100} % de la barra.`),
@@ -804,11 +809,11 @@ export class StationScene extends Phaser.Scene {
 
   /** Curarse: tratar cada herida manteniendo apretado. */
   private openHealGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
+    this.openFullMini({ hint: 'Mantén apretada cada herida hasta cerrarla', mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
   }
 
   private openHarvestGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', quality(result ?? 1)) });
+    this.openFullMini({ hint: 'Toca solo las plantas maduras', mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', quality(result ?? 1)) });
   }
 
   /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */
@@ -1028,13 +1033,14 @@ export class StationScene extends Phaser.Scene {
     this.ui.q(sel).innerHTML = html;
   }
 
-  private alert(text: string, tone: 'info' | 'ok' | 'danger'): void {
+  /** Aviso arriba al centro. `ms`: cuánto dura (los de llamarada duran hasta que pasa el evento). */
+  private alert(text: string, tone: 'info' | 'ok' | 'danger', ms = ALERT_MS): void {
     const el = this.ui.q('[data-alert]');
     el.textContent = text;
     el.className = `hud__alert hud__alert--${tone}`;
     el.hidden = false;
     this.alertTimer?.remove();
-    this.alertTimer = this.time.delayedCall(4500, () => (el.hidden = true));
+    this.alertTimer = this.time.delayedCall(Math.max(ALERT_MS, ms / this.timescale), () => (el.hidden = true));
   }
 
   /** Consejo de la Comandante (solo en dificultades con pistas). */
@@ -1324,8 +1330,12 @@ const controlsHtml = (): string => `
     <span class="controls__action">${esc(c.action)}</span></li>`).join('')}
   </ul>
   <p class="controls__pointer">${esc(POINTER_HINT)}</p>`;
-/** Clase GOES de la llamarada, tal cual (p. ej. "X9.3"). */
-const flareName = (classType: string): string => classType;
+const ALERT_MS = 4500;
+const FLARE_SIZE = { minor: 'pequeña', moderate: 'mediana', severe: 'enorme' } as const;
+/** Tamaño de la llamarada en palabras, con su clase GOES real entre paréntesis (p. ej. "enorme (X9.3)"). */
+const flareName = (classType: string): string => `${FLARE_SIZE[severity(classType)]} (${classType})`;
+/** Cuánto se ve la pista de cada minijuego. */
+const MINI_HINT_MS = 4000;
 /** Oscuridad según la energía: con 60 o más, luz plena; sin energía, casi a oscuras. */
 const darknessFor = (energy: number): number => (Math.min(60, Math.max(0, 60 - energy)) / 60) * 0.72;
 /** Escala del plano dentro del mapa (M). */

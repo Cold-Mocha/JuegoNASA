@@ -2,7 +2,7 @@ import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
   BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
@@ -58,7 +58,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -346,7 +346,7 @@ export class Simulation {
 
     this.updateSuit(dt);
     if (this.ended) return;
-    this.updateFlares(dt, shield);
+    this.updateFlares(dt);
     this.resolvePending();
     this.checkDepleted();
     this.checkCritical();
@@ -376,7 +376,13 @@ export class Simulation {
     if (loss) this.res.health = clamp(this.res.health + loss * k);
   }
 
-  private updateFlares(dt: number, shield: number): void {
+  /** Fracción de una llamarada que llega al michi: afuera, toda; en la nave, casi nada mientras haya energía para el blindaje. */
+  get flareShield(): number {
+    if (!this.sheltered) return 1;
+    return this.res.energy > 0 ? SHELTER_FACTOR : SHELTER_FACTOR_NO_ENERGY;
+  }
+
+  private updateFlares(dt: number): void {
     const events = this.config.events;
     // aviso previo: con pronóstico llega antes
     while (this.warned < events.length) {
@@ -393,8 +399,10 @@ export class Simulation {
       this.events.push({ type: 'flareStart', event, forecasted: false });
     }
     for (const f of this.active) {
-      const portion = Math.min(dt, f.remaining) / FLARE_DURATION_SEC;
-      const dose = f.total * portion * shield;
+      const secs = Math.min(dt, f.remaining);
+      const portion = secs / FLARE_DURATION_SEC;
+      const dose = f.total * portion * this.flareShield;
+      if (this.sheltered) this.res.energy = clamp(this.res.energy - SHIELD_ENERGY_PER_SEC * secs); // el blindaje gasta energía mientras dura la llamarada
       f.received += dose;
       f.remaining -= dt;
       this.res.radiation = clamp(this.res.radiation + dose);
@@ -402,7 +410,9 @@ export class Simulation {
     for (const f of this.active.filter((a) => a.remaining <= 0)) {
       if (f.received <= f.total * 0.3) this.stats.shelteredFlares++;
       else this.stats.unshieldedFlares++;
-      this.events.push({ type: 'flareEnd', event: f.event, dose: Math.round(f.received) });
+      this.stats.flareDose += f.received;
+      this.stats.flareDoseOutside += f.total;
+      this.events.push({ type: 'flareEnd', event: f.event, dose: Math.round(f.received), total: f.total });
     }
     this.active = this.active.filter((a) => a.remaining > 0);
     this.checkTasks();

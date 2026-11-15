@@ -68,7 +68,7 @@ export type SimEvent =
   | { type: 'dayStart'; day: number; light: number }
   | { type: 'flareWarning'; event: SolarEvent; inSec: number; forecasted: boolean }
   | { type: 'flareStart'; event: SolarEvent; forecasted: boolean }
-  | { type: 'flareEnd'; event: SolarEvent; dose: number }
+  | { type: 'flareEnd'; event: SolarEvent; dose: number; total: number } // total: lo que habría recibido afuera, sin protección
   | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> & { science?: number } }
   | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
   | { type: 'critical'; resource: keyof Resources }
@@ -92,6 +92,8 @@ export interface ActionCheck {
 export interface SimStats {
   shelteredFlares: number; // llamaradas pasadas dentro de la nave
   unshieldedFlares: number;
+  flareDose: number;        // radiación recibida de las llamaradas
+  flareDoseOutside: number; // la que habría recibido afuera, sin protección
   evas: number;
   antennaAligns: number;
   actions: number;

@@ -565,14 +565,14 @@ export class StationScene extends Phaser.Scene {
       }
       case 'flareWarning': {
         audio.play('radio');
-        const where = this.sim.sheltered ? 'Estás dentro de la nave: a salvo.' : '¡Vuelve a la nave!';
+        const where = !this.sim.sheltered ? '¡Vuelve a la nave!' : this.sim.res.energy > 0 ? 'Estás dentro de la nave: el blindaje va a gastar energía.' : 'Sin energía, el blindaje protege la mitad.';
         this.alert(`⚠ Llamarada ${flareName(ev.event.classType)} en ${Math.ceil(ev.inSec)} s. ${where}`, 'danger');
         if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en el Puente, el aviso llega mucho antes.');
         break;
       }
       case 'flareStart': {
         const sev = severity(ev.event.classType);
-        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)} a las ${ev.event.peakTime.slice(11, 16)} UTC${this.sim.sheltered ? '. Estás protegido dentro de la nave.' : '. ¡Vuelve a la nave!'}`, 'danger');
+        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)} a las ${ev.event.peakTime.slice(11, 16)} UTC${!this.sim.sheltered ? '. ¡Vuelve a la nave!' : this.sim.res.energy > 0 ? '. Estás protegido: el blindaje gasta energía.' : '. Sin energía el blindaje protege la mitad.'}`, 'danger');
         audio.play('alarm');
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
         this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);

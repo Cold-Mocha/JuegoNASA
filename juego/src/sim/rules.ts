@@ -59,6 +59,10 @@ export const FLARE_DURATION_SEC = 10;
 export const FLARE_WARNING_SEC = { forecasted: 25, unforecasted: 10 } as const;
 /** Dentro de la nave las paredes dejan pasar solo esta fracción de la radiación (llamaradas y fondo). */
 export const SHELTER_FACTOR = 0.1;
+/** El blindaje no es gratis: durante una llamarada, estar protegido en la nave gasta esta energía por segundo (4 por llamarada). */
+export const SHIELD_ENERGY_PER_SEC = 0.4;
+/** Sin energía el blindaje activo se apaga y solo quedan las paredes: pasa la mitad de la llamarada. */
+export const SHELTER_FACTOR_NO_ENERGY = 0.5;
 
 /** Zona de cada sala. Los pasillos de la nave son 'ship'; los caminos de afuera, 'surface' (ver `stationMap.ts`). */
 export const ROOM_ZONE: Record<RoomId, Zone> = {

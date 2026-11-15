@@ -2,16 +2,16 @@ import type { ActionCheck, ActionId } from '../sim/types';
 
 /** Textos de las acciones de cada sala (los números viven en sim/rules.ts). */
 export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
-  repairAntenna: { label: 'Reparar la antena', why: 'La antena se desajusta con los días y la señal con la Tierra se debilita. Conecta los cables en el minijuego para repararla. La Tierra tarda casi 3 segundos en responder.' },
-  forecast: { label: 'Pedir el pronóstico solar', why: 'La Tierra vigila el Sol. Con el pronóstico, el aviso de cada llamarada llega 25 segundos antes en vez de 10. Necesita buena señal: si la antena se debilita, deja de llegar hasta repararla.' },
-  growLights: { label: 'Encender luces de las algas', why: 'Minijuego: mantén la luz, los nutrientes y la temperatura de las algas en la franja verde. La luz calienta el tanque, así que subirla te obliga a compensar. Cuanto mejor lo hagas, más O₂ y comida dan las algas.' },
-  harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas. Una vez por día.' },
-  cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'Las tormentas de polvo lunar tapan las celdas de los paneles cuando menos lo esperas. Solo se puede limpiar cuando llega una: se hace a mano con un cepillo (minijuego) y al terminar la energía vuelve a renovarse sola.' },
-  cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Es el panel de la investigación: cuando una tormenta de polvo lo ensucia, límpialo con el cepillo y oriéntalo hacia el Sol para medir cuánta energía da. Afuera hay radiación y el traje gasta oxígeno. Una vez por día.' },
-  eva: { label: 'Recoger muestras de hielo', why: 'Muestras para la ciencia. Afuera hay más radiación y el traje gasta oxígeno. Una vez por día.' },
-  repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire: el oxígeno de la nave baja hasta cerrarla. Sigue la grieta con el sellador (minijuego).' },
-  pedal: { label: 'Pedalear', why: 'La bicicleta de la estación convierte tu esfuerzo en energía: sigue el ritmo. Cuesta un poco de comida. Hasta 3 veces por día.' },
-  heal: { label: 'Curarse', why: 'Minijuego: trata cada herida de la camilla. Recupera salud; gasta energía y un poco de comida.' },
+  repairAntenna: { label: 'Reparar la antena', why: 'Gasta energía y recupera la señal con la Tierra; la respuesta tarda casi 3 segundos.' },
+  forecast: { label: 'Pedir el pronóstico solar', why: 'Gasta energía: el aviso de cada llamarada llega 25 segundos antes en vez de 10, mientras la señal sea buena.' },
+  growLights: { label: 'Encender luces de las algas', why: 'Gasta energía y da O₂ y comida, más al terminar el día; una vez por día.' },
+  harvest: { label: 'Cosechar', why: 'Gasta un poco de energía y da comida según lo que coseches; una vez por día.' },
+  cleanDust: { label: 'Limpiar el polvo de los paneles', why: 'Afuera, con radiación: deja los paneles limpios para que la energía vuelva a subir.' },
+  cleanTestPanel: { label: 'Limpiar el panel de pruebas', why: 'Afuera, con radiación: mide el panel y da ciencia; una vez por día.' },
+  eva: { label: 'Recoger muestras de hielo', why: 'Afuera, con más radiación: da ciencia según lo que encuentres; una vez por día.' },
+  repair: { label: 'Sellar la fractura', why: 'Gasta energía y cierra la fuga para que el oxígeno deje de bajar.' },
+  pedal: { label: 'Pedalear', why: 'Cambia comida por energía; hasta 3 veces por día.' },
+  heal: { label: 'Curarse', why: 'Gasta energía y comida y recupera salud.' },
 };
 
 export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = {

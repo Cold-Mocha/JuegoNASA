@@ -566,7 +566,7 @@ export class StationScene extends Phaser.Scene {
       case 'flareWarning': {
         audio.play('radio');
         const where = !this.sim.sheltered ? '¡Vuelve a la nave!' : this.sim.res.energy > 0 ? 'Estás dentro de la nave: el blindaje va a gastar energía.' : 'Sin energía, el blindaje protege la mitad.';
-        this.alert(`⚠ Viene una llamarada ${flareName(ev.event.classType)}. ${where}`, 'danger', ev.inSec * 1000); // la cuenta regresiva va aparte; el aviso queda hasta que llega
+        this.alert(`Viene una llamarada ${flareName(ev.event.classType)}. ${where}`, 'danger', ev.inSec * 1000); // la cuenta regresiva va aparte; el aviso queda hasta que llega
         if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en Comunicaciones, el aviso llega mucho antes.');
         break;
       }
@@ -624,14 +624,14 @@ export class StationScene extends Phaser.Scene {
           health: 'Tu salud está baja. Ve a la Enfermería y cúrate.',
           radiation: 'Tienes mucha radiación. Quédate dentro de la nave todo lo que puedas.',
         };
-        this.alert(`⚠ ${RESOURCE_TEXT[ev.resource].label} en estado crítico`, 'danger');
+        this.alert(`${RESOURCE_TEXT[ev.resource].label} en estado crítico`, 'danger');
         this.tip(advice[ev.resource]);
         break;
       }
       case 'breachOpened':
         audio.play('alarm');
         this.spawnBreach(ev.room);
-        this.alert(`⚠ ¡Se rompió el reciclador de oxígeno! Se escapa el aire: el oxígeno de la nave baja hasta que lo repares.`, 'danger');
+        this.alert(`¡Se rompió el reciclador de oxígeno! Se escapa el aire: el oxígeno de la nave baja hasta que lo repares.`, 'danger');
         this.tip(`Ve a ${ROOMS[ev.room].name}, al reciclador roto, y sella la grieta con el sellador.`);
         break;
       case 'breachRepaired':
@@ -640,17 +640,17 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'dustStorm':
         audio.play('error');
-        this.alert('⚠ ¡Tormenta de polvo! El polvo lunar cubrió los paneles solares.', 'danger');
+        this.alert('¡Tormenta de polvo! El polvo lunar cubrió los paneles solares.', 'danger');
         this.tip('Sal a la superficie y limpia los paneles con el cepillo antes de que la energía baje.');
         break;
       case 'panelsFailing':
         audio.play('error');
         if (this.sim.light < 1) {
           // sin sol no hay nada que limpiar: solo queda la reserva y la bicicleta
-          this.alert('⚠ Con poca luz los paneles generan menos de lo que gasta la nave: la energía empezó a bajar.', 'danger');
+          this.alert('Con poca luz los paneles generan menos de lo que gasta la nave: la energía empezó a bajar.', 'danger');
           this.tip('Sin sol solo queda la energía guardada. Pedalea en la bicicleta del Puente y gasta lo justo.');
         } else {
-          this.alert('⚠ Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.', 'danger');
+          this.alert('Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.', 'danger');
           this.tip('Sal a la superficie y limpia el polvo de los paneles para que la energía vuelva a renovarse.');
         }
         break;
@@ -659,7 +659,7 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'suitLow':
         audio.play('error');
-        this.alert('⚠ Queda poco oxígeno en el traje. Vuelve a la nave o entra al invernadero.', 'danger');
+        this.alert('Queda poco oxígeno en el traje. Vuelve a la nave o entra al invernadero.', 'danger');
         break;
       case 'suitEmpty':
         audio.play('hurt');
@@ -1074,7 +1074,7 @@ export class StationScene extends Phaser.Scene {
           const good = k === 'radiation' ? v < 0 : v > 0;
           return `<span class="delta ${good ? 'delta--good' : 'delta--bad'}">${v > 0 ? '+' : '−'}${Math.abs(Math.round(v))} ${RESOURCE_TEXT[k].short}</span>`;
         })
-        .join('') || '<span class="delta">Sin costo directo</span>';
+        .join('');
     const items = ids.map((id, i) => {
       const check = this.sim.canAct(id);
       const pending = this.sim.isPending(id);
@@ -1113,11 +1113,10 @@ export class StationScene extends Phaser.Scene {
     const ch = CHARACTERS.find((c) => c.id === state.loadout!.character)!;
     this.openModal(`
       <h2 class="mn-panel__title">Mapa de la Estación Central</h2>
-      <p class="mn-panel__body">Tu cara de michi marca dónde estás. La nave está arriba; los paneles solares y el invernadero, afuera.</p>
       <div class="map" style="width:${f(MAP_W * k)}px;height:${f(MAP_H * k)}px">
         <svg class="map__plan" viewBox="0 0 ${f(MAP_W * k)} ${f(MAP_H * k)}" aria-hidden="true">${halls}</svg>${rooms}
         <span class="map__me" data-map-me role="img" aria-label="Estás aquí">${michiFaceSvg(ch)}</span></div>
-      <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${icon('close')}Cerrar</button></div>`, 'map', 'modal__panel--wide');
+      <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">Cerrar</button></div>`, 'map', 'modal__panel--wide');
     this.renderMapMarker();
   }
 
@@ -1131,8 +1130,7 @@ export class StationScene extends Phaser.Scene {
   private openPause(): void {
     this.overlay = 'pause';
     this.openModal(`
-      <h2 class="mn-panel__title">Pausa</h2>
-      <div class="pause__actions">
+      <div class="pause__actions" aria-label="Pausa">
         <button class="mn-btn" data-action="resume">${icon('play')}Continuar</button>
         <button class="mn-btn mn-btn--secondary" data-action="archive">${icon('book')}Archivo científico</button>
         <button class="mn-btn mn-btn--secondary" data-action="controls">${icon('keyboard')}Controles</button>
@@ -1191,7 +1189,7 @@ export class StationScene extends Phaser.Scene {
       <h2 class="mn-panel__title">Controles de la estación</h2>
       ${controlsHtml()}
       <div class="mn-panel__footer">
-        <button class="mn-btn mn-btn--secondary" data-action="close">${icon('back')}Volver</button>
+        <button class="mn-btn mn-btn--secondary" data-action="close">Volver</button>
         <button class="mn-btn" data-action="tutorial-start">${icon('retry')}Repetir tutorial</button>
       </div>`, 'controls', 'modal__panel--wide');
   }

@@ -69,7 +69,7 @@ export class StoryScene extends Phaser.Scene {
     portrait.hidden = !slide.speaker;
     if (slide.speaker && !portrait.innerHTML) portrait.innerHTML = michiSvg(COMMANDER, tokenCss('nebula-violet'));
     this.ui.q('.story__dialogue').classList.toggle('is-narration', !slide.speaker);
-    this.ui.q('[data-credit]').textContent = slide.credit ? `FUENTE: ${slide.credit}` : '';
+    this.ui.q('[data-credit]').textContent = slide.credit ? `Fuente: ${slide.credit}` : '';
     this.ui.q('[data-dots]').innerHTML = STORY.map((_, k) => `<i class="${k === i ? 'is-on' : ''}"></i>`).join('');
     this.type(slide.text);
   }

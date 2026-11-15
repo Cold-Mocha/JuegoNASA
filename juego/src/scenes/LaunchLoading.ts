@@ -506,10 +506,10 @@ export class LaunchLoadingScene extends Phaser.Scene {
     });
 
     this.speakerName = this.fixed(this.add.text(140, 32, '', { fontFamily: FONT_DISPLAY, fontSize: '18px', fontStyle: '700', color: tokenCss('comet-cyan') }));
-    this.fixed(this.add.text(610, 36, '● ENLACE DIRECTO', { fontFamily: FONT_MONO, fontSize: '12px', color: tokenCss('comet-cyan') }).setOrigin(1, 0));
+    this.fixed(this.add.text(610, 36, '● Enlace directo', { fontFamily: FONT_MONO, fontSize: '12px', color: tokenCss('comet-cyan') }).setOrigin(1, 0));
     this.speakerText = this.fixed(this.add.text(140, 62, '', { fontFamily: FONT_DISPLAY, fontSize: '22px', color: tokenCss('ink'), wordWrap: { width: 470 }, lineSpacing: 4 }));
 
-    this.panelLabel = this.fixed(this.add.text(1151, 38, 'DESPEGUE', { fontFamily: FONT_MONO, fontSize: '13px', color: tokenCss('ink-muted') }).setOrigin(0.5));
+    this.panelLabel = this.fixed(this.add.text(1151, 38, 'Despegue', { fontFamily: FONT_MONO, fontSize: '13px', color: tokenCss('ink-muted') }).setOrigin(0.5));
     this.panelValue = this.fixed(this.add.text(1151, 76, `T-${COUNTDOWN_FROM}`, { fontFamily: FONT_MONO, fontSize: '46px', fontStyle: '700', color: tokenCss('ink-muted') }).setOrigin(0.5));
   }
 
@@ -635,7 +635,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     }
     if (this.lastCount !== -2) {
       this.lastCount = -2;
-      this.panelLabel.setText('ALTITUD');
+      this.panelLabel.setText('Altitud');
       this.panelValue.setColor(tokenCss('star-gold')).setFontSize(32);
     }
     const km = altitudeKm(this.ascent(t));

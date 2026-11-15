@@ -29,11 +29,12 @@ export class MainMenuScene extends Phaser.Scene {
         <nav class="menu__actions" aria-label="Menú principal">
           <button class="mn-btn menu__play" data-action="play">${icon('rocket')}Jugar</button>
           <button class="mn-btn mn-btn--secondary" data-action="archive">${icon('book')}Archivo científico</button>
-          <button class="mn-btn mn-btn--secondary" data-action="achievements">${icon('trophy')}Logros</button>
-          <button class="mn-btn mn-btn--secondary" data-action="settings">${icon('gear')}Ajustes</button>
-          <button class="mn-btn mn-btn--secondary" data-action="credits">${icon('info')}Créditos</button>
+          <div class="menu__more">
+            <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="achievements">${icon('trophy')}Logros</button>
+            <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="settings">${icon('gear')}Ajustes</button>
+            <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="credits">${icon('info')}Créditos</button>
+          </div>
         </nav>
-        <p class="caption-mono menu__footer">Proyecto creado para el NASA Space Apps Challenge 2026</p>
       </div>
       <div class="modal" data-modal hidden></div>`);
 
@@ -60,7 +61,7 @@ export class MainMenuScene extends Phaser.Scene {
           .join('');
         openModal(`<h2 class="mn-panel__title">Logros científicos (${owned.length}/${Object.keys(ACHIEVEMENTS).length})</h2>
           <ul class="achievement-list">${items}</ul>
-          <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${icon('close')}Cerrar</button></div>`);
+          <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">Cerrar</button></div>`);
       })
       .on('credits', () =>
         openModal(`
@@ -69,8 +70,8 @@ export class MainMenuScene extends Phaser.Scene {
           <p class="mn-panel__body">Proyecto creado para el NASA Space Apps Challenge 2026. Usa datos e imágenes abiertas de la NASA; la NASA no respalda este proyecto.</p>
           <p class="mn-panel__body">Datos científicos: NASA (DONKI, Fact Sheets, OSDR, Science), NOAA SWPC, ESA y Zhang et al. 2020. Lista completa en el Archivo científico.</p>
           <p class="mn-panel__body">Sonido y música generados por código (Web Audio API).</p>
-          <p class="caption-mono">Fuentes tipográficas: Fredoka y Space Mono (SIL OFL 1.1).</p>
-          <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${icon('close')}Cerrar</button></div>`),
+          <p class="mn-panel__body">Fuentes tipográficas: Fredoka y Space Mono (SIL OFL 1.1).</p>
+          <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">Cerrar</button></div>`),
       );
 
     bindSettings(ui, () => this.scene.restart()); // el tema redibuja el canvas con los nuevos colores

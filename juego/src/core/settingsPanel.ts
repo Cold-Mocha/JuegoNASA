@@ -2,7 +2,9 @@ import { state, type Settings } from './state';
 import { applyComfort, applyTheme } from './theme';
 import { audio } from './audio';
 import type { UiLayer } from './ui';
-import { icon } from './icons';
+
+/** Herramientas de desarrollo (contador de FPS): solo con `?debug` en la dirección. */
+const DEBUG = new URLSearchParams(location.search).has('debug');
 
 /** HTML del panel de Ajustes (lo usan el menú principal y la pausa). */
 export function settingsHtml(): string {
@@ -20,8 +22,8 @@ export function settingsHtml(): string {
     ${check('ultraLight', 'Modo Ultra Ligero', 'Para computadores antiguos: dibujo más simple, sin partículas ni destellos (se aplica al recargar).')}
     ${check('reducedMotion', 'Reducir movimiento', 'Sin sacudidas ni rebotes.')}
     ${check('theme', 'Alto contraste', 'Colores más marcados.')}
-    ${check('showFps', 'Mostrar FPS', 'Cuadros por segundo, para revisar el rendimiento.')}
-    <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${icon('check')}Listo</button></div>`;
+    ${DEBUG ? check('showFps', 'Mostrar FPS', 'Cuadros por segundo, para revisar el rendimiento.') : ''}
+    <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">Listo</button></div>`;
 }
 
 /**

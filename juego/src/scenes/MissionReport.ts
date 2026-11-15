@@ -69,31 +69,29 @@ export class MissionReportScene extends Phaser.Scene {
     fadeIn(this);
     drawStarfield(this, 'report', !state.calm);
     const achievements = r.newAchievements.length
-      ? r.newAchievements.map((id) => `<li class="mn-toast"><span class="mn-toast__medal" aria-hidden="true">${icon(ACHIEVEMENT_ICON[id])}</span><span><span class="mn-toast__kicker">Logro nuevo</span><br><span class="mn-toast__title">${esc(ACHIEVEMENTS[id].title)}</span></span></li>`).join('')
-      : '<li class="body-sm report__muted">Sin logros nuevos esta vez.</li>';
+      ? `<ul class="report__achievements" aria-label="Logros nuevos">${r.newAchievements.map((id) => `<li class="mn-toast"><span class="mn-toast__medal" aria-hidden="true">${icon(ACHIEVEMENT_ICON[id])}</span><span class="mn-toast__title">${esc(ACHIEVEMENTS[id].title)}</span></li>`).join('')}</ul>`
+      : '';
 
     const ui = new UiLayer(this, /* html */ `
       <div class="report" data-report="${s.won ? 'won' : 'lost'}">
         <div class="mn-panel report__main">
-          <span class="mn-chip ${s.won ? 'mn-chip--eva' : 'mn-chip--bonus'}">${s.won ? 'Investigación completa' : 'Investigación incompleta'}</span>
           <h1 class="display-lg report__title">${s.won ? '¡De vuelta a la Tierra!' : 'Hay que volver a la Tierra'}</h1>
           <p class="mn-panel__body report__question">${icon(MISSION_ICON[mission.id])}${esc(mission.name)}: ${esc(mission.question)}</p>
           <ul class="mn-checklist report__tasks">${tasks}</ul>
           <div class="mn-stars report__stars" aria-label="${r.score.stars} de 3 estrellas">${STAR.repeat(r.score.stars)}${STAR_OFF.repeat(3 - r.score.stars)}</div>
           <div class="report__stats">
             <div class="mn-telemetry"><span class="mn-telemetry__label">Puntaje</span><span class="mn-telemetry__value" data-score>${r.score.score}</span></div>
-            <div class="mn-telemetry"><span class="mn-telemetry__label">Tareas</span><span class="mn-telemetry__value">${s.tasksDone}/${s.tasksTotal}</span></div>
             <div class="mn-telemetry"><span class="mn-telemetry__label">Días</span><span class="mn-telemetry__value">${s.daysSurvived}/${s.days}</span></div>
-            <div class="mn-telemetry"><span class="mn-telemetry__label">Llamaradas dentro de la nave</span><span class="mn-telemetry__value">${s.stats.shelteredFlares}/${s.stats.shelteredFlares + s.stats.unshieldedFlares}</span></div>
+            <div class="mn-telemetry"><span class="mn-telemetry__label">Llamaradas con escudo</span><span class="mn-telemetry__value">${s.stats.shelteredFlares}/${s.stats.shelteredFlares + s.stats.unshieldedFlares}</span></div>
           </div>
           ${r.newBest ? '<p class="heading report__best">¡Nuevo récord en esta jornada!</p>' : ''}
           <h2 class="heading report__h">Lo que aprendiste</h2>
           <p class="mn-panel__body">${esc(lesson.text)}</p>
-          <p class="caption-mono report__source">DATO REAL: ${esc(entry.fact)}. Fuente: <a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.source)}</a></p>
-          <p class="caption-mono report__source">Clima solar real (${esc(mission.tagline.toLowerCase())}): ${week.flares.map((f) => esc(f.classType)).join(', ') || 'sin llamaradas fuertes'} (archivo histórico).</p>
+          <p class="report__source">Dato real: ${esc(entry.fact)}. Fuente: <a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.source)}</a></p>
+          <p class="report__source">Clima solar real (${esc(mission.tagline.toLowerCase())}): ${week.flares.map((f) => esc(f.classType)).join(', ') || 'sin llamaradas fuertes'} (archivo histórico).</p>
         </div>
         <aside class="report__side">
-          <ul class="report__achievements">${achievements}</ul>
+          ${achievements}
           <div class="report__buttons">
             <button class="mn-btn" data-action="retry">${icon('retry')}Reintentar</button>
             <button class="mn-btn mn-btn--secondary" data-action="select">${icon('list')}Otra jornada</button>

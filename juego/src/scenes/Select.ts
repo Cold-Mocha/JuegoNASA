@@ -14,7 +14,7 @@ import { DIFFICULTY_ICON } from '../core/iconMap';
 import { MICHI_ANIMS, type MichiAnim } from '../data/preload';
 
 interface Option { id: string; title: string; subtitle: string; body: string; art: string; chips?: string[]; }
-interface Step { key: 'mission' | 'character' | 'difficulty'; label: string; heading: string; options: Option[]; }
+interface Step { key: 'mission' | 'character' | 'difficulty'; label: string; options: Option[]; }
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
@@ -56,13 +56,13 @@ export class SelectScene extends Phaser.Scene {
     };
     this.steps = [
       {
-        key: 'character', label: 'Tripulante', heading: 'Elige tu tripulante',
+        key: 'character', label: 'Tripulante',
         options: CHARACTERS.map((c) => ({
           id: c.id, title: c.name, subtitle: c.role, body: c.trait, art: michiSvg(c, tokenCss(c.accent)),
         })),
       },
       {
-        key: 'mission', label: 'Jornada científica', heading: 'Jornadas científicas',
+        key: 'mission', label: 'Jornada científica',
         options: [...MISSIONS.map((m) => {
           const best = state.progress.best[m.id];
           const flares = archiveFor(m).flares.length;
@@ -79,9 +79,9 @@ export class SelectScene extends Phaser.Scene {
         ],
       },
       {
-        key: 'difficulty', label: 'Dificultad', heading: '¿Qué tan difícil?',
+        key: 'difficulty', label: 'Dificultad',
         options: DIFFICULTIES.map((d) => ({
-          id: d.id, title: d.name, subtitle: `Nivel ${d.stars}`, body: d.description,
+          id: d.id, title: d.name, subtitle: '', body: d.description, // las estrellas ya dicen el nivel
           art: `<div class="option__icon">${icon(DIFFICULTY_ICON[d.id])}</div><div class="mn-stars">${STAR.repeat(d.stars)}${STAR_OFF.repeat(3 - d.stars)}</div>`,
         })),
       },
@@ -92,11 +92,10 @@ export class SelectScene extends Phaser.Scene {
     this.ui = new UiLayer(this, /* html */ `
       <div class="select">
         <ol class="stepper" data-stepper></ol>
-        <h2 class="display-lg select__heading" data-heading></h2>
         <div class="select__grid" role="radiogroup" data-grid></div>
         <div class="select__footer">
-          <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}Atrás</button>
-          <button class="mn-btn" data-action="next" data-next>Siguiente${icon('next')}</button>
+          <button class="mn-btn mn-btn--secondary" data-action="back">Atrás</button>
+          <button class="mn-btn" data-action="next" data-next>Siguiente</button>
         </div>
       </div>`);
 
@@ -129,7 +128,6 @@ export class SelectScene extends Phaser.Scene {
     this.ui.q('[data-stepper]').innerHTML = this.steps
       .map((s, k) => `<li class="stepper__item ${k === i ? 'is-current' : k < i ? 'is-done' : ''}"><span class="stepper__num">${k + 1}</span>${esc(s.label)}</li>`)
       .join('');
-    this.ui.q('[data-heading]').textContent = step.heading;
     const grid = this.ui.q('[data-grid]');
     this.stopPreview();
     grid.classList.toggle('is-roster', step.key === 'character');
@@ -148,8 +146,6 @@ export class SelectScene extends Phaser.Scene {
       grid.innerHTML = `<div class="roster">${cards}</div>
         <aside class="preview mn-panel" aria-label="Vista previa del tripulante">
           <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="Tu michi astronauta"></div></div>
-          <span class="title preview__name" data-preview-name></span>
-          <span class="heading preview__role" data-preview-role></span>
         </aside>`;
       this.startPreview((this.picks.character as CharacterId | null) ?? CHARACTERS[0].id);
     } else {
@@ -159,13 +155,13 @@ export class SelectScene extends Phaser.Scene {
           <div class="option__art">${o.art}</div>
           ${o.chips ? `<span class="option__chips">${o.chips.map((c) => `<span class="mn-chip mn-chip--outline">${esc(c)}</span>`).join('')}</span>` : ''}
           <span class="title option__title">${esc(o.title)}</span>
-          <span class="heading option__subtitle">${esc(o.subtitle)}</span>
+          ${o.subtitle ? `<span class="heading option__subtitle">${esc(o.subtitle)}</span>` : ''}
           <span class="body-sm option__body">${esc(o.body)}</span>
         </button>`)
         .join('');
     }
     const next = this.ui.q<HTMLButtonElement>('[data-next]');
-    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}¡Despegar!` : `Siguiente${icon('next')}`;
+    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}¡Despegar!` : 'Siguiente';
     this.syncNext();
     this.ui.focusFirst(this.picks[step.key] ? `.option[data-id="${this.picks[step.key]}"]` : '.option');
   }
@@ -181,10 +177,7 @@ export class SelectScene extends Phaser.Scene {
   // ---------- vista previa del michi (hoja de sprites animada con CSS; sin movimiento si se pidió menos movimiento) ----------
   private startPreview(id: CharacterId, greet = false): void {
     this.stopPreview();
-    const ch = CHARACTERS.find((c) => c.id === id)!;
     this.pvId = id;
-    this.ui.q('[data-preview-name]').textContent = ch.name;
-    this.ui.q('[data-preview-role]').textContent = `${ch.role} · ${ch.trait}`;
     this.setPreviewAnim('idle');
     if (state.calm) return;
     if (greet) this.doAction({ anim: 'smile', sec: 1.6 });

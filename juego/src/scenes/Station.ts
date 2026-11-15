@@ -1020,17 +1020,14 @@ export class StationScene extends Phaser.Scene {
     this.breachMarker = this.makeBreachMarker(rec.at.x, rec.at.y - sprite.displayHeight - 36);
   }
 
-  /** Marcador sobre la máquina rota: un círculo rojo con «!» y un anillo que se expande (quieto si se pidió menos movimiento). */
+  /** Marcador sobre la máquina rota: una flecha roja sólida que apunta hacia abajo y empuja hacia ella (quieta si se pidió menos movimiento). */
   private makeBreachMarker(x: number, y: number): Phaser.GameObjects.Container {
-    const red = tokenColor('danger');
-    const ring = this.add.circle(0, 0, 26).setStrokeStyle(4, red).setFillStyle(red, 0);
-    const disc = this.add.circle(0, 0, 24, red).setStrokeStyle(4, 0x0e0b33);
-    const bang = this.add.text(0, 1, '!', { fontFamily: 'Fredoka, system-ui, sans-serif', fontSize: '34px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5);
-    const box = this.add.container(x, y, [ring, disc, bang]).setDepth(9001);
-    if (!state.calm) {
-      this.tweens.add({ targets: ring, scale: 2, alpha: 0, duration: 1100, repeat: -1, ease: 'Quad.out' });
-      this.tweens.add({ targets: box, y: y - 8, duration: 550, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    }
+    const arrow = this.add.graphics();
+    const pts = [[-10, -34], [10, -34], [10, -6], [26, -6], [0, 24], [-26, -6], [-10, -6]].map(([px, py]) => new Phaser.Math.Vector2(px, py));
+    arrow.fillStyle(tokenColor('danger'), 1).fillPoints(pts, true);
+    arrow.lineStyle(5, tokenColor('space-900'), 1).strokePoints(pts, true, true);
+    const box = this.add.container(x, y, [arrow]).setDepth(9001);
+    if (!state.calm) this.tweens.add({ targets: box, y: y + 10, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     return box;
   }
 

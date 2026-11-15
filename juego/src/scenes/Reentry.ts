@@ -14,9 +14,13 @@ const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="tr
 const STAR_OFF = STAR.replace(' is-earned', '');
 const PHASE_ICON: IconName[] = ['radar', 'rocket', 'sun', 'map'];
 const DAMAGED_TILES = 4;
+/** El planeo es la única fase con una línea de texto: la pista real donde termina (ver la ficha «mataveri» del Archivo). */
+const GLIDE_PHASE = 3;
+const GLIDE_CAPTION = 'Pista de Mataveri, Rapa Nui: la NASA la alargó en 1987 para emergencias del transbordador.';
+const GLIDE_INTRO_MS = 4500;
 
 /**
- * Misión final «Casa» (sin texto): 1) giro e inspección, 2) quemada, 3) corredor de reingreso con apagón, 4) planeo.
+ * Misión final «Casa» (casi sin texto): 1) giro e inspección, 2) quemada, 3) corredor de reingreso con apagón, 4) planeo.
  * Los daños que no se encuentran en la fase 1 suben el calor de la fase 3. Se sale con Esc.
  */
 export class ReentryScene extends Phaser.Scene {
@@ -67,9 +71,9 @@ export class ReentryScene extends Phaser.Scene {
     this.stop();
     if (i === 0) this.unfound = 0;
     const root = this.ui.q('[data-casa]');
-    root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}</div>`;
+    root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}${i === GLIDE_PHASE ? `<p class="casa__caption">${GLIDE_CAPTION}</p>` : ''}</div>`;
     audio.play(i === 2 ? 'alarm' : 'radio');
-    this.timer = this.time.delayedCall(i === 0 ? 1100 : 800, () => {
+    this.timer = this.time.delayedCall(i === GLIDE_PHASE ? GLIDE_INTRO_MS : i === 0 ? 1100 : 800, () => {
       root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
       const stage = this.ui.q('[data-stage]');
       const done = (apply: (r: Parameters<PhaseDone>[0]) => void): PhaseDone => (r) => {

@@ -17,4 +17,4 @@ export const CONTROLS: Control[] = [
   { keys: ['Esc'], action: 'Pausa', basic: true },
 ];
 
-export const POINTER_HINT = 'Con el ratón o el dedo: toca el piso para caminar y una máquina para usarla.';
+export const POINTER_HINT = 'Con el mouse o el dedo: toca el piso para caminar y una máquina para usarla.';

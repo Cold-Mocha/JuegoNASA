@@ -44,7 +44,7 @@ export const MISSIONS: Mission[] = [
     brief: 'Cultiva algas con luz. El Sol está tranquilo.',
     tasks: [
       act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 días'),
-      act('huerto-cosecha', 'harvest', 1, 'Cosechar el invernadero'),
+      act('huerto-cosecha', 'harvest', 1, 'Cosechar las plantas'),
       act('huerto-polvo', 'cleanDust', 1, 'Limpiar los paneles solares'),
       act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
     ],
@@ -53,7 +53,7 @@ export const MISSIONS: Mission[] = [
     id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'may-2024', tagline: 'Sol de mayo de 2024',
     tutorial: { asset: 'panel-solar', action: 'cleanTestPanel', handsOn: false, text: 'Tu investigación: el Panel de pruebas, afuera. Cuando una tormenta de polvo lo ensucie, límpialo y oriéntalo al Sol para medir su energía.' },
     question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
-    brief: 'Mide los paneles en una semana de tormentas solares.',
+    brief: 'Mide los paneles en la semana de tormentas solares que llevó auroras al sur de Chile.',
     tasks: [
       act('paneles-prueba', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
       act('paneles-polvo', 'cleanDust', 1, 'Limpiar los paneles de la estación'),

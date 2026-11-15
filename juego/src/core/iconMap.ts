@@ -26,7 +26,7 @@ export const MISSION_ICON: Record<MissionId, IconName> = {
 };
 
 export const CATEGORY_ICON: Record<EntryCategory, IconName> = {
-  luna: 'moon', sol: 'sun', vida: 'sprout', misiones: 'rocket', universo: 'galaxy',
+  luna: 'moon', sol: 'sun', vida: 'sprout', misiones: 'rocket', universo: 'galaxy', chile: 'map',
 };
 
 export const ACHIEVEMENT_ICON: Record<AchievementId, IconName> = {

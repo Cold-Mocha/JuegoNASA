@@ -536,6 +536,8 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 
 /* ---------- Misión final «Casa» (sin texto) ---------- */
 .casa { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(14, 11, 51, .94); }
+.casa__intro { display: grid; justify-items: center; }
+.casa__caption { margin: var(--space-4) 0 0; max-width: 620px; text-align: center; font: 600 22px/30px var(--font-display); color: var(--ink); }
 .casa__intro .mn-icon { width: 140px; height: 140px; color: var(--star-gold); animation: mini-pop .5s var(--ease-spring) both; }
 .casa__result { display: grid; justify-items: center; gap: var(--space-4); }
 .casa__result .mn-star { width: 96px; height: 96px; }

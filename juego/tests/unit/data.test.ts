@@ -7,7 +7,9 @@ import { ROOM_IDS } from '../../src/data/rooms';
 import { parseFlareClass } from '../../src/sim/flares';
 
 /** Auditoría científica automática: datos bien formados y fuentes solo oficiales. */
-const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|noaa\.gov|caltech\.edu|dlr\.de)\//;
+const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|noaa\.gov|caltech\.edu|dlr\.de|eso\.org)\//;
+/** Las fichas «Desde Chile» citan además prensa y divulgación con fecha (lo ocurrido en Chile no está en sitios de agencias). */
+const CHILE_SOURCES = /^https:\/\/([a-z0-9-]+\.)*(eso\.org|upi\.com|meganoticias\.cl|mongabay\.com)\//;
 
 describe('archivo DONKI', () => {
   it('cada semana tiene 7 días, fuente oficial y llamaradas válidas dentro de la semana', () => {
@@ -73,7 +75,7 @@ describe('jornadas científicas', () => {
 describe('Archivo Científico', () => {
   it('ids únicos y fuentes oficiales HTTPS', () => {
     expect(new Set(ENTRIES.map((e) => e.id)).size).toBe(ENTRIES.length);
-    for (const e of ENTRIES) expect(e.url, e.id).toMatch(OFFICIAL);
+    for (const e of ENTRIES) expect(e.url, e.id).toMatch(e.category === 'chile' ? CHILE_SOURCES : OFFICIAL);
   });
 
   it('textos breves (legibles para 7–12 años)', () => {

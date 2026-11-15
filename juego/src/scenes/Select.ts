@@ -7,7 +7,7 @@ import { UiLayer, esc } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
 import { michiSvg, missionArtSvg } from '../core/art';
 import { MISSIONS, archiveFor, missionText, type MissionId } from '../data/missions';
-import { CHARACTERS, characterRole, characterTrait, type CharacterId } from '../data/characters';
+import { CHARACTERS, characterSubtitle, characterTrait, type CharacterId } from '../data/characters';
 import { DIFFICULTIES, difficultyDescription, difficultyName, type DifficultyId } from '../data/difficulties';
 import { icon } from '../core/icons';
 import { DIFFICULTY_ICON } from '../core/iconMap';
@@ -65,7 +65,7 @@ export class SelectScene extends Phaser.Scene {
       {
         key: 'character', label: t('select.step.character'),
         options: CHARACTERS.map((c) => ({
-          id: c.id, title: c.name, subtitle: characterRole(c.id), body: characterTrait(c.id), art: michiSvg(c, tokenCss(c.accent)),
+          id: c.id, title: c.name, subtitle: characterSubtitle(c), body: characterTrait(c.id), art: michiSvg(c, tokenCss(c.accent)),
         })),
       },
       {

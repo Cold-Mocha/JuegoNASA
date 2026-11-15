@@ -20,12 +20,12 @@ FEET = (66, 84 + 31 * 0.92)            # ancla de los pies en el frame 1x  (≈ 
 
 VARIANTS = {
     'miu':   {'name': 'Miu',   'fur': '#f2a65a', 'band': '#ffcb47', 'nose': '#ee5fd6', 'ear': '#ff9ad9'},
-    # leopardo de las nieves: pelaje gris humo claro, orejas redondas, manchas oscuras y cola gruesa moteada
-    'tomas': {'name': 'Tomás', 'fur': '#cdd0dc', 'band': '#4cc3f5', 'nose': '#e58fa6', 'ear': '#b9bdd0', 'spots': '#4a4c63', 'round_ears': True},
+    # Leo, leopardo de las nieves (Panthera uncia): pelaje gris humo claro, orejas redondas, manchas oscuras y cola gruesa moteada
+    'leo': {'name': 'Leo', 'fur': '#cdd0dc', 'band': '#4cc3f5', 'nose': '#e58fa6', 'ear': '#b9bdd0', 'spots': '#4a4c63', 'round_ears': True},
     # güiña (Leopardus guigna, felino chileno): pelaje amarillo ocre con manchas negras, orejas redondas y ojos turquesa
     'luna':  {'name': 'Güiña', 'fur': '#e9b949', 'band': '#ee5fd6', 'nose': '#c9707f', 'ear': '#c98a2e', 'spots': '#1f1812', 'round_ears': True, 'eye': '#2ad0c6'},
     # marciano: pelaje verde y antenitas (caben dentro de la burbuja del casco)
-    'zib':   {'name': 'Zib',   'fur': '#7ed957', 'band': '#9b7bff', 'nose': '#2f8f3a', 'ear': '#c6f28a', 'antennae': '#ffcb47', 'eyes': 1.45},
+    'zib':   {'name': 'Zib',   'fur': '#7ed957', 'band': '#9b7bff', 'nose': '#2f8f3a', 'ear': '#c6f28a', 'antennae': '#ffcb47', 'eyes': 1.22},
 }
 
 
@@ -80,34 +80,59 @@ def l_collar(p, v):
     return f'<rect id="cuello" x="-14" y="-9" width="28" height="9" rx="4.5" fill="{GEAR}" stroke="{OUT}" stroke-width="3"/>'
 
 
+def lighten(hex_, a):
+    """Mezcla un color con blanco (a = 0..1): sirve para el morro, más claro que el pelaje."""
+    r, g, b = (int(hex_[i:i + 2], 16) for i in (1, 3, 5))
+    return '#%02x%02x%02x' % tuple(round(c + (255 - c) * a) for c in (r, g, b))
+
+
+# Boca felina caricaturizada: nariz triangular, línea corta bajo la nariz y dos curvitas en «ω» (proporciones de dibujo animado).
+def cat_mouth(kind='neutral'):
+    w = f'stroke="{OUT}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"'
+    if kind == 'open':    # sonrisa: boca abierta en «ω» con lengüita
+        return (f'<path d="M0 -13.4 v1" {w}/><path d="M-5.6 -12.4 q2.8 2.4 5.6 0 q2.8 2.4 5.6 0 q-0.4 6.6 -5.6 6.6 q-5.2 0 -5.6 -6.6z" fill="{OUT}" stroke="{OUT}" stroke-width="1.2" stroke-linejoin="round"/>'
+                f'<path d="M-2.5 -7.7 q2.5 -2.4 5 0 q-2.5 2.6 -5 0z" fill="#ff7fb8"/>')
+    if kind == 'hurt':    # «ω» al revés
+        return f'<path d="M0 -13.4 v1.6 M0 -11.8 q-2.6 -2.6 -5.4 -0.2 M0 -11.8 q2.6 -2.6 5.4 -0.2" {w}/>'
+    if kind == 'flat':    # concentrado
+        return f'<path d="M0 -13.4 v1.6 M-3.4 -11.8 h6.8" {w}/>'
+    return f'<path d="M0 -13.4 v1.8 M0 -11.6 q-2.6 3.2 -5.4 0.4 M0 -11.6 q2.6 3.2 5.4 0.4" {w}/>'
+
+
 def eyes_mouth(expr, k=1.0, eye=None):
-    """k agranda los ojos abiertos (variantes de ojos grandes, p. ej. el marciano); con k > 1 llevan brillo."""
+    """Ojos estilo anime: más grandes y más separados que antes (x = ±7,6), con brillo doble; k agranda aún más los ojos (p. ej. el marciano)."""
+    X, Y = 7.6, -21.4
+    spark = lambda x, y, k_=1.0: (f'<circle cx="{x + 1.3 * k_:.2f}" cy="{y - 1.7 * k_:.2f}" r="{1.25 * k_:.2f}" fill="#fff"/>'
+                                 f'<circle cx="{x - 1.2 * k_:.2f}" cy="{y + 1.9 * k_:.2f}" r="{0.6 * k_:.2f}" fill="#fff" opacity=".9"/>')
     if expr == 'hurt':
-        eyes = f'<path d="M-8.5 -24.5 l5 5 m0 -5 l-5 5 M3.5 -24.5 l5 5 m0 -5 l-5 5" stroke="{OUT}" stroke-width="2.6" stroke-linecap="round"/>'
-        mouth = f'<path d="M-3.5 -11.5 q3.5 -3 7 0" fill="none" stroke="{OUT}" stroke-width="1.8" stroke-linecap="round"/>'
-    elif expr == 'smile':
-        eyes = f'<path d="M-9 -20 q3 -4 6 0 M3 -20 q3 -4 6 0" fill="none" stroke="{OUT}" stroke-width="2.4" stroke-linecap="round"/>'
-        mouth = f'<path d="M-4.5 -13.5 q4.5 6 9 0 z" fill="{OUT}"/><path d="M-2.2 -11.4 q2.2 1.6 4.4 0" fill="none" stroke="#ff7fb8" stroke-width="1.6" stroke-linecap="round"/>'
+        eyes = f'<path d="M-{X + 3.4} -24.6 l5.6 5.6 m0 -5.6 l-5.6 5.6 M{X - 2.2} -24.6 l5.6 5.6 m0 -5.6 l-5.6 5.6" stroke="{OUT}" stroke-width="2.6" stroke-linecap="round"/>'
+        mouth = cat_mouth('hurt')
+    elif expr == 'smile':   # ojos felices en arco
+        eyes = f'<path d="M-{X + 3.8} -20 q3.8 -5.4 7.6 0 M{X - 3.8} -20 q3.8 -5.4 7.6 0" fill="none" stroke="{OUT}" stroke-width="2.6" stroke-linecap="round"/>'
+        mouth = cat_mouth('open')
     elif expr == 'closed':
-        eyes = f'<path d="M-9 -21 q3 2 6 0 M3 -21 q3 2 6 0" fill="none" stroke="{OUT}" stroke-width="2.4" stroke-linecap="round"/>'
+        eyes = f'<path d="M-{X + 3.6} -21.4 q3.6 2.6 7.2 0 M{X - 3.6} -21.4 q3.6 2.6 7.2 0" fill="none" stroke="{OUT}" stroke-width="2.6" stroke-linecap="round"/>'
         mouth = None
     elif expr == 'half':
-        eyes = f'<ellipse cx="-6" cy="-20.5" rx="{2.6 * k:.2f}" ry="1.5" fill="{OUT}"/><ellipse cx="6" cy="-20.5" rx="{2.6 * k:.2f}" ry="1.5" fill="{OUT}"/>'
+        eyes = f'<ellipse cx="-{X}" cy="-20.8" rx="{3.4 * k:.2f}" ry="1.8" fill="{OUT}"/><ellipse cx="{X}" cy="-20.8" rx="{3.4 * k:.2f}" ry="1.8" fill="{OUT}"/>'
         mouth = None
-    elif expr == 'focus':   # concentrado al usar una consola
-        eyes = f'<ellipse cx="-5" cy="-21" rx="{2.4 * k:.2f}" ry="{3.2 * k:.2f}" fill="{OUT}"/><ellipse cx="7" cy="-21" rx="{2.4 * k:.2f}" ry="{3.2 * k:.2f}" fill="{OUT}"/>'
+    elif expr == 'focus':   # concentrado al usar una consola (mira un poco a la derecha)
+        xs = (-X + 1.0, X + 1.0)
         if eye:
-            eyes = ''.join(f'<ellipse cx="{x}" cy="-21" rx="3.2" ry="3.6" fill="{eye}" stroke="{OUT}" stroke-width="1.3"/><ellipse cx="{x}" cy="-21" rx="1.3" ry="3" fill="{OUT}"/>' for x in (-5, 7))
-        mouth = f'<path d="M-1 -13 h4" stroke="{OUT}" stroke-width="1.7" stroke-linecap="round"/>'
+            eyes = ''.join(f'<ellipse cx="{x}" cy="{Y}" rx="4.0" ry="4.6" fill="{eye}" stroke="{OUT}" stroke-width="1.4"/><ellipse cx="{x + 0.6}" cy="{Y}" rx="1.5" ry="3.9" fill="{OUT}"/>{spark(x, Y, 0.9)}' for x in xs)
+        else:
+            eyes = ''.join(f'<ellipse cx="{x}" cy="{Y}" rx="{3.0 * k:.2f}" ry="{4.3 * k:.2f}" fill="{OUT}"/>{spark(x, Y, k)}' for x in xs)
+        mouth = cat_mouth('flat')
     else:
-        eyes = f'<ellipse cx="-6" cy="-21" rx="{2.6 * k:.2f}" ry="{3.6 * k:.2f}" fill="{OUT}"/><ellipse cx="6" cy="-21" rx="{2.6 * k:.2f}" ry="{3.6 * k:.2f}" fill="{OUT}"/>'
-        if eye:  # ojos de color: iris, pupila vertical y brillo
-            eyes = ''.join(f'<ellipse cx="{x}" cy="-21" rx="3.6" ry="4.2" fill="{eye}" stroke="{OUT}" stroke-width="1.4"/><ellipse cx="{x}" cy="-21" rx="1.4" ry="3.4" fill="{OUT}"/><circle cx="{x + 1.4}" cy="-22.6" r="1" fill="#fff"/>' for x in (-6, 6))
-        elif k > 1:  # brillo en los ojos grandes
-            eyes += f'<circle cx="{-6 + 1.1 * k:.2f}" cy="{-21 - 1.4 * k:.2f}" r="{0.9 * k:.2f}" fill="#fff"/><circle cx="{6 + 1.1 * k:.2f}" cy="{-21 - 1.4 * k:.2f}" r="{0.9 * k:.2f}" fill="#fff"/>'
+        if eye:  # ojos de color: iris grande, pupila vertical (felina) y doble brillo
+            eyes = ''.join(f'<ellipse cx="{x}" cy="{Y}" rx="4.6" ry="5.4" fill="{eye}" stroke="{OUT}" stroke-width="1.5"/><ellipse cx="{x}" cy="{Y}" rx="1.6" ry="4.4" fill="{OUT}"/>{spark(x, Y, 1.15)}' for x in (-X, X))
+        else:
+            eyes = ''.join(f'<ellipse cx="{x}" cy="{Y}" rx="{3.4 * k:.2f}" ry="{4.8 * k:.2f}" fill="{OUT}"/>{spark(x, Y, k * 1.1)}' for x in (-X, X))
         mouth = None
     if mouth is None:
-        mouth = f'<path d="M-2.5 -12.8 q2.5 2 5 0" fill="none" stroke="{OUT}" stroke-width="1.6" stroke-linecap="round"/>'
+        mouth = cat_mouth()
+    # boca un poco más pequeña en proporción a los ojos (caricatura)
+    mouth = f'<g transform="translate(0 -11.6) scale(.9) translate(0 11.6)">{mouth}</g>'
     return eyes, mouth
 
 
@@ -115,7 +140,9 @@ def l_head(p, v):
     """Cabeza del gato: idéntica con y sin casco."""
     e = p.ear
     eyes, mouth = eyes_mouth(p.expr, v.get('eyes', 1.0), v.get('eye'))
-    nose = '' if p.expr == 'smile' else f'<path d="M-1.9 -16.2 h3.8 l-1.9 2.3 z" fill="{v["nose"]}"/>'
+    nose = f'<path d="M-2.7 -17 h5.4 l-2.7 3.5 z" fill="{v["nose"]}" stroke="{OUT}" stroke-width="0.9" stroke-linejoin="round"/>'
+    # morro: dos mejillas claras más grandes que antes (caricatura felina), debajo de la nariz y la boca
+    muzzle = ''.join(f'<ellipse cx="{sg * 5}" cy="-11.6" rx="6.8" ry="5.3" fill="{lighten(v["fur"], 0.55)}"/>' for sg in (-1, 1))
     antennae = ''
     if 'antennae' in v:  # antenitas de marciano: entre las orejas, delante de ellas y detrás de la cara
         antennae = ''.join(
@@ -147,7 +174,7 @@ def l_head(p, v):
             f'<path transform="{rot(e,11,-34)}" d="{inner_r}" fill="{v["ear"]}"/>'
             f'{antennae}'
             f'<ellipse cx="0" cy="-22" rx="19.5" ry="17.5" fill="{v["fur"]}" stroke="{OUT}" stroke-width="3"/>'
-            f'{spots}{eyes}{nose}{mouth}{whiskers}</g>')
+            f'{spots}{muzzle}{eyes}{nose}{mouth}{whiskers}</g>')
 
 
 def l_helmet(p, v):

@@ -10,6 +10,11 @@ juego/blob-report/
 ui-audit-before/
 ui-audit-after/
 
+# Caché de Python de las herramientas y revisiones locales de arte (no son entregables)
+__pycache__/
+*.pyc
+assets/personajes/**/_revision/
+
 # Sistema y editores
 .DS_Store
 *.log

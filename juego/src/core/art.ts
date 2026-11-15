@@ -20,17 +20,24 @@ export function michiSvg(c: Character, visor: string): string {
   ${c.spots ? spotsSvg(c.spots) : ''}
   <path d="M50 70 Q80 54 110 70" fill="none" stroke="${c.furDark}" stroke-width="6" stroke-linecap="round"/>
   ${c.eyes
-    ? `<ellipse cx="64" cy="90" rx="9.5" ry="11" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/><ellipse cx="96" cy="90" rx="9.5" ry="11" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/>
-  <ellipse cx="64" cy="90" rx="3.6" ry="9" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="3.6" ry="9" fill="#0e0b33"/>
-  <circle cx="68" cy="85" r="2.6" fill="#fff"/><circle cx="100" cy="85" r="2.6" fill="#fff"/>`
-    : `<ellipse cx="64" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/><ellipse cx="96" cy="90" rx="${7 * e}" ry="${9 * e}" fill="#0e0b33"/>
-  <circle cx="${64 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/><circle cx="${96 + 2 * e}" cy="${90 - 3 * e}" r="${2.5 * e}" fill="#fff"/>`}
-  <path d="M76 102 L84 102 L80 107 Z" fill="#ee5fd6"/>
-  <path d="M80 107 Q74 114 68 110 M80 107 Q86 114 92 110" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>
+    ? `<ellipse cx="58" cy="90" rx="11" ry="12.5" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/><ellipse cx="102" cy="90" rx="11" ry="12.5" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/>
+  <ellipse cx="58" cy="90" rx="3.8" ry="10.4" fill="#0e0b33"/><ellipse cx="102" cy="90" rx="3.8" ry="10.4" fill="#0e0b33"/>
+  <circle cx="62" cy="84" r="3" fill="#fff"/><circle cx="106" cy="84" r="3" fill="#fff"/><circle cx="55" cy="95" r="1.4" fill="#fff"/><circle cx="99" cy="95" r="1.4" fill="#fff"/>`
+    : `<ellipse cx="58" cy="90" rx="${8 * e}" ry="${11 * e}" fill="#0e0b33"/><ellipse cx="102" cy="90" rx="${8 * e}" ry="${11 * e}" fill="#0e0b33"/>
+  <circle cx="${58 + 3 * e}" cy="${90 - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${102 + 3 * e}" cy="${90 - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${58 - 2.6 * e}" cy="${90 + 4.4 * e}" r="${1.4 * e}" fill="#fff"/><circle cx="${102 - 2.6 * e}" cy="${90 + 4.4 * e}" r="${1.4 * e}" fill="#fff"/>`}
+  <ellipse cx="70" cy="106" rx="13" ry="10" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="90" cy="106" rx="13" ry="10" fill="${lighten(c.fur, 0.55)}"/>
+  <path d="M74 98 L86 98 L80 106 Z" fill="#ee5fd6" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M80 106 V111 M80 111 Q73 119 66 113 M80 111 Q87 119 94 113" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>
   <path d="M30 60 A60 60 0 0 1 130 60" fill="none" stroke="${visor}" stroke-width="6" stroke-linecap="round" opacity=".9"/>
 </svg>`;
 }
+
+/** Mezcla un color con blanco (a = 0..1): el morro es más claro que el pelaje. */
+const lighten = (hex: string, a: number): string => {
+  const n = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `#${n.map((v) => Math.round(v + (255 - v) * a).toString(16).padStart(2, '0')).join('')}`;
+};
 
 /** Manchas de la cara del leopardo de las nieves (frente y mejillas). */
 const spotsSvg = (color: string): string => [[62, 62, 5, 3.4], [80, 58, 4.6, 3.6], [98, 62, 5, 3.4], [71, 70, 3.6, 2.6], [89, 70, 3.6, 2.6], [45, 90, 4, 3], [115, 90, 4, 3], [48, 102, 3.4, 2.8], [112, 102, 3.4, 2.8]]
@@ -46,9 +53,11 @@ export function michiFaceSvg(c: Character): string {
   <path d="M5 13 L7 3 L14 9 Z M27 13 L25 3 L18 9 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
   <circle cx="16" cy="18" r="11" fill="${c.fur}" stroke="#0e0b33" stroke-width="2"/>
   ${c.eyes
-    ? `<ellipse cx="12" cy="18" rx="2.6" ry="3" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="20" cy="18" rx="2.6" ry="3" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="12" cy="18" rx="1" ry="2.4" fill="#0e0b33"/><ellipse cx="20" cy="18" rx="1" ry="2.4" fill="#0e0b33"/>`
-    : `<ellipse cx="12" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/><ellipse cx="20" cy="18" rx="${1.8 * e}" ry="${2.4 * e}" fill="#0e0b33"/>`}
-  <path d="M14.8 22 h2.4 l-1.2 1.4 z" fill="#ee5fd6"/></svg>`;
+    ? `<ellipse cx="10.4" cy="18" rx="3" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="21.6" cy="18" rx="3" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="10.4" cy="18" rx="1.1" ry="2.8" fill="#0e0b33"/><ellipse cx="21.6" cy="18" rx="1.1" ry="2.8" fill="#0e0b33"/>`
+    : `<ellipse cx="10.4" cy="18" rx="${2.2 * e}" ry="${3 * e}" fill="#0e0b33"/><ellipse cx="21.6" cy="18" rx="${2.2 * e}" ry="${3 * e}" fill="#0e0b33"/>`}
+  <ellipse cx="14" cy="22.4" rx="3.4" ry="2.6" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="18" cy="22.4" rx="3.4" ry="2.6" fill="${lighten(c.fur, 0.55)}"/>
+  <path d="M14.4 20.6 h3.2 l-1.6 2 z" fill="#ee5fd6"/>
+  <path d="M16 22.6 v1.2 M16 23.8 q-1.5 1.7 -3 0.3 M16 23.8 q1.5 1.7 3 0.3" fill="none" stroke="#0e0b33" stroke-width="1" stroke-linecap="round"/></svg>`;
 }
 
 /** Antenitas del michi marciano (entre las orejas). */

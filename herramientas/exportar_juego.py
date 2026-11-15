@@ -14,7 +14,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 ESC = ROOT / 'escenario'
 OUT = ROOT / 'juego' / 'public' / 'game'
-VARIANTS = ['miu', 'tomas', 'luna', 'zib']
+VARIANTS = ['miu', 'leo', 'luna', 'zib']
 HELMETS = ['sin-casco', 'casco']
 ANIMS = ['idle', 'blink', 'walk', 'use', 'hurt', 'smile']
 

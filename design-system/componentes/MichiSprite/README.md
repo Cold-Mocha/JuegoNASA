@@ -11,7 +11,7 @@ Personaje jugable: michi astronauta original, animado con spritesheets (tiras ho
 | `celebrate` | 8 | 12 | no | Tarea o día completado (salto con destellos). |
 
 - Frame: 128×128 (1x) o 256×256 (@2x). Pies en (64, 121). Mira a la **derecha**; para la izquierda se voltea (`.is-flip` / `setFlipX(true)`).
-- Variantes de color: Miu (naranja), Tomás (gris), Luna (oscura). Solo cambian pelaje y color de la franja.
+- Variantes de color: Miu (naranja), Leo (gris, leopardo de las nieves), Luna (oscura). Solo cambian pelaje y color de la franja.
 - En web: `.mn-sprite` con `--frames` y `--dur` (frames ÷ fps). En Phaser: `this.load.spritesheet(key, url, { frameWidth: 256, frameHeight: 256 })` y `anims.create({ frameRate: fps, repeat: loop ? -1 : 0 })`.
 
 ## Reglas

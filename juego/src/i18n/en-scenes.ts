@@ -29,6 +29,7 @@ export const EN_SCENES: Record<string, string> = {
   'Nivel {n}': "Level {n}",
   'Atrás': "Back",
   'Siguiente': "Next",
+  'Pasos': "Steps",
   'Vista previa del tripulante': "Crew member preview",
   'Tu michi astronauta': "Your astronaut michi",
   '¡Despegar!': "Lift off!",

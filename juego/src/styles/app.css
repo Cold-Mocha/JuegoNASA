@@ -607,3 +607,27 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .story__meta .caption-mono { max-width: 82%; line-height: 1.35; }
 .report__chapter { display: grid; gap: var(--space-2); padding: var(--space-3); border: 2px dashed var(--ink-muted); border-radius: 12px; justify-items: start; }
 .casa__chapter { display: grid; gap: var(--space-2); max-width: 560px; padding: var(--space-3); border: 2px dashed var(--ink-muted); border-radius: 12px; justify-items: start; }
+
+/* ---------- Proporciones y scroll: nada queda fuera del lienzo de 1280×720 (revisión de maquetación) ---------- */
+/* Selector: título y pasos fijos arriba, Atrás/Siguiente fijos abajo; solo las tarjetas se desplazan si no caben. */
+.select > .stepper, .select > .select__heading, .select > .select__footer { flex: none; }
+.select__grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: safe center; padding: var(--space-2) var(--space-2) var(--space-3); overscroll-behavior: contain; scroll-padding-block: var(--space-4); }
+.select__footer { padding-top: var(--space-2); }
+.select__grid:has(> .option:nth-child(5)) .option { min-height: 0; }
+.select__grid:has(> .option:nth-child(5)) .mn-chip { font-size: 12px; }
+/* Paneles de ventana (ajustes, logros, créditos): nunca más altos que la pantalla */
+.modal__panel { max-height: calc(100% - var(--space-6) * 2); overflow-y: auto; overscroll-behavior: contain; }
+/* Informe final: la columna larga se desplaza sin esconder los botones */
+.report { grid-template-rows: minmax(0, 1fr); }
+.report__main, .report__side { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.report__side { align-self: center; }
+/* Archivo: el cuerpo ocupa el alto restante y cada columna se desplaza por separado */
+.archive { grid-template-rows: auto minmax(0, 1fr) auto; }
+/* Barras de desplazamiento visibles y del estilo del juego */
+.select__grid, .modal__panel, .report__main, .report__side, .archive__list, .archive__detail { scrollbar-width: thin; scrollbar-color: var(--star-gold) var(--space-700); }
+.select__grid::-webkit-scrollbar, .modal__panel::-webkit-scrollbar, .report__main::-webkit-scrollbar, .report__side::-webkit-scrollbar, .archive__list::-webkit-scrollbar, .archive__detail::-webkit-scrollbar { width: 12px; }
+.select__grid::-webkit-scrollbar-thumb, .modal__panel::-webkit-scrollbar-thumb, .report__main::-webkit-scrollbar-thumb, .report__side::-webkit-scrollbar-thumb, .archive__list::-webkit-scrollbar-thumb, .archive__detail::-webkit-scrollbar-thumb { background: var(--star-gold); border-radius: var(--radius-pill); border: 3px solid var(--space-700); }
+.select__grid::-webkit-scrollbar-track, .modal__panel::-webkit-scrollbar-track, .report__main::-webkit-scrollbar-track, .report__side::-webkit-scrollbar-track, .archive__list::-webkit-scrollbar-track, .archive__detail::-webkit-scrollbar-track { background: var(--space-700); border-radius: var(--radius-pill); }
+/* Accesibilidad: botones pequeños con objetivo táctil de al menos 44 px */
+.mn-btn--sm { min-height: 44px; }
+

@@ -41,7 +41,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     const modal = ui.q('[data-modal]');
     const openModal = (html: string): void => {
-      modal.innerHTML = `<div class="mn-panel modal__panel" role="dialog" aria-modal="true">${html}</div>`;
+      modal.innerHTML = `<div class="mn-panel modal__panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">${html}</div>`;
+      modal.querySelector('.mn-panel__title')?.setAttribute('id', 'modal-title');
       modal.hidden = false;
       ui.focusFirst('.modal [data-action]');
     };

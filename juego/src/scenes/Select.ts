@@ -92,9 +92,9 @@ export class SelectScene extends Phaser.Scene {
     drawStarfield(this, 'select', !state.calm);
     this.ui = new UiLayer(this, /* html */ `
       <div class="select">
-        <ol class="stepper" data-stepper></ol>
-        <h2 class="display-lg select__heading" data-heading></h2>
-        <div class="select__grid" role="radiogroup" data-grid></div>
+        <ol class="stepper" data-stepper aria-label="${t('Pasos')}"></ol>
+        <h2 class="display-lg select__heading" id="select-heading" data-heading aria-live="polite"></h2>
+        <div class="select__grid" role="radiogroup" aria-labelledby="select-heading" data-grid></div>
         <div class="select__footer">
           <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}${t('Atrás')}</button>
           <button class="mn-btn" data-action="next" data-next>${t('Siguiente')}${icon('next')}</button>
@@ -128,7 +128,7 @@ export class SelectScene extends Phaser.Scene {
     this.step = i;
     const step = this.steps[i];
     this.ui.q('[data-stepper]').innerHTML = this.steps
-      .map((s, k) => `<li class="stepper__item ${k === i ? 'is-current' : k < i ? 'is-done' : ''}"><span class="stepper__num">${k + 1}</span>${esc(s.label)}</li>`)
+      .map((s, k) => `<li class="stepper__item ${k === i ? 'is-current' : k < i ? 'is-done' : ''}"${k === i ? ' aria-current="step"' : ''}><span class="stepper__num">${k + 1}</span>${esc(s.label)}</li>`)
       .join('');
     this.ui.q('[data-heading]').textContent = step.heading;
     const grid = this.ui.q('[data-grid]');

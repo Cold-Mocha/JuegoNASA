@@ -259,7 +259,7 @@ export class StationScene extends Phaser.Scene {
   private updateGuides(): void {
     const needs = new Map<string, string[]>(); // máquina (asset) → motivos
     const add = (asset: string, label: string): void => void needs.set(asset, [...(needs.get(asset) ?? []), label]);
-    for (const key of this.sim.criticals) if (key !== 'radiation') add(GUIDE_ASSET[key], RESOURCE_TEXT[key].label);
+    for (const key of this.sim.criticals) if (key !== 'radiation') add(key === 'energy' && !(this.sim.comp.dust > 0.05 && this.sim.light > 0) ? BIKE_ASSET : GUIDE_ASSET[key], RESOURCE_TEXT[key].label);
     if (this.sim.breach) add(BREACH_GUIDE, 'Fractura');
     const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
     if (guide) add(guide, 'Tutorial');
@@ -560,7 +560,7 @@ export class StationScene extends Phaser.Scene {
         audio.play('day');
         const light = ev.light >= 1 ? 'Día lunar' : ev.light > 0 ? 'Atardecer: los paneles rinden la mitad' : 'Noche lunar: los paneles no producen';
         this.alert(`Día ${ev.day}, ${realDate(this.mission, ev.day)}. ${light}`, 'info');
-        if (ev.light === 0 && ev.day === 5) this.tip('Empieza la noche lunar. Ahorra energía: los paneles no sirven hasta que vuelva el sol.');
+        if (ev.light === 0 && ev.day === 5) this.tip('Empieza la noche lunar. Los paneles no producen: guarda energía y pedalea en la bicicleta si hace falta.');
         break;
       }
       case 'flareWarning': {
@@ -612,7 +612,7 @@ export class StationScene extends Phaser.Scene {
       case 'critical': {
         audio.play('error');
         const advice: Record<keyof Resources, string> = {
-          energy: 'Queda poca energía. Sal a mover los paneles solares mientras haya sol.',
+          energy: 'Queda poca energía. Pedalea en la bicicleta del Puente; si hay sol, limpia los paneles.',
           oxygen: 'Queda poco O₂. Ve al reciclador de CO₂ en Soporte vital.',
           food: 'Queda poca comida. Prepárala en la cocina de Soporte vital.',
           health: 'Tu salud está baja. Ve a la Enfermería y cúrate.',
@@ -639,8 +639,14 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'panelsFailing':
         audio.play('error');
-        this.alert('⚠ Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.', 'danger');
-        this.tip('Sal a la superficie y limpia el polvo de los paneles para que la energía vuelva a renovarse.');
+        if (this.sim.light < 1) {
+          // sin sol no hay nada que limpiar: solo queda la reserva y la bicicleta
+          this.alert('⚠ Con poca luz los paneles generan menos de lo que gasta la nave: la energía empezó a bajar.', 'danger');
+          this.tip('Sin sol solo queda la energía guardada. Pedalea en la bicicleta del Puente y gasta lo justo.');
+        } else {
+          this.alert('⚠ Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.', 'danger');
+          this.tip('Sal a la superficie y limpia el polvo de los paneles para que la energía vuelva a renovarse.');
+        }
         break;
       case 'panelsRestored':
         audio.play('confirm');
@@ -1301,6 +1307,8 @@ const ACTIONS_DELAYED = new Set<ActionId>(['repairAntenna']);
 const GUIDE_ASSET: Record<Exclude<keyof Resources, 'radiation'>, string> = {
   energy: 'estacion-limpieza', oxygen: 'reciclador-aire', food: 'rack-plantas', health: 'camilla-medica',
 };
+/** Sin polvo que limpiar (o sin sol), la energía se recupera pedaleando. */
+const BIKE_ASSET = 'bicicleta-estatica';
 /** La Esclusa: adonde guía la flecha cuando hay que volver a la nave. */
 const DOOR_ASSET = 'esclusa';
 const BREACH_GUIDE = 'reciclador-roto';

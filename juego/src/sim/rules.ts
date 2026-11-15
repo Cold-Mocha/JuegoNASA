@@ -42,8 +42,8 @@ export const DUST_STORM_CHANCE = 0.5;
 export const DUST_STORM_MAX_GAP = 2;
 export const DUST_MAX_LOSS = 0.8;
 
-/** Los paneles renuevan la energía siempre: generan esto por jornada con los paneles limpios. Si el polvo los deja generando menos de lo que gasta la nave, la energía empieza a bajar. */
-export const PANEL_REGEN_PER_DAY = 7; // lenta: con los paneles limpios solo sobran 2 por jornada (pedalear recupera mucho más rápido)
+/** Los paneles generan esto por jornada con sol pleno y limpios; se multiplica por la luz (LIGHT_BY_DAY): al atardecer rinden la mitad y de noche, nada. Si generan menos de lo que gasta la nave, la energía empieza a bajar. */
+export const PANEL_REGEN_PER_DAY = 9; // de día sobran 4 por jornada; de noche solo queda la reserva y la bicicleta
 
 /** Degradación de la antena por jornada (rango; se sortea con la semilla). */
 export const ANTENNA_DRIFT_PER_DAY: readonly [number, number] = [0.12, 0.2];

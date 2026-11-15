@@ -145,9 +145,14 @@ export class Simulation {
     return 1 - this.comp.dust * DUST_MAX_LOSS;
   }
 
+  /** Energía que generan los paneles por jornada: depende del polvo y de la luz (de noche no producen nada). */
+  get panelOutput(): number {
+    return PANEL_REGEN_PER_DAY * this.panelEfficiency * this.light;
+  }
+
   /** Los paneles funcionan mientras generen al menos lo que gasta la nave (entonces la energía se renueva sola). */
   get panelsOk(): boolean {
-    return PANEL_REGEN_PER_DAY * this.panelEfficiency >= -PASSIVE_PER_DAY.energy * this.config.drain;
+    return this.panelOutput >= -PASSIVE_PER_DAY.energy * this.config.drain;
   }
 
   /** Radio buena o mala: lo único que ve el jugador del enlace con la Tierra. */
@@ -332,7 +337,7 @@ export class Simulation {
 
     const k = (dt / len) * this.config.drain;
     const shield = this.sheltered ? SHELTER_FACTOR : 1;
-    this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k + PANEL_REGEN_PER_DAY * this.panelEfficiency * (dt / len));
+    this.res.energy = clamp(this.res.energy + PASSIVE_PER_DAY.energy * k + this.panelOutput * (dt / len));
     this.checkPanels();
     this.res.oxygen = clamp(this.res.oxygen + PASSIVE_PER_DAY.oxygen * k + (this.breach ? OXYGEN_LEAK_PER_DAY * k : OXYGEN_REGEN_PER_DAY * (dt / len)) + (this.res.energy <= 0 ? NO_ENERGY_EXTRA_OXYGEN_PER_DAY * k : 0));
     this.res.food = clamp(this.res.food + PASSIVE_PER_DAY.food * k);

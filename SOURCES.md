@@ -84,3 +84,41 @@ Los sprites de `herramientas/props_detallados.py` se inspiran en equipo real; so
 - **Tamaños y avisos de clima espacial:** Miteva et al. y Buzulukova y Tsurutani (tiempos de llamaradas, partículas y eyecciones de masa coronal; caso Carrington ~17 h 40 min) **[REAL]**; no se muestran en pantalla todavía.
 - **Biofirmas:** los orgánicos solos no prueban vida; se necesitan varias pruebas independientes **[MODELO]**.
 - **Opportunity (2018):** la tormenta de polvo bloqueó la luz solar; no afirmar que "cubrió los paneles" **[verificar]**.
+
+
+## Imágenes del Archivo científico
+
+Las fotos del Archivo están en `juego/public/game/archive/` (reducidas a 960 px). Las de la NASA son de dominio público; se cita a la NASA y al centro o fotógrafo. Las de Chile son de Wikimedia Commons con licencia libre y se muestra el autor y la licencia dentro del juego.
+
+| Ficha | Imagen | Crédito | Licencia | Enlace |
+|---|---|---|---|---|
+| algae-oxygen | Photobioreactor | NASA / JSC · Nick Hague | NASA (dominio público) | [original](https://images.nasa.gov/details/iss059e114346) |
+| artemis | Artemis I FD 17 Orion and a Crescent Moon | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/Artemis%20I%20FD%2017%20Orion%20and%20a%20Crescent%20Moon) |
+| body-in-space | Kuipers exercises on the ARED in the Node 3 | NASA / JSC · Andre Kuipers | NASA (dominio público) | [original](https://images.nasa.gov/details/iss030e148403) |
+| chile-auroras | Aurora Australis on Puerto Williams, Chile | Mat Austro | CC BY 4.0 | [original](https://commons.wikimedia.org/wiki/File:Aurora_Australis_on_Puerto_Williams,_Chile.jpg) |
+| chile-sky | Paranal and the Pacific at sunset (dsc4088, retouched, cropped) | ESO/G. Hüdepohl (atacamaphoto.com) | CC BY 4.0 | [original](https://commons.wikimedia.org/wiki/File:Paranal_and_the_Pacific_at_sunset_(dsc4088,_retouched,_cropped).jpg) |
+| chile-sky-alma | ALMA antennas on Chajnantor | ESO/B. Tafreshi (twanight.org) | CC BY 4.0 | [original](https://commons.wikimedia.org/wiki/File:ALMA_antennas_on_Chajnantor.jpg) |
+| comm-delay | A New Antenna for NASA's Deep Space Network | NASA/JPL-Caltech | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA25136) |
+| donki | CME Blow Out | NASA / GSFC | NASA (dominio público) | [original](https://images.nasa.gov/details/cme-blow-out_18529951894_o) |
+| exoplanets | Kepler-90 System Compared to Our Solar System (Artist's Concept) | NASA/Ames Research Center/Wendy Stenzel | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA22193) |
+| flare-classes | Two X Flares in Quick Succession | NASA / GSFC | NASA (dominio público) | [original](https://images.nasa.gov/details/GSFC_20171208_Archive_e001050) |
+| guina | Leopardus guigna | Mauro Tammone | CC BY 3.0 | [original](https://commons.wikimedia.org/wiki/File:Leopardus_guigna.jpeg) |
+| kuiper | New Horizons Encountering 2014 MU69 (Artist's Impression) | NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute/Steve Gribben | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA22190) |
+| lagrange | From a Million Miles Away, NASA Camera Shows Moon Crossing Face of Ear | NASA / GSFC · NOAA | NASA (dominio público) | [original](https://images.nasa.gov/details/from-a-million-miles-away-nasa-camera-shows-moon-crossing-face-of-earth_20129140980_o) |
+| lunar-day | Panoramic view of Station 5 (Camelot Crater) during Apollo 17 EVA-2 | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/as17-145-22183) |
+| mars-gravity | Curiosity Low-Angle Self-Portrait at Buckskin Drilling Site on Mount S | NASA/JPL-Caltech/MSSS | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA19807) |
+| mataveri | Chile-03721 - Mataveri International Airport (49073235787) | Dennis G. Jarvis | CC BY-SA 2.0 | [original](https://commons.wikimedia.org/wiki/File:Chile-03721_-_Mataveri_International_Airport_(49073235787).jpg) |
+| may-2024 | MAVEN Detects Auroras During Solar Storm in 2024 | NASA/University of Colorado/LASP | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA26304) |
+| moon-dust | Astronaut Eugene Cernan inside the lunar module on lunar surface after | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/AS17-145-22224) |
+| moon-gravity | Astronaut John Young leaps from lunar surface to salute flag | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/as16-113-18339) |
+| moon-radiation | Astronaut Alan Bean deploys Lunar Surface Magnetometer on lunar surfac | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/as12-46-6813) |
+| oct-2024 | Giant Sunspot Erupts on October 24, 2014 | NASA / GSFC | NASA (dominio público) | [original](https://images.nasa.gov/details/GSFC_20171208_Archive_e000920) |
+| osdr | Astronaut Nick Hague works on space biology research | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/iss072e146315) |
+| perseverance | Perseverance's Selfie with Ingenuity | NASA/JPL-Caltech/MSSS | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA24542) |
+| plants-space | Veggie Ponds experiment Initiation | NASA / JSC · David Saint-Jacques | NASA (dominio público) | [original](https://images.nasa.gov/details/iss059e035668) |
+| sep-2017 | Major Solar Flare | NASA/GSFC/Solar Dynamics Observatory | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA21949) |
+| solar-min | Spotless Sun | NASA / JPL | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA21582) |
+| trappist | Illustration of TRAPPIST-1 Planets as of Feb. 2018 | NASA/JPL-Caltech | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA22097) |
+| voyager | Artist Concept of Voyager | NASA/JPL | NASA (dominio público) | [original](https://images.nasa.gov/details/PIA04495) |
+| water-shield | Personal Radiation Shielding Garment | NASA / JSC | NASA (dominio público) | [original](https://images.nasa.gov/details/iss053e238888) |
+| webb | James Webb Space Telescope Revealed | NASA / GSFC | NASA (dominio público) | [original](https://images.nasa.gov/details/GSFC_20171208_Archive_e000355) |

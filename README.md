@@ -53,7 +53,7 @@ JuegoNASA/
 | Lo que pide el reto | Cómo lo cubrimos |
 |---|---|
 | Gestionar un puesto avanzado en la Luna o Marte | La **Estación Central**, una base ficticia en la superficie lunar. |
-| Trade-offs reales; ninguna opción gratis | El blindaje contra una llamarada gasta energía y sin energía protege la mitad; de noche los paneles no producen y pedalear cambia comida por energía; salir a la superficie da ciencia y suma radiación; el pronóstico solar cuesta energía y solo llega con la antena en buen estado. |
+| Trade-offs reales; ninguna opción gratis | El blindaje contra una llamarada gasta energía y sin energía protege la mitad; de noche los paneles no producen y pedalear cambia comida por energía; salir a la superficie avanza la investigación y suma radiación; el pronóstico solar cuesta energía y solo llega con la antena en buen estado. |
 | 2–3 recursos centrales, sin abrumar | 5 barras (energía, oxígeno, comida, salud y radiación); los equipos solo aparecen en el HUD cuando fallan, y el tutorial muestra 3 controles. |
 | Datos reales de la NASA, citados en el juego | Semanas reales de llamaradas guardadas en el juego y etiquetadas como históricas; la fuente está siempre al pie del HUD y en cada aviso (ver «Datos usados»). |
 | Rejugable, aprender del error sin castigo | Tormentas de polvo y fracturas al azar, 3 jornadas y 3 dificultades. El informe explica la causa real y «Reintentar» vuelve directo a la estación. |

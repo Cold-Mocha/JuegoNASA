@@ -37,25 +37,22 @@ scripts/build-tokens.mjs  ← genera src/styles/tokens.css (corre solo en dev/bu
 src/
   main.ts                 ← config de Phaser y orden de escenas
   core/                   ← config, tema (tokens→Phaser), estado, UiLayer, fondo estelar, arte SVG, fades
-  data/                   ← CONTENIDO EDITABLE: historia, estaciones, personajes, dificultad, capas atmosféricas, preload
+  data/                   ← CONTENIDO EDITABLE: estaciones, personajes, dificultad, capas atmosféricas, preload
   sim/                    ← LÓGICA PURA (sin Phaser): simulación, reglas, física, llamaradas, puntaje, logros
-  scenes/                 ← Boot → MainMenu → Story → Select → LaunchLoading → Station → MissionReport (+ Encyclopedia)
+  scenes/                 ← Boot → MainMenu → Select → LaunchLoading → Station → MissionReport (+ Encyclopedia)
   styles/                 ← components.css (design system) + app.css (layout de pantallas)
-public/story/             ← láminas de la historia (placeholder; reemplazar con mismo nombre, 1280×720)
 ```
 
 ## Flujo de pantallas
 
 1. **Menú principal**: Jugar, Ajustes (alto contraste, reducir movimiento), Créditos.
-2. **Historia**: láminas imagen + texto con efecto máquina de escribir. Espacio/Enter/clic avanza, Esc salta. Editar en `src/data/story.ts`.
-3. **Selector**: Estación → Tripulante → Dificultad (clic o flechas). Resultado en `state.loadout`.
-4. **Carga con cohete (despegue al amanecer)**: la torre de control habla directo con el tripulante elegido mientras corre el conteo regresivo (T-10 → T-0, guion en `src/data/launch.ts`). T-6 enciende los motores principales (vapor, temblor de tierra, gaviotas asustadas que huyen del cohete) y T-0 los propulsores y el despegue, con el público de animales y la prensa mirando a distancia. Luego sube por troposfera, estratosfera, mesosfera y termosfera hasta el espacio cislunar con altitud y un dato por capa (valores reales; escala visual no proporcional). Dura ~25 s (`LIFTOFF_MS`, `ASCENT_MS`) y nunca termina antes que la carga real de `src/data/preload.ts`. Con movimiento reducido o Ultra Ligero se acelera, sin sacudidas ni partículas.
-5. **Estación**: salas 2.5D, HUD de recursos, mapa, acciones con costo, llamaradas reales, envíos y pausa.
-6. **Fin de misión** y **Archivo científico**. Diseño completo en [`../GDD.md`](../GDD.md), fuentes en [`../SOURCES.md`](../SOURCES.md) y QA en [`../REPORTE-CALIDAD.md`](../REPORTE-CALIDAD.md).
+2. **Selector**: Estación → Tripulante → Dificultad (clic o flechas). Resultado en `state.loadout`.
+3. **Carga con cohete (despegue al amanecer)**: la torre de control habla directo con el tripulante elegido mientras corre el conteo regresivo (T-10 → T-0, guion en `src/data/launch.ts`). T-6 enciende los motores principales (vapor, temblor de tierra, gaviotas asustadas que huyen del cohete) y T-0 los propulsores y el despegue, con el público de animales y la prensa mirando a distancia. Luego sube por troposfera, estratosfera, mesosfera y termosfera hasta el espacio cislunar con altitud y un dato por capa (valores reales; escala visual no proporcional). Dura ~25 s (`LIFTOFF_MS`, `ASCENT_MS`) y nunca termina antes que la carga real de `src/data/preload.ts`. Con movimiento reducido o Ultra Ligero se acelera, sin sacudidas ni partículas.
+4. **Estación**: salas 2.5D, HUD de recursos, mapa, acciones con costo, llamaradas reales, envíos y pausa.
+5. **Fin de misión** y **Archivo científico**. Diseño completo en [`../GDD.md`](../GDD.md), fuentes en [`../SOURCES.md`](../SOURCES.md) y QA en [`../REPORTE-CALIDAD.md`](../REPORTE-CALIDAD.md).
 
 ## Cómo agregar…
 
-- **Una lámina de historia**: agregar el objeto en `data/story.ts` y su imagen en `public/story/`.
 - **Una estación / personaje / dificultad**: un objeto en el archivo correspondiente de `data/`.
 - **Assets de la estación o misiones**: `load.image(...)` dentro de `queueStationAssets` (`data/preload.ts`). Se cargan durante el cohete.
 - **Un color o estilo**: editar `design/tokens.json` (no `tokens.css`, que se genera).
@@ -63,7 +60,7 @@ public/story/             ← láminas de la historia (placeholder; reemplazar c
 ## Legal y marca
 
 - **No usar** la insignia, el logotipo "worm" ni el sello de la NASA (14 CFR 1221). Participar en Space Apps no da permiso. Para el evento, usar el logo oficial de *NASA Space Apps Challenge* (spaceappschallenge.org/brand) sin modificarlo.
-- Imágenes y datos de la NASA: permitidos con crédito (`credit` en `story.ts`, estilo `caption-mono`).
+- Imágenes y datos de la NASA: permitidos con crédito (estilo `caption-mono`).
 - **Privacidad (Ley 19.628 / 21.719, Chile)**: el juego no recolecta datos personales. Solo guarda preferencias en `localStorage` del dispositivo. No agregar analítica, cuentas ni nombre real del jugador sin revisar esto antes: el público son menores de edad.
 - Fuentes Fredoka y Space Mono: SIL OFL 1.1.
 

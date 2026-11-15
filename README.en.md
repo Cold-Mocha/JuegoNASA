@@ -23,7 +23,7 @@ The flares are a **historical archive, not live data**, and the game says so on 
 | What the challenge asks | How the game covers it |
 |---|---|
 | Manage an outpost on the Moon or Mars | The **Central Station**, a fictional base on the lunar surface. |
-| Real trade-offs; no free option | Shielding against a flare uses energy, and with no energy it protects only half. At night the panels produce nothing and pedaling trades food for energy. Going outside gives science and adds radiation. The solar forecast costs energy and only arrives while the antenna is in good shape. |
+| Real trade-offs; no free option | Shielding against a flare uses energy, and with no energy it protects only half. At night the panels produce nothing and pedaling trades food for energy. Going outside moves the research forward and adds radiation. The solar forecast costs energy and only arrives while the antenna is in good shape. |
 | 2–3 core resources, not overwhelming | 5 bars (energy, oxygen, food, health and radiation); equipment only shows up in the HUD when it fails, and the tutorial teaches 3 controls. |
 | Real NASA data, cited in the game | Real weeks of solar flares stored in the game and labeled as historical; the source is always at the bottom of the HUD and in each warning. |
 | Replayable, learn from mistakes without punishment | Random dust storms and hull cracks, 3 missions and 3 difficulty levels. The report explains the real cause, and "Try again" goes straight back to the station. |

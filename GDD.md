@@ -6,7 +6,7 @@
 
 ## 1. Fantasía y objetivo educativo
 Eres un michi astronauta en la **Estación Central**, un puesto lunar ficticio, en una **jornada científica**: una investigación con una lista de tareas (por ejemplo, buscar hielo, cultivar algas o estudiar las llamaradas). Al cumplir todas las tareas, la tripulación **vuelve a la Tierra**. El plazo son 7 días lunares comprimidos, y de fondo se vive una **semana real del Sol** con sus llamaradas (archivo DONKI de la NASA). Los **5 recursos** (energía, oxígeno, comida, salud, radiación) son **secundarios**: hay que cuidarlos para poder investigar.
-**Lo que el niño se lleva:** *ninguna decisión es gratis*. El blindaje contra una llamarada gasta energía; de noche los paneles no producen y pedalear cuesta comida; salir a hacer ciencia da puntos pero también radiación; el pronóstico solar cuesta energía y solo llega si cuidas la antena.
+**Lo que el niño se lleva:** *ninguna decisión es gratis*. El blindaje contra una llamarada gasta energía; de noche los paneles no producen y pedalear cuesta comida; salir a la superficie avanza la investigación pero suma radiación; el pronóstico solar cuesta energía y solo llega si cuidas la antena.
 
 ## 2. Bucle principal
 1. Mirar las 5 barras (energía, oxígeno, comida, salud y radiación) y la jornada (día / atardecer / noche). Los equipos (reciclador, paneles, radio) solo aparecen en el HUD cuando algo falla.
@@ -23,13 +23,13 @@ Todos los minijuegos son **a pantalla completa**: solo el juego, una pista de 5 
 | Soporte vital | Reciclador de oxígeno: decorativo hasta que se rompe | Sellador: seguir la grieta | Con la fractura abierta el oxígeno de la nave se escapa; sellarla lo regenera |
 | Invernadero | Rack de plantas (siempre) y Cultivo de algas (*Huerto lunar*) | Cosecha: tocar solo las plantas maduras. Cultivo de algas (*Huerto lunar*): mantener apretadas luz, nutrientes y temperatura en su franja verde (la luz calienta el tanque) | +20 comida × calidad; las algas dan O₂ y comida × calidad, una vez por día |
 | Enfermería | Camilla | Curarse: mantener apretadas 4 heridas | +25 salud × calidad (más rápido, más calidad) |
-| Comunicaciones | Antena | Cables (si la señal está floja) y **Mensaje con ruido**: completar el patrón dañado por la estática. **Pedir el pronóstico solar** no tiene minijuego | Reparar la antena (−5 energía) se puede siempre; como tarea «Avisar a la Tierra» solo cuenta con la investigación terminada. El pronóstico (−3 energía) responde tras 2,56 s y adelanta los avisos de llamarada de 10 s a 25 s mientras la señal sea ≥ 60 % |
+| Superficie (a la izquierda) | Antena de la Tierra | Cables (si la señal está floja) y **Mensaje con ruido**: completar el patrón dañado por la estática. **Pedir el pronóstico solar** no tiene minijuego | Reparar la antena (−5 energía) se puede siempre; como tarea «Avisar a la Tierra» solo cuenta con la investigación terminada. El pronóstico (−3 energía) responde tras 2,56 s y adelanta los avisos de llamarada de 10 s a 25 s mientras la señal sea ≥ 60 % |
 | Puente | Bicicleta de energía | Pedalear: seguir el ritmo con dos pedales | +10 energía × calidad, −3 comida, hasta 3 por jornada |
-| Superficie | Taladro de hielo (*Hielo en la Luna*) | Biofirmas: emparejar picos del espectro con su huella; un pico es ruido | +2 ciencia × calidad, una vez por día; los orgánicos solos no prueban vida |
+| Superficie | Taladro de hielo (*Hielo en la Luna*) | Biofirmas: emparejar picos del espectro con su huella; un pico es ruido | Cuenta para la tarea de muestras, una vez por día; los orgánicos solos no prueban vida |
 
-**Energía [MODELO]:** parte en 60. Consumo de 5 por jornada; los paneles generan 9 × su rendimiento × la luz (1 de día, 0,5 al atardecer, 0 de noche): de día sobran 4 por jornada y **de noche no producen nada**, solo queda la reserva y la bicicleta (energía por comida). Llegan **tormentas de polvo al azar** (50 % por jornada) que bajan el rendimiento hasta limpiarlos.
-**Oxígeno y comida [MODELO]:** el oxígeno se renueva solo (+10 por jornada, −9 de consumo); una fractura (60 % por jornada desde el día 2, en el reciclador) lo corta y lo filtra (−30 extra por jornada). La comida baja 12 por jornada: sin cosechar ni algas no alcanza para la semana.
-**Salud [MODELO]:** baja cuando el oxígeno o la comida llegan a 0, y con radiación sobre 50 %, de a poco y más rápido mientras más alta. **La radiación no se puede sacar.** Con salud 0 (o radiación 100 %) la tripulación vuelve a la Tierra.
+**Energía [MODELO]:** parte en 50. El consumo es de 6 por jornada (por el multiplicador de dificultad). Los paneles generan 9 × su rendimiento × la luz (1 de día, 0,5 al atardecer, 0 de noche). De día sobran unos 4 en Cadete, 2 en Piloto y 1 en Comandante, y **de noche no producen nada**: solo queda la reserva y la bicicleta (energía por comida). Llegan **tormentas de polvo** (50 % por jornada, y seguras si pasaron 2 jornadas sin una) que bajan el rendimiento hasta limpiarlos.
+**Oxígeno y comida [MODELO]:** el oxígeno se renueva solo (+10 por jornada) y se consume 11 por jornada. Una fractura (70 % por jornada desde el día 2, en el reciclador) corta la renovación y filtra 30 extra por jornada. La comida baja 14 por jornada: sin cosechar ni algas no alcanza para la semana. El multiplicador de dificultad escala el consumo pero no la renovación.
+**Salud [MODELO]:** baja cuando el oxígeno o la comida llegan a 0, y con radiación sobre 30 %, de a poco y más rápido mientras más alta. **La radiación no se puede sacar.** Si una llamarada te encuentra afuera, recibes 20 de radiación de golpe (una vez por llamarada). Con salud 0 (o radiación 100 %) la tripulación vuelve a la Tierra.
 **Límite diario:** la cosecha y las acciones propias de cada investigación (algas, taladro, panel de pruebas) se hacen una vez por jornada. Cada investigación tiene su propio minijuego en su objeto: algas (perillas de luz, nutrientes y temperatura), panel de pruebas (limpiarlo y orientarlo al Sol; solo mide, no limpia los paneles de la estación) y taladro de hielo (emparejar el espectro); la bicicleta, hasta 3.
 
 ## 4. Llamaradas (datos reales)
@@ -38,16 +38,16 @@ Cada llamarada aparece en su jornada y a su hora UTC real. La dosis de juego se 
 **Aviso previo:** antes de cada llamarada aparece una alerta que dura hasta que llega, una cuenta regresiva y una flecha a la Esclusa: 25 s antes si se pidió el pronóstico y la señal es buena, y solo 10 s antes si no (`FLARE_WARNING_SEC` en `sim/rules.ts`).
 
 ## 5. Decisiones con costo
-No hay power-ups gratis. Las cuatro decisiones que se repiten: **reserva o ciencia** (la energía que se gasta en algas o en la antena es la que falta para el blindaje y la noche), **comida o energía** (pedalear), **ciencia o radiación** (toda salida a la superficie suma dosis) y **pronóstico o ahorro** (cuesta energía y exige mantener la antena).
+No hay power-ups gratis. Las cuatro decisiones que se repiten: **reserva o investigación** (la energía que se gasta en algas o en la antena es la que falta para el blindaje y la noche), **comida o energía** (pedalear), **investigación o radiación** (toda salida a la superficie suma dosis) y **pronóstico o ahorro** (cuesta energía y exige mantener la antena).
 
 ## 6. Jornadas científicas, puntaje y logros
 - **Tareas en dos pestañas:** las 3 propias de cada jornada y «Avisar a la Tierra» (la antena), que cuenta solo cuando las otras están cumplidas. La misión se gana al cumplir las 4.
 - **Jornadas** (`src/data/missions.ts`): tres, de 7 días cada una. **Huerto lunar** (nivel 1, Sol tranquilo de diciembre de 2019; trae el cultivo de algas), **Energía del Sol** (nivel 2, la tormenta de mayo de 2024 con 8 llamaradas X; trae un panel de pruebas) y **Hielo en la Luna** (nivel 3, octubre de 2024 con 2 llamaradas X; trae el taladro de hielo). El mapa base es fijo; cada jornada suma sus propios objetos interactivos (`only(...)` en `src/data/rooms.ts`).
 - **Fin:** con todas las tareas cumplidas se vuelve a la Tierra (gana). Se pierde si se acaba el plazo con tareas pendientes, si la salud llega a 0 o si la radiación llega a 100 %.
-- **Dificultad** (se elige después de la jornada): Cadete (día de 120 s, consumo ×0,7, tutorial y consejos), Piloto (90 s, ×1, consejos) y Comandante (72 s, ×1,15, sin consejos).
+- **Dificultad** (se elige después de la jornada): Cadete (día de 120 s, consumo ×0,85, tutorial y consejos), Piloto (90 s, ×1,15, consejos) y Comandante (72 s, ×1,35, sin consejos).
 - **Estrellas:** ★ completar la investigación · ★★ además volver con salud ≥ 50 · ★★★ además salud ≥ 80 y todas las llamaradas pasadas con escudo.
-- **Puntaje:** tareas×300 + ciencia×100 + llamaradas con escudo×100 + días ahorrados×100 + salud×2 + promedio de recursos sobrantes + estrellas×200.
-- **Logros científicos (8):** A salvo a tiempo, Noche lunar (hacer una acción de noche), Exploración lunar, Señal fuerte, Investigación completa, Tripulación sana (salud ≥ 80), Ciencia de campo (4+ de ciencia) y Archivo leído.
+- **Puntaje:** tareas×300 + llamaradas con escudo×100 + días ahorrados×100 + salud×2 + promedio de recursos sobrantes + estrellas×200.
+- **Logros científicos (7):** A salvo a tiempo, Noche lunar (hacer una acción de noche), Exploración lunar, Señal fuerte, Investigación completa, Tripulación sana (salud ≥ 80) y Archivo leído. El avance se mide solo con la lista de tareas de la investigación (no hay puntos de ciencia).
 - **Guardado local** (`localStorage`, sin datos personales): ajustes, mejor puntaje por jornada, logros, fichas leídas y tutorial visto.
 
 ## 7. Pantallas
@@ -64,7 +64,8 @@ Verificar el archivo contra DONKI cuando la API responda (dos intentos fallidos,
 
 
 ## 11. Misión final «Casa» **[PROPUESTA]** (`src/sim/entry.ts`, `src/scenes/Reentry.ts`)
-Se desbloquea al ganar las tres jornadas y aparece en el selector. Cuatro fases casi sin texto, cada una un minijuego:
+Se desbloquea al ganar las tres jornadas y aparece en el selector. Cinco fases casi sin texto, cada una un minijuego:
+0. **Enlace con la Tierra:** apuntar la antena al planeta (flechas, botones o arrastrando) y elegir el canal que muestra la Tierra. Cuando la señal queda firme por un segundo, la fase termina. Los ángulos y canales son un modelo didáctico **[MODELO]**. Los canales equivocados restan poco y la rapidez es opcional (nunca baja de 0,4). Suma hasta 100 puntos.
 1. **Giro e inspección:** la nave gira a 0,75 °/s **[REAL: R-bar Pitch Maneuver, JSC-63400]** (480 s por vuelta; en el juego 24 s). Cuando el vientre mira a las ventanas se tocan las losetas dañadas para fotografiarlas. Cada daño sin encontrar sube el calor del reingreso.
 2. **Quemada:** alinear la nave con la marca verde y mantener el motor hasta llenar el indicador.
 3. **Reingreso:** mantener la nave en un corredor en S con el alabeo sin llevar el calor al rojo; hay un tramo de apagón de plasma **[MODELO: duración simplificada, verificar]**.

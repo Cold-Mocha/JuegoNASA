@@ -1,5 +1,5 @@
 import {
-  ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, ANTENNA_REPAIR_MIN, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
+  ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_FAULT_CHANCE, ANTENNA_FAULT_FROM_DAY, ANTENNA_FAULT_LEVEL, ANTENNA_REPAIR_MIN, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
   BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_RESIDUE, REPAIR_OXYGEN, scoreOf, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_OUTSIDE_HIT, FLARE_WARNING_SEC,
   GREENHOUSE_FLARE_FACTOR, SUIT_EMPTY_HEALTH_LOSS, GREENHOUSE_LIGHT_FACTOR, GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
   NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, START_RESOURCES, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
@@ -128,11 +128,14 @@ export class Simulation {
     return this.tasks.filter((t) => (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
   }
 
-  /** La sonda se puede llamar cuando están hechas todas las demás tareas de la investigación (es la última de la etapa 1). */
+  /** La sonda se llama al terminar la investigación (etapa 2), antes de reconectar con la Tierra. */
   get probeReady(): boolean {
-    if (this.ended || this.stats.probe) return false;
-    const probe = this.tasks.some((t) => t.kind === 'probe');
-    return probe && this.tasks.filter((t) => t.kind !== 'probe' && (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
+    return !this.ended && !this.stats.probe && this.tasks.some((t) => t.kind === 'probe') && this.stage2Unlocked;
+  }
+
+  /** Falta entregar la sonda: hasta entonces no se puede reconectar con la Tierra para volver. */
+  private get probePending(): boolean {
+    return !this.stats.probe && this.tasks.some((t) => t.kind === 'probe');
   }
 
   /** Entrega de la sonda: `score` (0–1) solo cuenta para el puntaje; nunca se pierde por jugarla mal. */
@@ -220,7 +223,8 @@ export class Simulation {
     if (this.ended) return false;
     if (action === 'repair' && !this.breach) return false;
     if (action === 'forecast' && (this.forecastOn || !this.radioOk)) return false;
-    if (action === 'tellEarth' && (!this.stage2Unlocked || !this.radioOk)) return false; // solo al querer irse y con la antena sana
+    if (action === 'repairAntenna' && this.radioOk) return false; // solo cuando falló (evento adverso)
+    if (action === 'tellEarth' && (!this.stage2Unlocked || !this.radioOk || this.probePending)) return false; // solo al querer irse, con la sonda entregada y la antena sana
     if (action === 'analyze' && !this.hasSample) return false;
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
     if (this.dailyLimitReached(action)) return false;
@@ -248,7 +252,7 @@ export class Simulation {
       case 'harvest': return this.res.food < 100;
       case 'cleanDust': return this.comp.dust > 0.05;
       case 'cleanTestPanel': return this.testDirty;
-      case 'repairAntenna': return this.comp.antenna < 0.95;
+      case 'repairAntenna': return !this.radioOk;
       case 'forecast': return !this.forecastOn;
       default: return true;
     }
@@ -297,8 +301,10 @@ export class Simulation {
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
     if (action === 'tellEarth' && !this.stage2Unlocked) return { ok: false, reason: 'locked' };
+    if (action === 'tellEarth' && this.probePending) return { ok: false, reason: 'probeFirst' };
     if (action === 'tellEarth' && !this.radioOk) return { ok: false, reason: 'repairFirst' };
     if (action === 'analyze' && !this.hasSample) return { ok: false, reason: 'noSample' };
+    if (action === 'repairAntenna' && this.radioOk) return { ok: false, reason: 'antennaOk' };
     if (action === 'forecast' && this.forecastOn) return { ok: false, reason: 'forecastOn' };
     if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
     if (!this.needsCleaning(action)) return { ok: false, reason: 'clean' };
@@ -559,7 +565,6 @@ export class Simulation {
     this.res.food = clamp(this.res.food + this.duskFood);
     this.duskOxygen = 0;
     this.duskFood = 0;
-    this.comp.antenna = Math.max(0, this.comp.antenna - between(this.rnd, ANTENNA_DRIFT_PER_DAY));
     if (this.day >= this.config.days) {
       // fin del plazo: gana si sobrevivió y (si hay investigación) la terminó
       if (this.tasks.length && this.tasksDone < this.tasks.length) this.finish(false, 'timeout');
@@ -570,7 +575,15 @@ export class Simulation {
     this.flaresToday = 0;
     this.events.push({ type: 'dayStart', day: this.day, light: this.light });
     this.rollBreach();
+    this.rollAntennaFault();
     this.rollDustStorm();
+  }
+
+  /** Cada jornada (desde ANTENNA_FAULT_FROM_DAY) la antena puede fallar: la señal cae bajo el mínimo hasta repararla (una falla a la vez). */
+  private rollAntennaFault(): void {
+    if (!this.radioOk || this.day < ANTENNA_FAULT_FROM_DAY || this.rnd() >= ANTENNA_FAULT_CHANCE) return;
+    this.comp.antenna = between(this.rnd, ANTENNA_FAULT_LEVEL);
+    this.events.push({ type: 'antennaFault' });
   }
 
   /** Cada jornada puede llegar una tormenta de polvo (segura si pasaron DUST_STORM_MAX_GAP jornadas sin una): cubre los paneles y ensucia el de pruebas. */

@@ -290,6 +290,7 @@ export class StationScene extends Phaser.Scene {
     const add = (asset: string, ic: IconName): void => void needs.set(asset, (needs.get(asset) ?? new Set<IconName>()).add(ic));
     for (const key of this.sim.criticals) if (key !== 'radiation') add(key === 'energy' && !(this.sim.comp.dust > 0.05 && this.sim.light > 0) ? BIKE_ASSET : GUIDE_ASSET[key], RESOURCE_ICON[key]);
     if (this.sim.breach) add(BREACH_GUIDE, 'wind');
+    if (!this.sim.radioOk) add('consola-antena', 'antenna'); // la antena falló: hay que repararla
     const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
     if (guide) add(guide, 'info');
     if (this.sim.probeReady && this.tutorialIndex < 0) add('consola-antena', 'antenna'); // la sonda espera en la Antena
@@ -654,6 +655,7 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'actionResolved':
         audio.play('radio');
+        if (ev.message === 'linkRestored') this.dismissToast('antenna');
         if (ev.message === 'forecast') {
           this.toast('radio', t(ev.flares === 0 ? 'forecast.quiet' : ev.flares === 1 ? 'forecast.one' : 'forecast.many', { n: ev.flares }), 'ok');
         }
@@ -662,7 +664,7 @@ export class StationScene extends Phaser.Scene {
         audio.play('achievement');
         this.taskTab = 2;
         this.renderTasks();
-        this.toast('stage', t('alert.stage2'), 'ok');
+        this.toast('stage', t(this.sim.probeReady ? 'probe.ready' : 'alert.stage2'), 'ok'); // con sonda: primero la sonda, después la Tierra
         break;
       case 'taskDone': {
         audio.play('achievement'); // sin cartel: el avance se ve en la lista de tareas
@@ -688,6 +690,10 @@ export class StationScene extends Phaser.Scene {
         this.spawnBreach(ev.room);
         this.toast('breach', t('alert.breach'), 'danger', Infinity, this.hint(t('tip.breach', { room: roomName(ev.room) }))); // queda a la vista hasta que se repara
         this.pulse(this.ui.q('[data-res="oxygen"]'), 'is-alarm');
+        break;
+      case 'antennaFault':
+        audio.play('alarm');
+        this.toast('antenna', t('alert.antennaFault'), 'danger', Infinity, this.hint(t('tip.antennaFault'))); // queda a la vista hasta que se repara
         break;
       case 'breachRepaired':
         this.removeBreach();
@@ -1029,6 +1035,7 @@ export class StationScene extends Phaser.Scene {
       hint: t('hint.rover'),
       mount: (root, cb) => mountRover(root, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r) => {
         this.sim.completeProbe(finaleScore(1, belt.score, r.score), r.rocks, belt.batteries + belt.chips + belt.algae);
+        if (this.sim.stats.probe) this.toast('stage', t('probe.done'), 'ok');
         cb.onDone(r.score);
       } }),
       finish: () => undefined,
@@ -1858,7 +1865,7 @@ const TOAST_STICKY = new Set(['breach', 'flare']); // no se desplazan por avisos
 const RES_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health', 'radiation'];
 /** Icono de cada aviso según lo que es (los críticos llevan el icono de su recurso). */
 const TOAST_ICON: Record<string, IconName> = {
-  flare: 'radiation', breach: 'wind', panels: 'panel', suit: 'helmet', radio: 'antenna', stage: 'flask', day: 'sun', end: 'rocket',
+  flare: 'radiation', breach: 'wind', antenna: 'antenna', panels: 'panel', suit: 'helmet', radio: 'antenna', stage: 'flask', day: 'sun', end: 'rocket',
 };
 const toastIcon = (id: string): IconName =>
   TOAST_ICON[id] ?? (id.startsWith('critical-') ? RESOURCE_ICON[id.slice('critical-'.length) as keyof Resources] : 'alert');

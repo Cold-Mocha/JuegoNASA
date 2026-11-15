@@ -46,8 +46,13 @@ export const DUST_MAX_LOSS = 0.8;
 /** Los paneles generan esto por jornada con sol pleno y limpios; se multiplica por la luz (LIGHT_BY_DAY): al atardecer rinden la mitad y de noche, nada. Si generan menos de lo que gasta la nave, la energía empieza a bajar. */
 export const PANEL_REGEN_PER_DAY = 9; // de día sobran 4 por jornada; de noche solo queda la reserva y la bicicleta
 
-/** Degradación de la antena por jornada (rango; se sortea con la semilla). */
-export const ANTENNA_DRIFT_PER_DAY: readonly [number, number] = [0.12, 0.2];
+/**
+ * Falla de la antena (evento adverso, como la fractura): desde ANTENNA_FAULT_FROM_DAY, cada jornada puede fallar con esta probabilidad.
+ * La señal cae a ANTENNA_FAULT_LEVEL (bajo LINK_MIN_RADIO): se pierde el pronóstico y no se puede volver hasta repararla. Solo entonces se puede reparar.
+ */
+export const ANTENNA_FAULT_FROM_DAY = 2;
+export const ANTENNA_FAULT_CHANCE = 0.35;
+export const ANTENNA_FAULT_LEVEL: readonly [number, number] = [0.3, 0.5];
 
 /** Bajo este enlace (60 %) no llega el pronóstico solar: no se puede pedir y, si ya se tenía, deja de adelantar los avisos. */
 export const LINK_MIN_RADIO = 0.6;

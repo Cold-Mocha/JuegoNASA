@@ -35,8 +35,8 @@ export interface Mission {
 export const MISSION_DAYS = 7;
 
 const act = (id: TaskId, action: ActionId, count: number, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, stage });
-/** La sonda: última tarea de la investigación (se llama desde la Antena cuando las demás están hechas). */
-const probe = (id: TaskId): ResearchTask => ({ id, kind: 'probe', count: 1 });
+/** La sonda: primera tarea de la etapa 2 (se llama desde la Antena al terminar la investigación, antes de reconectar con la Tierra). */
+const probe = (id: TaskId): ResearchTask => ({ id, kind: 'probe', count: 1, stage: 2 });
 
 /**
  * Textos de una jornada: nombre, pregunta que responde, qué hay que hacer (para niños), semana real del Sol que se vive de fondo,

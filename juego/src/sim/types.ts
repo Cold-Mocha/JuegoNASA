@@ -76,6 +76,7 @@ export type SimEvent =
   | { type: 'critical'; resource: keyof Resources }
   | { type: 'breachOpened'; room: RoomId }
   | { type: 'breachRepaired' }
+  | { type: 'antennaFault' } // la antena falló: sin señal hasta repararla
   | { type: 'dustStorm' }
   | { type: 'panelsFailing' }
   | { type: 'panelsRestored' }
@@ -88,7 +89,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'repairFirst' | 'noSample' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'repairFirst' | 'noSample' | 'probeFirst' | 'antennaOk' | 'ended';
 }
 
 export interface SimStats {

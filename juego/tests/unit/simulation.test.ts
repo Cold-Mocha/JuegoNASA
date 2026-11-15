@@ -26,12 +26,26 @@ describe('recursos y calendario', () => {
     expect(sim.time).toBe(0);
   });
 
-  it('emite dayStart y degrada la antena y los paneles al cerrar la jornada', () => {
+  it('emite dayStart y ensucia los paneles al cerrar la jornada', () => {
     const sim = makeSim({ drain: 0 });
     sim.tick(DAY + 0.1);
     expect(sim.drainEvents()).toContainEqual({ type: 'dayStart', day: 2, light: 1 });
-    expect(sim.comp.antenna).toBeLessThan(1);
     expect(sim.comp.dust).toBeGreaterThan(0);
+  });
+
+  it('la antena no se desgasta sola: falla como evento adverso y solo entonces se puede reparar', () => {
+    const sim = makeSim({ drain: 0 });
+    goTo(sim, 'exterior');
+    expect(sim.canAct('repairAntenna').reason).toBe('antennaOk');
+    let faults = 0;
+    for (let d = 0; d < 6 && !faults; d++) {
+      sim.tick(DAY);
+      faults = sim.drainEvents().filter((e) => e.type === 'antennaFault').length;
+    }
+    if (faults) {
+      expect(sim.radioOk).toBe(false);
+      expect(sim.available('repairAntenna')).toBe(true);
+    } else expect(sim.comp.antenna).toBe(1);
   });
 });
 

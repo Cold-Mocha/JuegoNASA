@@ -198,7 +198,8 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
   };
   const loop = runLoop((dt) => { stepBelt(s, dt * (opts.calm ? 0.8 : 1)); return beltDone(s); }, draw, () =>
     opts.onDone({ score: beltScore(s), batteries: s.got.battery, chips: s.got.chip, algae: s.got.algae, hull: s.hull }));
-  return { destroy() { loop.destroy(); window.removeEventListener('keydown', onKey); el.removeEventListener('pointerdown', onPointer); } };
+  // las flechas las lee el propio juego: `nudge` vacío evita que la estación mueva el foco entre botones mientras se maneja
+  return { nudge: () => undefined, keys: ['← →'], gesture: 'tap', destroy() { loop.destroy(); window.removeEventListener('keydown', onKey); el.removeEventListener('pointerdown', onPointer); } };
 }
 
 // ------------------------------------------------------------------ rover lunar
@@ -261,7 +262,7 @@ export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: 
   };
   const loop = runLoop((dt) => { stepRover(s, dt, { brake: input.brake, jump: input.jump }); hint = Math.max(0, hint - dt); return roverDone(s); }, draw, () =>
     opts.onDone({ score: roverScore(s), rocks: s.rocks.size, flips: s.flips }));
-  return { destroy() { loop.destroy(); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); } };
+  return { nudge: () => undefined, keys: ['↑', '↓'], gesture: 'hold', destroy() { loop.destroy(); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); } };
 }
 
 /**

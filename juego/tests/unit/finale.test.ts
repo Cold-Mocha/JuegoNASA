@@ -78,18 +78,20 @@ describe('la sonda', () => {
 });
 
 describe('la sonda en la simulación', () => {
-  it('solo se completa con las demás tareas de la investigación hechas, y cuenta como tarea', async () => {
+  it('se llama al terminar la investigación (etapa 2) y bloquea la vuelta a la Tierra hasta entregarla', async () => {
     const { makeSim } = await import('./helpers');
-    const sim = makeSim({ tasks: [{ id: 'a', kind: 'shelter', count: 1 }, { id: 'p', kind: 'probe', count: 1 }] });
+    const sim = makeSim({ tasks: [{ id: 'a', kind: 'shelter', count: 1 }, { id: 'p', kind: 'probe', count: 1, stage: 2 }, { id: 'e', kind: 'action', action: 'tellEarth', count: 1, stage: 2 }] });
     sim.completeProbe(0.9, 8, 2);
     expect(sim.ended).toBeNull(); // antes de terminar lo demás no cuenta
     expect(sim.stats.probe).toBe(0);
     sim.stats.shelteredFlares = 1;
     expect(sim.probeReady).toBe(true);
+    expect(sim.canAct('tellEarth').reason).not.toBe('locked');
+    expect(sim.available('tellEarth')).toBe(false); // primero la sonda
     sim.completeProbe(1.7, 8, 2);
     expect(sim.stats.probeScore).toBe(1); // se acota a 0–1
     expect(sim.stats.probeRocks).toBe(8);
     expect(sim.probeReady).toBe(false);
-    expect(sim.ended).toBe('won');
+    expect(sim.ended).toBeNull(); // falta reconectar con la Tierra
   });
 });

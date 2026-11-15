@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../core/audio';
 import { SCENES } from '../core/config';
 import { state } from '../core/state';
 import { tokenCss } from '../core/theme';
@@ -54,6 +55,7 @@ export class SelectScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('menu');
     this.step = 0;
     this.picks = {
       // la primera vez ya viene elegido lo más fácil: basta con pulsar Siguiente

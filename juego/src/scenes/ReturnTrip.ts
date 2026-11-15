@@ -23,6 +23,7 @@ export class ReturnTripScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('space');
     const calm = state.calm;
     fadeIn(this, 400);
     drawStarfield(this, 'return', !calm);

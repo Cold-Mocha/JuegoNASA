@@ -4,7 +4,7 @@ import { state } from '../core/state';
 import { tokenColor, tokenCss, FONT_DISPLAY } from '../core/theme';
 import { UiLayer, esc, labelDialog } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
-import { audio } from '../core/audio';
+import { audio, type Mood } from '../core/audio';
 import { settingsHtml, bindSettings } from '../core/settingsPanel';
 import { michiFaceSvg, addSvgTexture } from '../core/art';
 import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
@@ -129,6 +129,8 @@ export class StationScene extends Phaser.Scene {
   private miniGame?: MiniGameHandle;
   /** El minijuego se juega afuera (superficie): el reloj no se detiene y el traje sigue gastando oxígeno. */
   private miniOutdoor = false;
+  /** Ambiente propio del minijuego en curso (la sonda); al cerrarlo vuelve el de la zona. */
+  private miniMood: Mood | null = null;
   private breachProp?: Machine;
   private breachMarker?: Phaser.GameObjects.Container;
   private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
@@ -143,6 +145,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('station');
     const l = state.loadout;
     if (!l) {
       this.scene.start(SCENES.menu);
@@ -170,7 +173,7 @@ export class StationScene extends Phaser.Scene {
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, lastHealth: 100, breachProp: undefined, breachMarker: undefined, recycler: undefined, panelSprites: [], miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1, toasts: new Map(), previewId: null });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, lastHealth: 100, breachProp: undefined, breachMarker: undefined, recycler: undefined, panelSprites: [], miniGame: undefined, miniOutdoor: false, miniMood: null, pulses: new Map(), taskTab: 1, toasts: new Map(), previewId: null });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -513,6 +516,7 @@ export class StationScene extends Phaser.Scene {
     this.sim.enter(loc, zone);
     if ((loc && fromHall) || zoneChanged) audio.play('door');
     this.setHelmet(zone === 'surface');
+    if (!this.miniMood) audio.setMood(ZONE_MOOD[zone]);
     this.ui.el.dataset.room = loc ?? 'pasillo';
     if (this.overlay === 'actions') this.closeOverlay();
   }
@@ -1603,6 +1607,8 @@ export class StationScene extends Phaser.Scene {
     this.miniGame?.destroy();
     this.miniGame = undefined;
     this.miniOutdoor = false;
+    if (this.miniMood) audio.setMood(ZONE_MOOD[this.zone]);
+    this.miniMood = null;
     this.ui.q('[data-msgs]').innerHTML = '';
     this.ui.q('[data-hud]').classList.remove('is-mini');
     this.overlay = 'none';
@@ -1891,6 +1897,8 @@ const controlsHtml = (basicOnly = false): string => `
   </ul>
   <p class="controls__pointer">${esc(t('control.pointer'))}</p>`;
 const ALERT_MS = 4500;
+/** Música de cada zona de la estación. */
+const ZONE_MOOD: Record<Zone, Mood> = { ship: 'station', greenhouse: 'greenhouse', surface: 'surface' };
 const TOAST_MAX = 3;      // avisos a la vista a la vez
 const TOAST_OUT_MS = 220; // salida del aviso (igual que la transición del CSS)
 const TOAST_STICKY = new Set(['breach', 'antenna', 'dust', 'flare']); // no se desplazan por avisos nuevos

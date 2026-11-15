@@ -55,6 +55,7 @@ export class FlightScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('space');
     this.calm = state.calm;
     this.total = this.calm ? FLIGHT_SEC_CALM : FLIGHT_SEC;
     this.progress = 0;

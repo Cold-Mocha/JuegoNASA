@@ -127,6 +127,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('launch');
     const loadout = state.loadout;
     if (!loadout) {
       this.scene.start(SCENES.select);

@@ -40,6 +40,7 @@ export class ReentryScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('casa');
     fadeIn(this);
     drawStarfield(this, 'casa', !state.calm);
     this.res = { inspected: 1, burn: 0, corridor: 0, heatMax: 0, glide: 0, link: 0 };

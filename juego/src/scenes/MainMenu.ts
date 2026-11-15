@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../core/audio';
 import { SCENES, GAME_WIDTH } from '../core/config';
 import { state } from '../core/state';
 import { tokenColor } from '../core/theme';
@@ -17,6 +18,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('menu');
     state.training = false; // volver al menú cancela un entrenamiento a medias
     fadeIn(this);
     drawStarfield(this, 'menu', !state.calm);

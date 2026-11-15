@@ -73,6 +73,7 @@ export class EncyclopediaScene extends Phaser.Scene {
 
   create(data: ArchiveData): void {
     this.from = data?.from ?? SCENES.menu;
+    if (this.from !== SCENES.station) audio.setMood('menu');
     this.alive = true;
     this.busy = 0;
     this.timers = [];

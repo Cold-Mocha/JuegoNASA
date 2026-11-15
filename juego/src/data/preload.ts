@@ -23,9 +23,12 @@ export const michiKey = (helmet: boolean, anim: MichiAnim): string => `michi-${h
  * Solo se carga la variante del tripulante elegido (exportados por herramientas/exportar_juego.py).
  * El plano de la estación no se descarga: se rasteriza desde SVG (`core/stationArt.ts`) en la misma pantalla.
  */
+/** Versiones de estado que aparecen con los eventos adversos: el reciclador roto (fractura), la antena con falla y los paneles con polvo. */
+const STATE_ASSETS = ['reciclador-roto', 'consola-antena-rota', 'panel-solar-sucio'].flatMap((a) => [a, `${a}-marcado`]);
+
 export function queueStationAssets(load: Phaser.Loader.LoaderPlugin, loadout: Loadout): void {
   const { plain, marked } = propAssetsFor(loadout.mission);
-  for (const asset of [...plain, ...marked, 'reciclador-roto', 'reciclador-roto-marcado']) if (!load.textureManager.exists(propKey(asset))) load.svg(propKey(asset), `game/props/${asset}.svg`, { scale: 1.25 });
+  for (const asset of [...plain, ...marked, ...STATE_ASSETS]) if (!load.textureManager.exists(propKey(asset))) load.svg(propKey(asset), `game/props/${asset}.svg`, { scale: 1.25 });
   for (const helmet of [false, true]) {
     for (const anim of Object.keys(MICHI_ANIMS) as MichiAnim[]) {
       const key = michiKey(helmet, anim);

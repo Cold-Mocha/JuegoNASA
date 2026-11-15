@@ -132,6 +132,8 @@ export class StationScene extends Phaser.Scene {
   private breachProp?: Machine;
   private breachMarker?: Phaser.GameObjects.Container;
   private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
+  /** Paneles solares de adorno: se ven sucios mientras haya polvo. */
+  private panelSprites: Phaser.GameObjects.Image[] = [];
   private pulses = new Map<Machine, Phaser.Tweens.Tween>();
   private taskTab: 1 | 2 = 1;
   private disposers: (() => void)[] = [];
@@ -168,7 +170,7 @@ export class StationScene extends Phaser.Scene {
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, lastHealth: 100, breachProp: undefined, breachMarker: undefined, recycler: undefined, miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1, toasts: new Map(), previewId: null });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, lastHealth: 100, breachProp: undefined, breachMarker: undefined, recycler: undefined, panelSprites: [], miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1, toasts: new Map(), previewId: null });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -238,6 +240,7 @@ export class StationScene extends Phaser.Scene {
         at = { x: Phaser.Math.Clamp(at.x, r.x + half, r.x + r.w - half), y: at.y };
         img.setX(at.x);
         if (p.asset === 'reciclador-aire') this.recycler = { sprite: img, at };
+        if (p.asset === 'panel-solar' && p.kind === 'deco') this.panelSprites.push(img);
         if (p.kind === 'wall' || p.kind === 'poster') {
           img.setDepth(at.y - 500); // colgado de la pared: siempre detrás del michi
           if (p.kind === 'poster') this.addMachine(room, p, img, at); // se puede leer, pero no estorba al caminar
@@ -408,6 +411,8 @@ export class StationScene extends Phaser.Scene {
     this.updatePlayer(dt, paused);
     this.updateDarkness(dt);
     this.updateGuides();
+    this.updatePanels();
+    this.updateBrokenAlerts();
     this.updateSpot();
     this.hudTimer += dt;
     if (this.hudTimer >= 1 / HUD_HZ) {
@@ -543,9 +548,11 @@ export class StationScene extends Phaser.Scene {
     for (const m of this.machines) {
       const want = !this.sim.ended && ((m.prop.asset === 'consola-antena' && this.sim.probeReady) || (m.prop.actions ?? []).some((a) => this.sim.available(a)
         && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count && (t.stage !== 2 || this.sim.stage2Unlocked)))));
+      // los de la jornada mantienen el contorno; la antena y los paneles cambian de dibujo con su estado (rota, sucios)
+      const tex = propKey(textureAsset({ ...m.prop, asset: this.stateAsset(m.prop.asset) }, want || !!m.prop.missions));
+      if (m.sprite.texture.key !== tex) m.sprite.setTexture(tex);
       if (want === !!m.active) continue;
       m.active = want;
-      m.sprite.setTexture(propKey(textureAsset(m.prop, want || !!m.prop.missions))); // los de la jornada mantienen el contorno
       const old = this.pulses.get(m);
       if (old) {
         old.stop();
@@ -702,7 +709,7 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'dustStorm':
         audio.play('error');
-        this.toast('panels', t('alert.dust'), 'danger', ALERT_MS, this.hint(t('tip.dust')));
+        this.toast('dust', t('alert.dust'), 'danger', Infinity, this.hint(t('tip.dust'))); // queda a la vista hasta limpiar
         this.pulse(this.ui.q('[data-res="energy"]'), 'is-alarm');
         break;
       case 'panelsFailing':
@@ -711,7 +718,7 @@ export class StationScene extends Phaser.Scene {
           // sin sol no hay nada que limpiar: solo queda la reserva y la bicicleta
           this.toast('panels', t('alert.panels.dark'), 'danger', ALERT_MS, this.hint(t('tip.panels.dark')));
         } else {
-          this.toast('panels', t('alert.panels.dust'), 'danger', ALERT_MS, this.hint(t('tip.panels.dust')));
+          this.toast('dust', t('alert.panels.dust'), 'danger', Infinity, this.hint(t('tip.panels.dust')));
         }
         this.pulse(this.ui.q('[data-res="energy"]'), 'is-alarm');
         break;
@@ -1376,7 +1383,7 @@ export class StationScene extends Phaser.Scene {
     if (this.toasts.size > TOAST_MAX) {
       // se va el más antiguo de los avisos comunes; la fisura y la llamarada se quedan mientras duren
       const others = [...this.toasts.keys()].filter((k) => k !== id);
-      const old = others.find((k) => !TOAST_STICKY.has(k)) ?? others[0];
+      const old = others.find((k) => !TOAST_STICKY.has(k)); // las de algo roto nunca se desplazan: se van al repararlo
       if (old) this.dismissToast(old);
     }
   }
@@ -1483,6 +1490,31 @@ export class StationScene extends Phaser.Scene {
     if (this.sim.stats.dna > 0) return `<p class="body-sm action__why">${icon('check')}${t('dna.done', { n: Math.round((dnaBonus(this.sim.stats.dna) - 1) * 100) })}</p>`;
     return `<button class="mn-btn mn-btn--secondary mn-btn--sm action__btn" data-action="dna" ${this.sim.ended ? 'disabled' : ''}>${icon('flask')}${t('dna.open')}</button>
       <p class="body-sm action__why">${t('dna.openWhy', { n: Math.round(DNA_MAX_BONUS * 100) })}</p>`;
+  }
+
+  /** Dibujo según el estado: la antena con falla se ve rota; los paneles con polvo, sucios (el de pruebas, mientras esté por limpiar). */
+  private stateAsset(asset: string): string {
+    if (asset === 'consola-antena' && !this.sim.radioOk) return 'consola-antena-rota';
+    if (asset === 'panel-solar' && (this.mission.id === 'paneles-solares' ? this.sim.useful('cleanTestPanel') : this.sim.useful('cleanDust'))) return 'panel-solar-sucio';
+    return asset;
+  }
+
+  /** Paneles de adorno: sucios mientras la estación tenga polvo en sus paneles. */
+  private updatePanels(): void {
+    const tex = propKey(this.sim.useful('cleanDust') ? 'panel-solar-sucio' : 'panel-solar');
+    for (const img of this.panelSprites) if (img.texture.key !== tex) img.setTexture(tex);
+  }
+
+  /** Mientras algo esté roto (fractura, antena, paneles con polvo) su alerta queda en pantalla; al repararlo, se va. */
+  private updateBrokenAlerts(): void {
+    if (this.sim.ended) return;
+    const keep = (id: string, broken: boolean, show: () => void): void => {
+      if (broken && !this.toasts.has(id)) show();
+      else if (!broken && this.toasts.has(id) && STICKY_ALERTS.has(id)) this.dismissToast(id);
+    };
+    keep('breach', !!this.sim.breach, () => this.toast('breach', t('alert.breach'), 'danger', Infinity, this.hint(t('tip.breach', { room: roomName(this.sim.breach!) }))));
+    keep('antenna', !this.sim.radioOk, () => this.toast('antenna', t('alert.antennaFault'), 'danger', Infinity, this.hint(t('tip.antennaFault'))));
+    keep('dust', this.sim.useful('cleanDust'), () => this.toast('dust', t('alert.dust'), 'danger', Infinity, this.hint(t('tip.dust'))));
   }
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */
@@ -1861,11 +1893,13 @@ const controlsHtml = (basicOnly = false): string => `
 const ALERT_MS = 4500;
 const TOAST_MAX = 3;      // avisos a la vista a la vez
 const TOAST_OUT_MS = 220; // salida del aviso (igual que la transición del CSS)
-const TOAST_STICKY = new Set(['breach', 'flare']); // no se desplazan por avisos nuevos
+const TOAST_STICKY = new Set(['breach', 'antenna', 'dust', 'flare']); // no se desplazan por avisos nuevos
+/** Alertas de algo roto: se quedan mientras dure la falla y se van solas al repararla (ver `updateBrokenAlerts`). */
+const STICKY_ALERTS: ReadonlySet<string> = new Set(['breach', 'antenna', 'dust']);
 const RES_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health', 'radiation'];
 /** Icono de cada aviso según lo que es (los críticos llevan el icono de su recurso). */
 const TOAST_ICON: Record<string, IconName> = {
-  flare: 'radiation', breach: 'wind', antenna: 'antenna', panels: 'panel', suit: 'helmet', radio: 'antenna', stage: 'flask', day: 'sun', end: 'rocket',
+  flare: 'radiation', breach: 'wind', antenna: 'antenna', dust: 'panel', panels: 'panel', suit: 'helmet', radio: 'antenna', stage: 'flask', day: 'sun', end: 'rocket',
 };
 const toastIcon = (id: string): IconName =>
   TOAST_ICON[id] ?? (id.startsWith('critical-') ? RESOURCE_ICON[id.slice('critical-'.length) as keyof Resources] : 'alert');

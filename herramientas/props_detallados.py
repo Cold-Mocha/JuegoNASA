@@ -456,6 +456,32 @@ def reciclador_roto():
     return w, h, b
 
 
+def consola_antena_rota():
+    """La antena con falla (evento adverso): plato torcido y rajado, cable suelto con chispas, pantalla sin señal y luz roja."""
+    w, h, b = consola_antena()
+    b += f'<g transform="rotate(-18 112 62)">' + path('M98 14 L110 34 L100 44 L114 60', 'none', OUT, 6) + path('M98 14 L110 34 L100 44 L114 60', 'none', '#0b0c0f', 3) + '</g>'
+    b += path('M128 56 q26 6 30 34', 'none', OUT, 6) + path('M128 56 q26 6 30 34', 'none', CORAL, 3)
+    b += ''.join(path(f'M158 90 l{dx} {dy}', 'none', GOLD, 3) for dx, dy in ((10, -6), (12, 4), (4, 12), (-6, 10)))
+    b += screen(26, 160, 94, 54, '#3a0f1f', 8) + path('M50 172 L96 204 M96 172 L50 204', 'none', RED, 5) + text(73, 210, 'SIN SEÑAL', 9, RED)
+    b += circ(144, 174, 7, RED, 3) + rr(60, 128, 102, 18, 6, GOLD, 3) + text(111, 141, 'FALLA', 11, NAVY)
+    return w, h, b
+
+
+def panel_solar_sucio():
+    """Los paneles cubiertos de polvo lunar después de una tormenta: manchas grises y café sobre las celdas (rinden menos)."""
+    w, h, b = panel_solar()
+    dust = ''
+    for side in (-1, 1):
+        for i in range(9):
+            cx = 150 + side * (22 + (i * 37) % 108)
+            cy = 36 + (i * 29) % 70
+            rx, ry = 16 + (i * 7) % 14, 8 + (i * 5) % 8
+            dust += f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="{TAN if i % 3 else "#8f8a7e"}" opacity=".72"/>'
+    b += dust + path('M150 34 L150 118', 'none', TAN_D, 3, 'opacity=".5"')
+    b += ''.join(circ(150 + ((i * 71) % 250 - 125), 30 + (i * 43) % 86, 2.4, TAN_D, 0, 'none', 'opacity=".8"') for i in range(24))
+    return w, h, b
+
+
 def bicicleta_estatica():
     """Bicicleta fija (como la de la ISS): volante de inercia, asiento, manillar con pantalla y pedales. Convierte el esfuerzo en energía."""
     w, h = 230, 200
@@ -477,9 +503,9 @@ PROPS = {
     # nombre: (función, ¿interactiva?)
     'reciclador-aire': (reciclador_aire, True), 'estacion-comida': (estacion_comida, True),
     'tanque-algas': (tanque_algas, True), 'rack-plantas': (rack_plantas, True),
-    'consola-puente': (consola_puente, True), 'consola-antena': (consola_antena, True),
+    'consola-puente': (consola_puente, True), 'consola-antena': (consola_antena, True), 'consola-antena-rota': (consola_antena_rota, True),
     'camilla-medica': (camilla_medica, True), 'bicicleta-estatica': (bicicleta_estatica, True), 'reciclador-roto': (reciclador_roto, True), 'roca': (roca, False),
-    'panel-solar': (panel_solar, True), 'roca-hielo': (roca_hielo, True), 'estacion-limpieza': (estacion_limpieza, True),
+    'panel-solar': (panel_solar, True), 'panel-solar-sucio': (panel_solar_sucio, True), 'roca-hielo': (roca_hielo, True), 'estacion-limpieza': (estacion_limpieza, True),
     'casillero': (casillero, False), 'casillero-trajes': (casillero_trajes, False), 'planta': (planta, False),
     'mesa-comedor': (mesa_comedor, False), 'cajas': (cajas, False), 'bandeja-cultivo': (bandeja_cultivo, False),
     'extintor': (extintor, False), 'cuadro-tierra': (cuadro_tierra, False),
@@ -508,7 +534,7 @@ def main() -> None:
     out = os.path.join(root, 'juego', 'public', 'game', 'props')
     os.makedirs(out, exist_ok=True)
     for name in os.listdir(out):
-        if name.endswith('.svg'):
+        if name.endswith('.svg') and not name.startswith('cartel-'):  # los carteles los genera herramientas/carteles_chile.py
             os.remove(os.path.join(out, name))
     for name, (fn, interactive) in PROPS.items():
         w, h, body = fn()

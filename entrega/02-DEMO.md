@@ -12,17 +12,18 @@ Se arma con clips de juego real y clips cinematográficos (ver `06-VIDEOS.md`). 
 | 3 a 8 | Selector: el michi arriba, flechas a los lados, cambia de tripulante | Elige tu astronauta |
 | 8 a 14 | Estación: el michi camina, las barras suben y bajan con destellos | 5 barras que no alcanzan para todo |
 | 14 a 20 | Aviso de llamarada, pantalla magenta, el michi corre al refugio | Una llamarada real: 11 de mayo de 2024 |
-| 20 a 25 | Misión final: apuntar la antena, reingreso con fuego, planeo a la pista | Vuelve a casa |
+| 20 a 23 | La sonda: cinturón de asteroides y alunizaje con cohetes | Guía la sonda a la Luna |
+| 23 a 25 | Misión final: reingreso con fuego y planeo a la pista | Vuelve a casa |
 | 25 a 30 | Logo y enlace | Juega gratis en el navegador |
 
 ## Opción B: 7 slides
 
-1. Michinautas. Un michi astronauta cuida una base lunar. Equipo Michinautas, sede Temuco, Universidad de La Frontera.
-2. El problema. El contenido espacial para niños simplifica de más los sacrificios de una misión, o los explica a un nivel que no los engancha.
-3. Cómo se juega. 7 días lunares, una investigación con tareas y 5 barras. Captura de la estación.
-4. Ninguna decisión es gratis. El escudo gasta energía. Pedalear cambia comida por energía. Salir suma radiación. El pronóstico cuesta energía.
-5. El Sol es real. Tres semanas históricas, cada llamarada a su hora real, y su clase fija la dosis. Fuente en pantalla: NASA y NOAA, archivo histórico (no en vivo).
-6. Para cualquier aula. Navegador, sin cuenta, español e inglés, teclado, mouse y táctil, modo ligero. No recolecta datos.
-7. Juega ya. Enlace al juego y al repositorio, datos usados y declaración de IA.
+1. **Michinautas.** Los sacrificios de una misión se juegan, no se leen. Equipo Michinautas, sede Temuco, Universidad de La Frontera.
+2. **El problema.** El contenido espacial para niños se queda en afiches o es demasiado técnico. Los niños ven cómo terminan las misiones, pero nunca toman sus decisiones.
+3. **Nuestra respuesta.** El niño dirige una base lunar por 7 días con cinco barras que no alcanzan para todo. Captura de la estación.
+4. **Ninguna decisión es gratis.** El escudo gasta la energía de la noche, salir suma radiación, pedalear cambia comida por energía. La base falla (aire, polvo, antena) y hay que repararla.
+5. **Ciencia real.** Tres semanas históricas del Sol, cada llamarada a su hora real, con la fuente en pantalla: «archivo histórico, no en vivo». Archivo científico con 38 fichas.
+6. **Qué se lleva el niño.** Guía una sonda, recoge rocas lunares, aprende de cada error con un informe que explica qué pasó y conoce la cooperación espacial entre Chile y EE. UU.
+7. **Juega ya.** Navegador, sin cuenta, español e inglés, modo ligero para aulas. Enlace, QR, datos usados y declaración de IA.
 
 Exportar como PDF con máximo 7 páginas antes de subirlo.

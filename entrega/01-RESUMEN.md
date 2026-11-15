@@ -8,32 +8,44 @@ English: Michinautas: keep the Moon base running and fly home
 
 ## Resumen
 
-Michinautas es un juego web para niñas y niños de 7 a 12 años. Eres un michi astronauta en una base ficticia en la Luna. Tienes 7 días lunares para terminar una investigación: cultivar algas, probar paneles solares o buscar hielo. Para lograrlo cuidas cinco barras: energía, oxígeno, comida, salud y radiación. Nunca alcanzan para todo.
+**El problema.** El contenido espacial para niños se queda en datos sueltos y afiches, o pide una base técnica que un niño de 8 años no tiene. Así, casi nadie vive la lógica de una misión: que cada decisión cuesta algo y que ese costo se acumula.
 
-Cada acción muestra su costo. El escudo contra una llamarada gasta energía. De noche los paneles no producen. Salir a la superficie avanza la investigación y suma radiación. Pedir el pronóstico solar cuesta energía y la respuesta tarda 2,56 segundos, que es lo que demora una señal en ir y volver de la Tierra.
+**Nuestra respuesta.** Michinautas es un juego web para niñas y niños de 7 a 12 años donde esa lógica se juega. Un michi astronauta tiene 7 días lunares para terminar una investigación en una base en la Luna, con cinco barras (energía, oxígeno, comida, salud y radiación) que nunca alcanzan para todo. Cada acción muestra su costo antes de elegirla:
 
-El Sol del juego es real. Cada jornada repite una semana histórica (diciembre de 2019, mayo de 2024 y octubre de 2024) y cada llamarada llega en su día y hora reales. La dosis depende de su clase.
+- El escudo contra una llamarada gasta la energía que falta para la noche.
+- De noche los paneles no producen, y pedalear cambia comida por energía.
+- Salir a la superficie avanza la investigación y suma radiación.
+- El pronóstico solar cuesta energía y responde en 2,56 s, la demora real entre la Tierra y la Luna.
 
-Al terminar las tres investigaciones se desbloquea la misión final, Casa. Hay que volver a la Tierra en cinco fases cortas: llamar a Control de Misión apuntando la antena, revisar la nave en su giro, frenar con el motor, cruzar la atmósfera y planear hasta la pista.
+La base también falla: una grieta deja escapar el aire, el polvo cubre los paneles y la antena se queda sin señal. La alerta no se va hasta que lo reparas. Al terminar la investigación hay que llamar a una sonda: esquivas asteroides, alunizas frenando con cohetes porque no hay aire y recoges rocas con un rover. Solo entonces puedes volver.
 
-El informe final explica qué pasó según lo que hizo el jugador. «Reintentar» vuelve directo a la estación, así que equivocarse no castiga.
+**Por qué vale.**
 
-Funciona en el navegador, sin descarga ni cuenta. Tiene español e inglés, controles de teclado, mouse y pantalla táctil, alto contraste y un modo ligero para computadores escolares.
+- **Ciencia real, no inventada.** El Sol del juego repite tres semanas históricas (diciembre de 2019, mayo de 2024 y octubre de 2024). Cada llamarada llega en su día y hora reales y su clase fija la dosis. La pantalla dice siempre «archivo histórico, no en vivo».
+- **Aprender del error sin castigo.** El informe final explica qué pasó con lo que hizo el jugador, y «Reintentar» vuelve directo a la estación.
+- **Más que un juego.** Un Archivo científico de 38 fichas con fuente. Cada jornada ganada trae una historia sobre la cooperación espacial entre Chile y Estados Unidos.
+- **Para cualquier aula.** Funciona en el navegador sin descarga ni cuenta, en español e inglés, con teclado, mouse o pantalla táctil, y tiene un modo ligero para computadores escolares. No recolecta datos.
 
 ## Summary
 
-Michinautas is a web game for kids aged 7 to 12. You play a cat astronaut in a fictional base on the Moon. You have 7 lunar days to finish a research mission: grow algae, test solar panels or drill for ice. Five bars (energy, oxygen, food, health and radiation) never stretch far enough for everything.
+**The problem.** Space content for kids either stays at loose facts and posters or assumes a technical background an 8-year-old does not have. So almost no one experiences the logic of a mission: every decision costs something, and that cost adds up.
 
-Every action shows its cost. Shielding against a solar flare drains energy. At night the panels produce nothing. Going outside advances research and adds radiation. Asking for a solar forecast costs energy and the answer takes 2.56 seconds, the real round trip of a signal between Earth and the Moon.
+**Our answer.** Michinautas is a web game for kids aged 7 to 12 where that logic is played. A cat astronaut has 7 lunar days to finish a research mission on a Moon base, with five bars (energy, oxygen, food, health and radiation) that never stretch far enough. Every action shows its cost before you choose it:
 
-The Sun in the game is real. Each mission replays a historical week (December 2019, May 2024 and October 2024) and every flare arrives on its real day and hour, with a dose set by its class.
+- Shielding against a flare drains the energy you need for the night.
+- At night the panels produce nothing, and pedaling trades food for energy.
+- Going outside advances research and adds radiation.
+- A solar forecast costs energy and answers in 2.56 s, the real Earth–Moon delay.
 
-After the three research missions you unlock the final one, Home. You fly back to Earth in five short phases: call Mission Control by aiming the antenna, inspect the ship as it spins, brake with the engine, cross the atmosphere and glide to the runway.
+The base breaks too: a crack leaks air, dust covers the panels and the antenna loses its signal. The alert stays until you fix it. When the research is done you call a probe: dodge asteroids, land with rockets because there is no air, and collect rocks with a rover. Only then can you go home.
 
-The end report explains what happened based on the player's own choices. "Retry" goes straight back to the station, so mistakes are never punished.
+**Why it matters.**
 
-It runs in the browser with no download or account. It has Spanish and English, keyboard, mouse and touch controls, high contrast and a light mode for school computers.
+- **Real science, not made-up numbers.** The game's Sun replays three historical weeks (December 2019, May 2024 and October 2024). Every flare arrives on its real day and hour and its class sets the dose. The screen always says "historical archive, not live".
+- **Learning from failure without punishment.** The end report explains what happened from the player's own choices, and "Retry" goes straight back to the station.
+- **More than a game.** A Science Archive of 38 sourced fact sheets. Each mission won brings a story about space cooperation between Chile and the United States.
+- **For any classroom.** It runs in the browser with no download or account, in Spanish and English, with keyboard, mouse or touch, and a light mode for school computers. It collects no data.
 
 ## Versión corta
 
-Juego web para 7 a 12 años. Un michi astronauta cuida una base lunar con 5 recursos que no alcanzan para todo y al final vuelve a la Tierra. Las llamaradas son reales (semanas históricas de NASA y NOAA). Cada decisión tiene un costo visible. Sin descarga ni cuenta.
+Un juego web para 7 a 12 años donde los sacrificios de una misión se juegan, no se leen. Un michi astronauta cuida una base lunar con cinco barras que no alcanzan para todo, repara lo que falla y vuelve a la Tierra. El Sol es real: semanas históricas de NASA y NOAA. Sin descarga ni cuenta.

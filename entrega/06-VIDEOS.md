@@ -16,6 +16,7 @@ Todavía no hay videos hechos. Faltan dos decisiones del equipo:
 | G1 | Menú, luego el selector de tripulante: cambiar con las flechas del michi | 7 s |
 | G2 | Estación: caminar, usar la bicicleta, ver los destellos de las barras | 8 s |
 | G3 | Aviso de llamarada, pantalla magenta, correr al refugio | 8 s |
+| G3b | La sonda: cinturón de asteroides y alunizaje con cohetes | 6 s |
 | G4 | Misión Casa: apuntar la antena hasta que la señal quede firme | 7 s |
 | G5 | Misión Casa: reingreso y planeo hasta la pista | 8 s |
 

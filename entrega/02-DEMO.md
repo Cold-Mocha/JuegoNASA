@@ -18,12 +18,12 @@ Se arma con clips de juego real y clips cinematográficos (ver `06-VIDEOS.md`). 
 
 ## Opción B: 7 slides
 
-1. **Michinautas.** Los sacrificios de una misión se juegan, no se leen. Equipo Michinautas, sede Temuco, Universidad de La Frontera.
-2. **El problema.** El contenido espacial para niños se queda en afiches o es demasiado técnico. Los niños ven cómo terminan las misiones, pero nunca toman sus decisiones.
-3. **Nuestra respuesta.** El niño dirige una base lunar por 7 días con cinco barras que no alcanzan para todo. Captura de la estación.
-4. **Ninguna decisión es gratis.** El escudo gasta la energía de la noche, salir suma radiación, pedalear cambia comida por energía. La base falla (aire, polvo, antena) y hay que repararla.
-5. **Ciencia real.** Tres semanas históricas del Sol, cada llamarada a su hora real, con la fuente en pantalla: «archivo histórico, no en vivo». Archivo científico con 38 fichas.
-6. **Qué se lleva el niño.** Guía una sonda, recoge rocas lunares, aprende de cada error con un informe que explica qué pasó y conoce la cooperación espacial entre Chile y EE. UU.
-7. **Juega ya.** Navegador, sin cuenta, español e inglés, modo ligero para aulas. Enlace, QR, datos usados y declaración de IA.
+1. Michinautas. El niño toma las decisiones de una misión y ve lo que cuestan. Equipo Michinautas, sede Temuco, Universidad de La Frontera.
+2. El problema. El contenido espacial para niños se queda en afiches o es demasiado técnico, y los niños conocen cómo terminan las misiones sin tomar ninguna de sus decisiones.
+3. Nuestra respuesta. El niño dirige una base lunar por 7 días con cinco barras que no alcanzan para todo. Captura de la estación.
+4. Cada decisión cuesta. El escudo gasta la energía de la noche, salir suma radiación, pedalear cambia comida por energía. La base falla (aire, polvo, antena) y hay que repararla.
+5. Ciencia real. Tres semanas históricas del Sol, cada llamarada a su hora real, con la fuente en pantalla: «archivo histórico, no en vivo». Archivo científico con 38 fichas.
+6. Qué se lleva el niño. Guía una sonda y recoge rocas lunares. Cuando pierde, un informe le explica qué pasó, y cada jornada ganada le cuenta algo de la cooperación espacial entre Chile y EE. UU.
+7. Juega ya. Navegador, sin cuenta, español e inglés, modo ligero para aulas. Enlace, QR, datos usados y declaración de IA.
 
 Exportar como PDF con máximo 7 páginas antes de subirlo.

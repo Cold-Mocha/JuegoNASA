@@ -709,7 +709,6 @@ export const es = {
   'hint.rover': 'Salta los cráteres y recoge las rocas',
   'report.rocks': 'Rocas lunares',
   'report.cargo': 'Carga entregada',
-  'report.probeEcho': 'Aquí Santiago. El eco era la sonda: su señal viene de muy lejos y llega con retraso. Gracias por traer las rocas. Se estudiarán en tierra; aún no sabemos qué dirán. [RECREACIÓN]',
   'block.probeFirst': 'Primero llama a la sonda y recoge las rocas.',
   'probe.done': '¡Rocas entregadas! Ahora reconecta con la Tierra para volver.',
   'alert.antennaFault': '¡La antena falló! Sin señal con la Tierra',

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '../core/audio';
 import { SCENES } from '../core/config';
 import { state } from '../core/state';
 import { drawStarfield } from '../core/starfield';
@@ -12,7 +13,6 @@ import type { DeathCause } from '../sim/types';
 import { taskProgress, type MissionSummary } from '../sim/simulation';
 import { icon } from '../core/icons';
 import { ACHIEVEMENT_ICON, MISSION_ICON, taskIcon } from '../core/iconMap';
-import { chapterFor, chapterMessage, chapterTitle } from '../data/chapters';
 import { ROCKS } from '../sim/finale';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
@@ -48,6 +48,7 @@ export class MissionReportScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setMood('menu');
     const r = state.lastResult;
     if (!r) {
       this.scene.start(SCENES.menu);
@@ -65,13 +66,6 @@ export class MissionReportScene extends Phaser.Scene {
       return `<li class="mn-check ${n >= t.count ? 'is-done' : ''}"><span class="mn-check__box" aria-hidden="true">${n >= t.count ? icon('check') : ''}</span>
         <span class="mn-check__text">${icon(taskIcon(t))}${esc(taskLabel(t))}</span><span class="mn-check__meta">${n}/${t.count}</span></li>`;
     }).join('');
-
-    // capítulo de «Laboratorio Chile»: llega al ganar una jornada (no en el entrenamiento)
-    const chapter = s.won && !r.training ? chapterFor(mission.id) : undefined;
-    const chapterHtml = chapter ? `<div class="report__chapter"><span class="mn-chip mn-chip--science">${t('chapter.label', { n: chapter.number })} · ${esc(chapterTitle(chapter))}</span>
-          <p class="mn-panel__body"><strong>${t('chapter.from')}:</strong> ${esc(chapterMessage(chapter))}</p>
-          <p class="report__source">${t('chapter.note')}</p>
-          <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="chapter" data-entry="${esc(chapter.entry)}">${icon('book')}${t('chapter.readReal')}</button></div>` : '';
 
     fadeIn(this);
     drawStarfield(this, 'report', !state.calm);
@@ -103,8 +97,6 @@ export class MissionReportScene extends Phaser.Scene {
         </div>
         <aside class="report__side">
           ${achievements}
-          ${chapterHtml}
-          ${s.won && s.stats.probe ? `<p class="body-sm report__chapter">${esc(t('report.probeEcho'))}</p>` : ''}
           ${r.training
             ? `<p class="mn-panel__body report__training">${t('report.training')}</p>
           <div class="report__buttons"><button class="mn-btn" data-action="select">${icon('play')}${t('tutorial.choose')}</button></div>`
@@ -123,8 +115,7 @@ export class MissionReportScene extends Phaser.Scene {
         }
         fadeTo(this, SCENES.select);
       })
-      .on('menu', () => fadeTo(this, SCENES.menu))
-      .on('chapter', (el) => fadeTo(this, SCENES.archive, 300, { from: SCENES.report, entry: el.dataset.entry }));
+      .on('menu', () => fadeTo(this, SCENES.menu));
     ui.focusFirst();
   }
 }

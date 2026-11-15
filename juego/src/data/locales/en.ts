@@ -711,7 +711,6 @@ export const en: Record<TKey, string> = {
   'hint.rover': 'Jump the craters and collect the rocks',
   'report.rocks': 'Lunar rocks',
   'report.cargo': 'Cargo delivered',
-  'report.probeEcho': 'Santiago here. The echo was the probe: its signal comes from very far and arrives late. Thanks for bringing the rocks. They will be studied on the ground; we do not know yet what they will say. [RECREATION]',
   'block.probeFirst': 'Call the probe and collect the rocks first.',
   'probe.done': 'Rocks delivered! Now reconnect with Earth to go home.',
   'alert.antennaFault': 'The antenna failed! No signal with Earth',

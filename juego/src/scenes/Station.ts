@@ -267,7 +267,7 @@ export class StationScene extends Phaser.Scene {
     const outside = !this.sim.sheltered;
     if (outside && this.sim.flareActive) add(DOOR_ASSET, 'Llamarada');
     else if (outside && incoming) add(DOOR_ASSET, `Llamarada en ${Math.ceil(incoming.inSec)} s`);
-    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'Oxígeno');
+    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'Traje');
     for (const asset of needs.keys()) if (this.guideTarget(asset)?.room === this.here) needs.delete(asset); // ya estás ahí
     if (this.sim.ended || PAUSING.has(this.overlay)) needs.clear();
 
@@ -663,7 +663,7 @@ export class StationScene extends Phaser.Scene {
         if (this.overlay === 'minigame') this.closeOverlay(); // se acabó el oxígeno limpiando: se cancela, sin costo ni efecto
         this.rescue();
         this.alert(`Se acabó el oxígeno del traje: la tripulación te rescató (−${ev.oxygenLost} O₂ de la estación).`, 'danger');
-        this.tip('Afuera el traje dura poco. Mira la barra de oxígeno y vuelve antes de que se vacíe.');
+        this.tip('Afuera el traje dura poco. Mira la barra del traje y vuelve antes de que se vacíe.');
         break;
       case 'gameOver':
       case 'missionComplete':
@@ -873,17 +873,17 @@ export class StationScene extends Phaser.Scene {
         <div class="hud__guides" data-guides aria-live="polite"></div>
         <div class="hud__left">
           <section class="hud__stats mn-panel" aria-label="Estado de la misión">
-            ${bar('energy', 'mn-bar--energy')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
+            ${bar('energy', 'mn-bar--energy')}${bar('oxygen', 'mn-bar--oxygen')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
           </section>
-          <section class="hud__suit mn-panel" data-suit hidden aria-label="Oxígeno">
-            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="Oxígeno" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
-              <span class="mn-bar__label">${icon('helmet')}Oxígeno</span>
+          <section class="hud__suit mn-panel" data-suit hidden aria-label="Aire del traje">
+            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="Aire del traje" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
+              <span class="mn-bar__label">${icon('helmet')}Traje</span>
               <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
               <span class="mn-bar__value" data-value></span>
             </div>
           </section>
-          <section class="hud__systems mn-panel" aria-label="Estado de los equipos">
-            ${system('oxygen', 'oxygen', 'Aire de la nave')}${system('panels', 'panel', 'Paneles solares')}${system('radio', 'antenna', 'Radio')}
+          <section class="hud__systems mn-panel" data-systems hidden aria-label="Equipos con problemas">
+            ${system('leak', 'oxygen', 'Reciclador')}${system('panels', 'panel', 'Paneles solares')}${system('radio', 'antenna', 'Radio')}
           </section>
         </div>
         <div class="hud__top-right">
@@ -936,7 +936,7 @@ export class StationScene extends Phaser.Scene {
 
   private renderHud(): void {
     const s = this.sim;
-    for (const key of ['energy', 'food', 'health', 'radiation'] as (keyof Resources)[]) {
+    for (const key of ['energy', 'oxygen', 'food', 'health', 'radiation'] as (keyof Resources)[]) {
       const v = Math.round(s.res[key]);
       const id = `res-${key}`;
       if (this.hudCache.get(id) === String(v)) continue;
@@ -971,21 +971,23 @@ export class StationScene extends Phaser.Scene {
     this.checkTutorial();
   }
 
-  /** Estado de los equipos bajo las stats: aire de la nave, paneles solares y radio. */
+  /** Equipos bajo las barras: cada fila aparece solo cuando algo falla (fuga, paneles, radio) o mientras llega el pronóstico. */
   private renderSystems(): void {
     const s = this.sim;
     const night = s.light === 0;
-    const rows: Record<string, { text: string; bad: boolean }> = {
-      oxygen: s.breach ? { text: 'Fuga', bad: true } : { text: `${Math.round(s.res.oxygen)}%`, bad: s.res.oxygen <= 20 },
-      panels: { text: night ? 'Sin sol' : `${Math.round(s.panelEfficiency * 100)}%`, bad: !s.panelsOk },
-      radio: { text: !s.radioOk ? 'Señal débil' : s.forecasted ? 'Con pronóstico' : 'Señal buena', bad: !s.radioOk },
+    const rows: Record<string, { text: string; bad: boolean; show: boolean }> = {
+      leak: { text: 'Fuga de aire', bad: true, show: !!s.breach },
+      panels: { text: night ? 'Sin sol' : `${Math.round(s.panelEfficiency * s.light * 100)}%`, bad: true, show: !s.panelsOk },
+      radio: { text: !s.radioOk ? 'Señal débil' : 'Con pronóstico', bad: !s.radioOk, show: !s.radioOk || s.forecasted },
     };
+    this.ui.q('[data-systems]').hidden = !Object.values(rows).some((r) => r.show);
     for (const [key, row] of Object.entries(rows)) {
       const id = `sys-${key}`;
-      const sig = `${row.text}|${row.bad}`;
+      const sig = `${row.text}|${row.bad}|${row.show}`;
       if (this.hudCache.get(id) === sig) continue;
       this.hudCache.set(id, sig);
       const el = this.ui.q(`[data-sys="${key}"]`);
+      el.hidden = !row.show;
       el.classList.toggle('is-bad', row.bad);
       (el.querySelector('[data-sys-state]') as HTMLElement).textContent = row.text;
     }
@@ -1002,23 +1004,18 @@ export class StationScene extends Phaser.Scene {
     fill.parentElement!.classList.toggle('is-critical', v <= SUIT_LOW);
   }
 
-  /**
-   * Barra de Oxígeno debajo de las stats: afuera muestra el del traje; adentro solo aparece si el oxígeno de la nave está bajo
-   * o hay una fractura, y entonces muestra el de la nave. Sin textos.
-   */
+  /** Barra del traje debajo de las stats: aparece al salir a la superficie y se esconde cuando vuelve a estar llena (el oxígeno de la nave es una de las 5 barras). */
   private renderSuit(): void {
     const s = this.sim;
-    const suitMode = this.zone === 'surface' || s.suit < 99.5;
-    const stationMode = !suitMode && (!!s.breach || s.res.oxygen <= 30);
     const panel = this.ui.q('[data-suit]');
-    panel.hidden = !suitMode && !stationMode;
+    panel.hidden = this.zone !== 'surface' && s.suit >= 99.5;
     if (panel.hidden) return;
-    const v = Math.round(suitMode ? s.suit : s.res.oxygen);
+    const v = Math.round(s.suit);
     const bar = this.ui.q('[data-suit-bar]');
     bar.setAttribute('aria-valuenow', String(v));
     (bar.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
-    this.setText('[data-suit-bar] [data-value]', suitMode ? `${Math.ceil(s.suitSecondsLeft)} s` : `${v}`);
-    bar.classList.toggle('is-critical', suitMode ? this.zone === 'surface' && v <= SUIT_LOW : v <= 20);
+    this.setText('[data-suit-bar] [data-value]', `${Math.ceil(s.suitSecondsLeft)} s`);
+    bar.classList.toggle('is-critical', this.zone === 'surface' && v <= SUIT_LOW);
   }
 
   private setText(sel: string, text: string): void {

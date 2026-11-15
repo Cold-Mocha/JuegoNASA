@@ -8,22 +8,39 @@ import { MISSIONS, archiveFor } from '../data/missions';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { ENTRIES } from '../data/encyclopedia';
 import type { DeathCause } from '../sim/types';
-import { taskProgress } from '../sim/simulation';
+import { taskProgress, type MissionSummary } from '../sim/simulation';
 import { icon } from '../core/icons';
 import { ACHIEVEMENT_ICON, MISSION_ICON, taskIcon } from '../core/iconMap';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
 
-/** Qué enseña cada final: el error se explica con la causa real, sin castigar. */
-const LESSONS: Record<DeathCause | 'won', { text: string; entry: string }> = {
-  oxygen: { text: 'Se acabó el oxígeno y la salud llegó a cero. Las máquinas de aire y las algas necesitan energía: si la energía falla, el oxígeno también.', entry: 'algae-oxygen' },
-  food: { text: 'Se acabó la comida y la salud llegó a cero. En una base real, el invernadero y las raciones se planifican con días de anticipación.', entry: 'algae-oxygen' },
-  mixed: { text: 'Faltaron varias cosas a la vez (oxígeno, comida o protección) y la salud llegó a cero. Revisar las barras con frecuencia evita que un problema arrastre a los otros.', entry: 'algae-oxygen' },
+/** Qué enseña cada final: el error se explica con la causa real, sin castigar. La victoria se cuenta con lo que hizo el jugador (ver `wonLesson`). */
+const LESSONS: Record<DeathCause, { text: string; entry: string }> = {
+  oxygen: { text: 'Se acabó el oxígeno y la tripulación necesitó volver. Las máquinas de aire y las algas necesitan energía: si la energía falla, el oxígeno también.', entry: 'algae-oxygen' },
+  food: { text: 'Se acabó la comida y la tripulación necesitó volver. En una base real, el invernadero y las raciones se planifican con días de anticipación.', entry: 'algae-oxygen' },
+  mixed: { text: 'Faltaron varias cosas a la vez (oxígeno, comida o protección) y la tripulación necesitó volver. Revisar las barras con frecuencia evita que un problema arrastre a los otros.', entry: 'algae-oxygen' },
   radiation: { text: 'La radiación acumulada fue demasiada. La Luna no tiene aire ni campo magnético que la protejan: por eso las bases tienen paredes gruesas. Dentro de la nave estás a salvo, y el pronóstico que se pide en Comunicaciones te da tiempo de volver.', entry: 'moon-radiation' },
   timeout: { text: 'Se acabó el plazo antes de terminar la investigación. Planear el orden de las tareas ahorra camino y tiempo, como hacen los equipos de misión.', entry: 'lunar-day' },
-  won: { text: 'Terminaste la investigación cuidando los recursos justo lo necesario para hacer ciencia de verdad en la Luna. Así trabajan los equipos de misión.', entry: 'donki' },
 };
+const WON_ENTRY = 'donki';
+
+const times = (n: number): string => (n === 1 ? '1 vez' : `${n} veces`);
+
+/** Lección de la victoria armada con las decisiones de esta partida: salidas, bicicleta, llamaradas y radiación. */
+function wonLesson(s: MissionSummary): string {
+  const by = s.stats.actionsBy;
+  const outings = (by.eva ?? 0) + (by.cleanDust ?? 0) + (by.cleanTestPanel ?? 0);
+  const flares = s.stats.shelteredFlares + s.stats.unshieldedFlares;
+  const parts = [`Terminaste la investigación en ${s.daysSurvived} ${s.daysSurvived === 1 ? 'día' : 'días'}.`];
+  if (outings) parts.push(`Saliste ${times(outings)} a trabajar en la superficie.`);
+  if (by.pedal) parts.push(`Pedaleaste ${times(by.pedal)} y cambiaste comida por energía.`);
+  if (flares) {
+    parts.push(`Pasaste ${s.stats.shelteredFlares} de ${flares} ${flares === 1 ? 'llamarada' : 'llamaradas'} con escudo: recibiste ${Math.round(s.stats.flareDose)} de radiación; afuera habrían sido ${Math.round(s.stats.flareDoseOutside)}.`);
+  }
+  parts.push(`Volviste con ${Math.round(s.resources.radiation)} % de radiación.`);
+  return parts.join(' ');
+}
 
 /** Fin de la jornada científica (investigación completa o no): tareas, puntaje, estrellas, logros y lo aprendido. */
 export class MissionReportScene extends Phaser.Scene {
@@ -39,7 +56,7 @@ export class MissionReportScene extends Phaser.Scene {
     }
     const mission = MISSIONS.find((m) => m.id === r.loadout.mission)!;
     const s = r.summary;
-    const lesson = LESSONS[s.won ? 'won' : (s.cause ?? 'timeout')];
+    const lesson = s.won ? { text: wonLesson(s), entry: WON_ENTRY } : LESSONS[s.cause ?? 'timeout'];
     const entry = ENTRIES.find((e) => e.id === lesson.entry)!;
     const week = archiveFor(mission);
 

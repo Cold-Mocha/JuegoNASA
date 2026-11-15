@@ -33,7 +33,7 @@ const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health'
 
 /** Avance de una tarea (0..count) según lo hecho: sirve en la partida y en el informe final. */
 export function taskProgress(t: TaskGoal, stats: SimStats): number {
-  const n = t.kind === 'action' ? (t.stage === 2 ? stats.stage2By : stats.actionsBy)[t.action] ?? 0 : stats.shelteredFlares;
+  const n = t.kind === 'action' ? (t.stage === 2 ? stats.stage2By : stats.actionsBy)[t.action] ?? 0 : t.kind === 'probe' ? stats.probe : stats.shelteredFlares;
   return Math.min(t.count, n);
 }
 
@@ -57,7 +57,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0 };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0, probe: 0, probeScore: 0, probeRocks: 0, probeCargo: 0 };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -126,6 +126,23 @@ export class Simulation {
   /** ¿Se terminaron las tareas de la investigación? Desde entonces cuentan las acciones de "Avisar a la Tierra" (etapa 2). */
   get stage2Unlocked(): boolean {
     return this.tasks.filter((t) => (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
+  }
+
+  /** La sonda se puede llamar cuando están hechas todas las demás tareas de la investigación (es la última de la etapa 1). */
+  get probeReady(): boolean {
+    if (this.ended || this.stats.probe) return false;
+    const probe = this.tasks.some((t) => t.kind === 'probe');
+    return probe && this.tasks.filter((t) => t.kind !== 'probe' && (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
+  }
+
+  /** Entrega de la sonda: `score` (0–1) solo cuenta para el puntaje; nunca se pierde por jugarla mal. */
+  completeProbe(score: number, rocks: number, cargo: number): void {
+    if (!this.probeReady) return;
+    this.stats.probe = 1;
+    this.stats.probeScore = Math.min(1, Math.max(0, score));
+    this.stats.probeRocks = rocks;
+    this.stats.probeCargo = cargo;
+    this.checkTasks();
   }
 
   /** Biofirmas: hay una muestra de hielo recogida que todavía no se analizó. */

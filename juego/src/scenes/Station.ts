@@ -44,6 +44,8 @@ import {
 } from '../core/miniGames';
 import { mountBiofirmas, mountDnaWorkshop } from '../core/dnaGame';
 import { DNA_MAX_BONUS, dnaBonus } from '../sim/dna';
+import { mountBelt, mountDelivery, mountRover, type BeltResult } from '../core/finaleGames';
+import { finaleScore } from '../sim/finale';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
@@ -290,6 +292,7 @@ export class StationScene extends Phaser.Scene {
     if (this.sim.breach) add(BREACH_GUIDE, 'wind');
     const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
     if (guide) add(guide, 'info');
+    if (this.sim.probeReady && this.tutorialIndex < 0) add('consola-antena', 'antenna'); // la sonda espera en la Antena
     const incoming = this.sim.incomingFlare;
     const outside = !this.sim.sheltered;
     let flareSecs: number | null = null; // cuenta de la llamarada junto a la Esclusa
@@ -537,8 +540,8 @@ export class StationScene extends Phaser.Scene {
   private updateMachines(): void {
     const base = PROP_SIZE / PROP_TEXTURE_SCALE;
     for (const m of this.machines) {
-      const want = !this.sim.ended && (m.prop.actions ?? []).some((a) => this.sim.available(a)
-        && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count && (t.stage !== 2 || this.sim.stage2Unlocked))));
+      const want = !this.sim.ended && ((m.prop.asset === 'consola-antena' && this.sim.probeReady) || (m.prop.actions ?? []).some((a) => this.sim.available(a)
+        && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count && (t.stage !== 2 || this.sim.stage2Unlocked)))));
       if (want === !!m.active) continue;
       m.active = want;
       m.sprite.setTexture(propKey(textureAsset(m.prop, want || !!m.prop.missions))); // los de la jornada mantienen el contorno
@@ -1013,6 +1016,32 @@ export class StationScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * La sonda (última tarea de la investigación): contacto por cables → cinturón de asteroides → alunizaje → rover lunar.
+   * Se maneja a distancia desde la Antena: el reloj se detiene (no es `outdoor`). Nunca se pierde: jugar mal solo baja el puntaje.
+   * Nota = 0,2 × contacto + 0,3 × cinturón + 0,5 × luna; las baterías y chips del cinturón dan tiempo y pistas al rover.
+   */
+  private runProbe(): void {
+    const hard = this.difficulty.id === 'comandante';
+    const seed = this.mission.id.length * 977 + this.sim.day;
+    let belt: BeltResult = { score: 0, batteries: 0, chips: 0, algae: 0, hull: 3 };
+    const rover = (): void => this.openFullMini({
+      hint: t('hint.rover'),
+      mount: (root, cb) => mountRover(root, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r) => {
+        this.sim.completeProbe(finaleScore(1, belt.score, r.score), r.rocks, belt.batteries + belt.chips + belt.algae);
+        cb.onDone(r.score);
+      } }),
+      finish: () => undefined,
+    });
+    const delivery = (): void => this.openFullMini({ hint: t('hint.delivery'), mount: (root, cb) => mountDelivery(root, () => cb.onDone()), finish: () => undefined, next: rover });
+    const asteroids = (): void => this.openFullMini({
+      hint: t('hint.belt'),
+      mount: (root, cb) => mountBelt(root, { hard, seed, calm: state.calm, onDone: (r) => { belt = r; cb.onDone(r.score); } }),
+      finish: () => undefined, next: delivery,
+    });
+    this.openFullMini({ hint: t('hint.probeContact'), mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: asteroids });
+  }
+
   /** Biofirmas: analizar una muestra de hielo ya recogida con tres pruebas independientes. Se juega afuera: el traje sigue gastando. */
   private openBioTestsGame(): void {
     this.openFullMini({
@@ -1161,6 +1190,7 @@ export class StationScene extends Phaser.Scene {
       .on('archive', () => this.openArchive())
       .on('read-entry', (el) => this.openArchive(el.dataset.entry))
       .on('dna', () => this.openDnaGame())
+      .on('call-probe', () => this.runProbe())
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
@@ -1435,6 +1465,8 @@ export class StationScene extends Phaser.Scene {
       <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="${t('common.close')}">${icon('close')}</button></div>
       <ul class="action-list">${items.join('')}</ul>
       ${m.prop.asset === 'rack-plantas' && this.tutorialIndex < 0 ? this.dnaHtml() : ''}
+      ${m.prop.asset === 'consola-antena' && this.sim.probeReady && this.tutorialIndex < 0 ? `<button class="mn-btn mn-btn--sm action__btn" data-action="call-probe">${icon('antenna')}${t('probe.call')}</button>
+      <p class="body-sm action__why">${t('probe.callWhy')}</p>` : ''}
       ${m.prop.entry ? `<p class="body-sm action__why">${t('poster.body')}</p>
       <button class="mn-btn mn-btn--sm action__btn" data-action="read-entry" data-entry="${esc(m.prop.entry)}">${icon('book')}${t('chapter.readReal')}</button>` : ''}`);
   }

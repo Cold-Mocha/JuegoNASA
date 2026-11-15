@@ -13,6 +13,7 @@ import { taskProgress, type MissionSummary } from '../sim/simulation';
 import { icon } from '../core/icons';
 import { ACHIEVEMENT_ICON, MISSION_ICON, taskIcon } from '../core/iconMap';
 import { chapterFor, chapterMessage, chapterTitle } from '../data/chapters';
+import { ROCKS } from '../sim/finale';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
@@ -90,6 +91,8 @@ export class MissionReportScene extends Phaser.Scene {
             <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.days')}</span><span class="mn-telemetry__value">${s.daysSurvived}/${s.days}</span></div>
             <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.shielded')}</span><span class="mn-telemetry__value">${s.stats.shelteredFlares}/${s.stats.shelteredFlares + s.stats.unshieldedFlares}</span></div>
             ${s.stats.dna ? `<div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.dna')}</span><span class="mn-telemetry__value">${Math.round(s.stats.dna * 100)} %</span></div>` : ''}
+            ${s.stats.probe ? `<div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.rocks')}</span><span class="mn-telemetry__value">${s.stats.probeRocks}/${ROCKS.length}</span></div>
+            <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.cargo')}</span><span class="mn-telemetry__value">${s.stats.probeCargo}</span></div>` : ''}
             ${s.stats.bioTests ? `<div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.bio')}</span><span class="mn-telemetry__value">${s.stats.bioTests}</span></div>` : ''}
           </div>
           ${r.newBest ? `<p class="heading report__best">${t('report.best')}</p>` : ''}
@@ -101,6 +104,7 @@ export class MissionReportScene extends Phaser.Scene {
         <aside class="report__side">
           ${achievements}
           ${chapterHtml}
+          ${s.won && s.stats.probe ? `<p class="body-sm report__chapter">${esc(t('report.probeEcho'))}</p>` : ''}
           ${r.training
             ? `<p class="mn-panel__body report__training">${t('report.training')}</p>
           <div class="report__buttons"><button class="mn-btn" data-action="select">${icon('play')}${t('tutorial.choose')}</button></div>`

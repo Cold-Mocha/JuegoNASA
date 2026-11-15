@@ -14,9 +14,9 @@ import { dateLocale, t } from '../core/i18n';
 export type MissionId = 'huerto-lunar' | 'paneles-solares' | 'hielo-lunar';
 
 export type TaskId =
-  | 'huerto-luces' | 'huerto-cosecha' | 'huerto-polvo' | 'huerto-datos'
-  | 'paneles-prueba' | 'paneles-polvo' | 'paneles-cosecha' | 'paneles-datos'
-  | 'hielo-muestras' | 'hielo-polvo' | 'hielo-cosecha' | 'hielo-datos';
+  | 'huerto-luces' | 'huerto-cosecha' | 'huerto-polvo' | 'huerto-sonda' | 'huerto-datos'
+  | 'paneles-prueba' | 'paneles-polvo' | 'paneles-cosecha' | 'paneles-sonda' | 'paneles-datos'
+  | 'hielo-muestras' | 'hielo-polvo' | 'hielo-cosecha' | 'hielo-sonda' | 'hielo-datos';
 
 /** Tarea de una investigación; su texto para el jugador está en los diccionarios (`taskLabel`). */
 export type ResearchTask = TaskGoal & { id: TaskId };
@@ -35,6 +35,8 @@ export interface Mission {
 export const MISSION_DAYS = 7;
 
 const act = (id: TaskId, action: ActionId, count: number, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, stage });
+/** La sonda: última tarea de la investigación (se llama desde la Antena cuando las demás están hechas). */
+const probe = (id: TaskId): ResearchTask => ({ id, kind: 'probe', count: 1 });
 
 /**
  * Textos de una jornada: nombre, pregunta que responde, qué hay que hacer (para niños), semana real del Sol que se vive de fondo,
@@ -58,6 +60,7 @@ export const MISSIONS: Mission[] = [
       act('huerto-luces', 'growLights', 3),
       act('huerto-cosecha', 'harvest', 1),
       act('huerto-polvo', 'cleanDust', 1),
+      probe('huerto-sonda'),
       act('huerto-datos', 'tellEarth', 1, 2),
     ],
   },
@@ -68,6 +71,7 @@ export const MISSIONS: Mission[] = [
       act('paneles-prueba', 'cleanTestPanel', 3),
       act('paneles-polvo', 'cleanDust', 1),
       act('paneles-cosecha', 'harvest', 1),
+      probe('paneles-sonda'),
       act('paneles-datos', 'tellEarth', 1, 2),
     ],
   },
@@ -78,13 +82,14 @@ export const MISSIONS: Mission[] = [
       act('hielo-muestras', 'eva', 2),
       act('hielo-polvo', 'cleanDust', 1),
       act('hielo-cosecha', 'harvest', 1),
+      probe('hielo-sonda'),
       act('hielo-datos', 'tellEarth', 1, 2),
     ],
   },
 ];
 
 /** Sala donde se avanza una tarea (para guiar al jugador). */
-export const taskRoom = (t: TaskGoal): RoomId => (t.kind === 'action' ? ACTIONS[t.action].room : t.kind === 'shelter' ? 'esclusa' : 'exterior');
+export const taskRoom = (t: TaskGoal): RoomId => (t.kind === 'action' ? ACTIONS[t.action].room : t.kind === 'shelter' ? 'esclusa' : 'exterior'); // la sonda se llama desde la Antena, afuera
 
 export const archiveFor = (m: Mission): ArchivedWeek => {
   const week = DONKI_ARCHIVE.find((w) => w.id === m.archiveId);

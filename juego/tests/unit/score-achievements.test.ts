@@ -7,7 +7,7 @@ import { ACHIEVEMENT_IDS } from '../../src/data/achievements';
 const base: MissionSummary = {
   won: true, cause: null, daysSurvived: 5, days: 7, tasksDone: 3, tasksTotal: 3,
   resources: { energy: 40, oxygen: 40, food: 40, health: 90, radiation: 20 },
-  stats: { shelteredFlares: 2, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 3, antennaAligns: 1, actions: 20, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0 },
+  stats: { shelteredFlares: 2, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 3, antennaAligns: 1, actions: 20, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0, probe: 0, probeScore: 0, probeRocks: 0, probeCargo: 0 },
 };
 
 describe('puntaje y estrellas', () => {
@@ -41,7 +41,7 @@ describe('logros científicos', () => {
 
   it('una partida sin acciones no entrega logros', () => {
     const empty: MissionSummary = { ...base, won: false, daysSurvived: 2,
-      stats: { shelteredFlares: 0, unshieldedFlares: 1, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0 } };
+      stats: { shelteredFlares: 0, unshieldedFlares: 1, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0, probe: 0, probeScore: 0, probeRocks: 0, probeCargo: 0 } };
     expect(earnedAchievements(empty)).toEqual([]);
   });
 });

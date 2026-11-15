@@ -45,6 +45,7 @@ export interface SolarEvent {
 export type TaskGoal = (
   | { id: string; kind: 'action'; action: ActionId; count: number }
   | { id: string; kind: 'shelter'; count: number }
+  | { id: string; kind: 'probe'; count: number } // la sonda: contacto, cinturón de asteroides, alunizaje y rover
 ) & {
   /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra": solo cuenta lo hecho después de terminar todas las de la etapa 1. */
   stage?: 1 | 2;
@@ -107,4 +108,9 @@ export interface SimStats {
   /** Biofirmas: muestras de hielo analizadas y suma de sus notas (0–1 cada una). */
   bioTests: number;
   bioScore: number;
+  /** La sonda: 1 cuando se entregó; su nota (0–1), rocas lunares recogidas (de 8) y carga traída del cinturón. */
+  probe: number;
+  probeScore: number;
+  probeRocks: number;
+  probeCargo: number;
 }

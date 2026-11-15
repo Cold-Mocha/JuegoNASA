@@ -19,7 +19,7 @@ export const ROOM_ICON: Record<RoomId, IconName> = {
   invernadero: 'sprout', exterior: 'moon',
 };
 
-export const taskIcon = (t: TaskGoal): IconName => (t.kind === 'action' ? ACTION_ICON[t.action] : 'shield');
+export const taskIcon = (t: TaskGoal): IconName => (t.kind === 'action' ? ACTION_ICON[t.action] : t.kind === 'probe' ? 'antenna' : 'shield');
 
 export const MISSION_ICON: Record<MissionId, IconName> = {
   'huerto-lunar': 'sprout', 'paneles-solares': 'panel', 'hielo-lunar': 'snowflake',

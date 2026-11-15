@@ -4,6 +4,8 @@ import { state } from '../core/state';
 import { FONT_DISPLAY, FONT_MONO, tokenColor, tokenCss } from '../core/theme';
 import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
+import { UiLayer } from '../core/ui';
+import { icon } from '../core/icons';
 import { queueStationAssets } from '../data/preload';
 import { addSvgTexture, michiSvg } from '../core/art';
 import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
@@ -65,6 +67,8 @@ interface Gull {
 export class LaunchLoadingScene extends Phaser.Scene {
   private ready = false;
   private done = false;
+  /** El jugador pidió saltar el despegue: se llega a la estación apenas termine la carga. */
+  private skip = false;
   private calm = false;
   private light = false;
   private speed = 1;
@@ -152,12 +156,13 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.queue = LAUNCH_SCRIPT.map((l) => ({ ...l }));
 
     this.startLoading(loadout);
+    this.bindSkip();
     this.ready = true;
   }
 
   private resetRun(): void {
     Object.assign(this, {
-      ready: false, done: false, clock: 0, loadProgress: 0, queue: [], lineText: '', typed: 0, lineDone: true, heldMs: 0,
+      ready: false, done: false, skip: false, clock: 0, loadProgress: 0, queue: [], lineText: '', typed: 0, lineDone: true, heldMs: 0,
       lastCount: -1, layerShown: 0, ignited: false, lifted: false, camOff: 0, prevTarget: 0, thrust: 0, flashTimer: 0,
       rumbleTimer: 0, trailStopped: false, smokeStopped: false,
       arms: [], gulls: [], crowd: [], flashes: [], emIgnition: [], emBooster: [], emSmoke: [], emTrail: null, ui: [],
@@ -526,7 +531,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.stepGulls(t);
     this.stepPress(delta);
 
-    if (t >= END_MS && this.loadProgress >= 1 && !this.done) this.arrive();
+    if ((t >= END_MS || this.skip) && this.loadProgress >= 1 && !this.done) this.arrive();
   }
 
   /** Eventos únicos: encendido (T-6) y despegue (T-0). */
@@ -781,6 +786,16 @@ export class LaunchLoadingScene extends Phaser.Scene {
   }
 
   // ───────────────────────── Salida ─────────────────────────
+
+  /** El despegue se puede saltar con clic, Espacio, Esc o el botón (igual al de la historia). Si la carga no terminó, se espera a que termine. */
+  private bindSkip(): void {
+    const ui = new UiLayer(this, `<button class="mn-btn mn-btn--secondary mn-btn--sm story__skip launch__skip" data-action="skip">${icon('skip')}Saltar</button>`, 'screen screen--clear');
+    const request = (): void => void (this.skip = true);
+    ui.on('skip', request);
+    this.input.on('pointerdown', request);
+    this.input.keyboard?.on('keydown-SPACE', request);
+    this.input.keyboard?.on('keydown-ESC', request);
+  }
 
   private arrive(): void {
     this.done = true;

@@ -84,7 +84,7 @@ export class MissionReportScene extends Phaser.Scene {
           </div>
         </aside>
       </div>`);
-    ui.on('retry', () => fadeTo(this, SCENES.launch))
+    ui.on('retry', () => fadeTo(this, SCENES.station)) // reintentar va directo a la estación: el despegue ya se vio
       .on('select', () => fadeTo(this, SCENES.select))
       .on('menu', () => fadeTo(this, SCENES.menu));
     ui.focusFirst();

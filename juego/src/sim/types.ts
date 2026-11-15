@@ -7,9 +7,9 @@ export type RoomId = 'soporte' | 'puente' | 'enfermeria' | 'comunicaciones' | 'e
  */
 export type Zone = 'ship' | 'greenhouse' | 'surface';
 
-/** Acciones de las máquinas. `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
+/** Acciones de las máquinas. `forecast` pide el pronóstico solar a la Tierra (responde con demora). `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
 export type ActionId =
-  | 'repairAntenna' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
+  | 'repairAntenna' | 'forecast' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
 
 /**
  * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).
@@ -47,7 +47,7 @@ export type TaskGoal = (
   | { id: string; kind: 'science'; count: number }
   | { id: string; kind: 'shelter'; count: number }
 ) & {
-  /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra", disponible solo cuando se terminan todas las de la etapa 1. */
+  /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra": solo cuenta lo hecho después de terminar todas las de la etapa 1. */
   stage?: 1 | 2;
 };
 
@@ -71,6 +71,7 @@ export type SimEvent =
   | { type: 'flareEnd'; event: SolarEvent; dose: number; total: number } // total: lo que habría recibido afuera, sin protección
   | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> & { science?: number } }
   | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
+  | { type: 'actionResolved'; action: ActionId; message: 'forecast'; flares: number } // flares: llamaradas que quedan por venir
   | { type: 'critical'; resource: keyof Resources }
   | { type: 'breachOpened'; room: RoomId }
   | { type: 'breachRepaired' }
@@ -86,7 +87,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'ended';
 }
 
 export interface SimStats {
@@ -98,4 +99,6 @@ export interface SimStats {
   antennaAligns: number;
   actions: number;
   actionsBy: Partial<Record<ActionId, number>>;
+  /** Acciones hechas con la investigación ya terminada: son las que cuentan para las tareas de la etapa 2. */
+  stage2By: Partial<Record<ActionId, number>>;
 }

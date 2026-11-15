@@ -48,7 +48,7 @@ export const PANEL_REGEN_PER_DAY = 9; // de día sobran 4 por jornada; de noche 
 /** Degradación de la antena por jornada (rango; se sortea con la semilla). */
 export const ANTENNA_DRIFT_PER_DAY: readonly [number, number] = [0.12, 0.2];
 
-/** Bajo este enlace (60 %) no llegan el pronóstico ni los envíos. */
+/** Bajo este enlace (60 %) no llega el pronóstico solar: no se puede pedir y, si ya se tenía, deja de adelantar los avisos. */
 export const LINK_MIN_RADIO = 0.6;
 
 /** Ida y vuelta de una señal Tierra–Luna (384 400 km / c ≈ 1,28 s por sentido). */
@@ -95,6 +95,7 @@ export interface ActionRule {
 
 export const ACTIONS: Record<ActionId, ActionRule> = {
   repairAntenna: { room: 'comunicaciones', cost: { energy: -5 }, gain: {}, delayed: true },
+  forecast:     { room: 'comunicaciones', cost: { energy: -3 }, gain: {}, delayed: true }, // pronóstico solar: los avisos de llamarada llegan antes mientras la radio funcione
   growLights:   { room: 'invernadero', cost: { energy: -7 }, gain: { oxygen: 6, food: 4 } }, // + GROW_LIGHTS_AT_DUSK al cierre de la jornada
   harvest:      { room: 'invernadero', cost: { energy: -3 }, gain: { food: 20 } },            // × lo cosechado en el minijuego
   cleanDust:    { room: 'exterior', cost: { energy: -2, radiation: 2 }, gain: {} },

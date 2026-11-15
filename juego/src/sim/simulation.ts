@@ -33,7 +33,7 @@ const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health'
 
 /** Avance de una tarea (0..count) según lo hecho: sirve en la partida y en el informe final. */
 export function taskProgress(t: TaskGoal, stats: SimStats, science: number): number {
-  const n = t.kind === 'action' ? stats.actionsBy[t.action] ?? 0 : t.kind === 'science' ? science : stats.shelteredFlares;
+  const n = t.kind === 'action' ? (t.stage === 2 ? stats.stage2By : stats.actionsBy)[t.action] ?? 0 : t.kind === 'science' ? science : stats.shelteredFlares;
   return Math.min(t.count, n);
 }
 
@@ -58,7 +58,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {}, stage2By: {} };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -78,6 +78,8 @@ export class Simulation {
   private suitWarned = false;
   private panelsWereOk = true;
   private stageAnnounced = false;
+  /** El pronóstico solar ya se pidió a la Tierra (vale por el resto de la jornada científica). */
+  private forecastOn = false;
   /** Sala donde hay una fractura (el oxígeno no se regenera, ni en la nave ni en el traje) o null. */
   breach: RoomId | null = null;
 
@@ -121,14 +123,9 @@ export class Simulation {
     return taskProgress(t, this.stats, this.science);
   }
 
-  /** ¿Se terminaron las tareas de la investigación? Entonces se desbloquea "Avisar a la Tierra" (etapa 2). */
+  /** ¿Se terminaron las tareas de la investigación? Desde entonces cuentan las acciones de "Avisar a la Tierra" (etapa 2). */
   get stage2Unlocked(): boolean {
     return this.tasks.filter((t) => (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
-  }
-
-  /** La acción pertenece a una tarea de la etapa 2 que todavía no está disponible. */
-  private stageLocked(action: ActionId): boolean {
-    return !this.stage2Unlocked && this.tasks.some((t) => t.stage === 2 && t.kind === 'action' && t.action === action);
   }
 
   get tasksDone(): number {
@@ -160,6 +157,16 @@ export class Simulation {
     return this.comp.antenna >= LINK_MIN_RADIO;
   }
 
+  /** El pronóstico llega solo con buena señal: con la antena débil los avisos vuelven a ser tardíos hasta repararla. */
+  get forecasted(): boolean {
+    return this.forecastOn && this.radioOk;
+  }
+
+  /** El pronóstico ya se pidió (aunque ahora no llegue por la señal). */
+  get forecastRequested(): boolean {
+    return this.forecastOn;
+  }
+
   /** Dentro de la nave las paredes frenan la radiación. */
   get sheltered(): boolean {
     return this.zone === 'ship';
@@ -178,7 +185,7 @@ export class Simulation {
   available(action: ActionId): boolean {
     if (this.ended) return false;
     if (action === 'repair' && !this.breach) return false;
-    if (this.stageLocked(action)) return false;
+    if (action === 'forecast' && (this.forecastOn || !this.radioOk)) return false;
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
     if (this.dailyLimitReached(action)) return false;
     const d = this.preview(action);
@@ -206,6 +213,7 @@ export class Simulation {
       case 'cleanDust': return this.comp.dust > 0.05;
       case 'cleanTestPanel': return this.testDirty;
       case 'repairAntenna': return this.comp.antenna < 0.95;
+      case 'forecast': return !this.forecastOn;
       default: return true;
     }
   }
@@ -251,7 +259,8 @@ export class Simulation {
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
-    if (this.stageLocked(action)) return { ok: false, reason: 'locked' };
+    if (action === 'forecast' && this.forecastOn) return { ok: false, reason: 'forecastOn' };
+    if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
     if (!this.needsCleaning(action)) return { ok: false, reason: 'clean' };
     if (this.dailyLimitReached(action)) return { ok: false, reason: action === 'eva' ? 'evaDone' : 'doneToday' };
     return { ok: true };
@@ -270,6 +279,7 @@ export class Simulation {
       const prev = this.doneToday.get(action);
       this.doneToday.set(action, { day: this.day, n: (prev?.day === this.day ? prev.n : 0) + 1 });
     }
+    if (this.stage2Unlocked) this.stats.stage2By[action] = (this.stats.stage2By[action] ?? 0) + 1; // antes de terminar la investigación no cuenta como aviso
     this.stats.actions++;
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 
@@ -387,8 +397,8 @@ export class Simulation {
     // aviso previo: con pronóstico llega antes
     while (this.warned < events.length) {
       const e = events[this.warned];
-      const forecasted = false;
-      const lead = FLARE_WARNING_SEC.unforecasted;
+      const forecasted = this.forecasted;
+      const lead = forecasted ? FLARE_WARNING_SEC.forecasted : FLARE_WARNING_SEC.unforecasted;
       if (this.time < this.eventTime(e) - lead) break;
       this.warned++;
       this.events.push({ type: 'flareWarning', event: e, inSec: Math.max(0, this.eventTime(e) - this.time), forecasted });
@@ -396,7 +406,7 @@ export class Simulation {
     while (this.fired < events.length && this.time >= this.eventTime(events[this.fired])) {
       const event = events[this.fired++];
       this.active.push({ event, remaining: FLARE_DURATION_SEC, total: flareDose(event.classType, event.sep), received: 0 });
-      this.events.push({ type: 'flareStart', event, forecasted: false });
+      this.events.push({ type: 'flareStart', event, forecasted: this.forecasted });
     }
     for (const f of this.active) {
       const secs = Math.min(dt, f.remaining);
@@ -449,6 +459,9 @@ export class Simulation {
         this.comp.antenna = 1;
         this.stats.antennaAligns++;
         this.events.push({ type: 'actionResolved', action: p.action, message: 'linkRestored' });
+      } else if (p.action === 'forecast') {
+        this.forecastOn = true;
+        this.events.push({ type: 'actionResolved', action: p.action, message: 'forecast', flares: this.config.events.length - this.fired });
       }
     }
   }
@@ -542,7 +555,7 @@ export class Simulation {
       tasksDone: this.tasksDone,
       tasksTotal: this.tasks.length,
       resources: { ...this.res },
-      stats: { ...this.stats, actionsBy: { ...this.stats.actionsBy } },
+      stats: { ...this.stats, actionsBy: { ...this.stats.actionsBy }, stage2By: { ...this.stats.stage2By } },
     };
   }
 }

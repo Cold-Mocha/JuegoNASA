@@ -497,7 +497,7 @@ export class StationScene extends Phaser.Scene {
     const base = PROP_SIZE / PROP_TEXTURE_SCALE;
     for (const m of this.machines) {
       const want = !this.sim.ended && (m.prop.actions ?? []).some((a) => this.sim.available(a)
-        && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count)));
+        && (this.sim.useful(a) || this.sim.tasks.some((t) => t.kind === 'action' && t.action === a && this.sim.taskProgress(t) < t.count && (t.stage !== 2 || this.sim.stage2Unlocked))));
       if (want === !!m.active) continue;
       m.active = want;
       m.sprite.setTexture(propKey(textureAsset(m.prop, want || !!m.prop.missions))); // los de la jornada mantienen el contorno
@@ -567,7 +567,7 @@ export class StationScene extends Phaser.Scene {
         audio.play('radio');
         const where = !this.sim.sheltered ? '¡Vuelve a la nave!' : this.sim.res.energy > 0 ? 'Estás dentro de la nave: el blindaje va a gastar energía.' : 'Sin energía, el blindaje protege la mitad.';
         this.alert(`⚠ Llamarada ${flareName(ev.event.classType)} en ${Math.ceil(ev.inSec)} s. ${where}`, 'danger');
-        if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en el Puente, el aviso llega mucho antes.');
+        if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en Comunicaciones, el aviso llega mucho antes.');
         break;
       }
       case 'flareStart': {
@@ -577,7 +577,7 @@ export class StationScene extends Phaser.Scene {
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
         this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);
         if (!state.calm) this.tweens.add({ targets: this.flareTint, alpha: 0.06, duration: 800, yoyo: true, repeat: Math.floor(FLARE_DURATION_SEC / 1.6) });
-        if (!this.sim.sheltered) this.tip(ev.forecasted ? '¡La llamarada del pronóstico! Entra a la nave lo antes posible.' : 'Una llamarada sin aviso. Con el pronóstico del Puente habrías tenido tiempo de volver a la nave.');
+        if (!this.sim.sheltered) this.tip(ev.forecasted ? '¡La llamarada del pronóstico! Entra a la nave lo antes posible.' : 'Llegó casi sin aviso. Con el pronóstico de Comunicaciones habrías tenido tiempo de volver a la nave.');
         break;
       }
       case 'flareEnd':
@@ -597,6 +597,9 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'actionResolved':
         audio.play('radio');
+        if (ev.message === 'forecast') {
+          this.alert(ev.flares ? `Pronóstico de la Tierra: ${ev.flares === 1 ? 'viene 1 llamarada' : `vienen ${ev.flares} llamaradas`}. Te avisaremos 25 segundos antes de cada una.` : 'Pronóstico de la Tierra: el Sol está tranquilo. No se esperan llamaradas.', 'ok');
+        }
         break;
       case 'stageUnlocked':
         audio.play('achievement');
@@ -971,7 +974,7 @@ export class StationScene extends Phaser.Scene {
     const rows: Record<string, { text: string; bad: boolean }> = {
       oxygen: s.breach ? { text: 'Fuga', bad: true } : { text: `${Math.round(s.res.oxygen)}%`, bad: s.res.oxygen <= 20 },
       panels: { text: night ? 'Sin sol' : `${Math.round(s.panelEfficiency * 100)}%`, bad: !s.panelsOk },
-      radio: { text: s.radioOk ? 'Señal buena' : 'Señal débil', bad: !s.radioOk },
+      radio: { text: !s.radioOk ? 'Señal débil' : s.forecasted ? 'Con pronóstico' : 'Señal buena', bad: !s.radioOk },
     };
     for (const [key, row] of Object.entries(rows)) {
       const id = `sys-${key}`;
@@ -1302,7 +1305,7 @@ export class StationScene extends Phaser.Scene {
   }
 }
 
-const ACTIONS_DELAYED = new Set<ActionId>(['repairAntenna']);
+const ACTIONS_DELAYED = new Set<ActionId>(['repairAntenna', 'forecast']);
 /** Sala que repara cada recurso crítico (avisos en los bordes). */
 const GUIDE_ASSET: Record<Exclude<keyof Resources, 'radiation'>, string> = {
   energy: 'estacion-limpieza', oxygen: 'reciclador-aire', food: 'rack-plantas', health: 'camilla-medica',

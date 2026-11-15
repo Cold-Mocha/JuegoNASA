@@ -63,7 +63,7 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   comunicaciones: {
     id: 'comunicaciones', name: 'Comunicaciones',
-    props: [machine('consola-antena', 355, 72, ['repairAntenna'], 'Antena de la Tierra'),
+    props: [machine('consola-antena', 355, 72, ['repairAntenna', 'forecast'], 'Antena de la Tierra'),
       deco('casillero', 62, 62), wall('extintor', 140, 12),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 400, 350)],
   },

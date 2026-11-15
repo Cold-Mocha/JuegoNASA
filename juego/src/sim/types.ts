@@ -1,5 +1,5 @@
 /** Tipos de la simulación. Este módulo y todo `src/sim/` es TypeScript puro: sin Phaser ni DOM. */
-export type RoomId = 'soporte' | 'puente' | 'enfermeria' | 'comunicaciones' | 'esclusa' | 'invernadero' | 'exterior';
+export type RoomId = 'soporte' | 'puente' | 'enfermeria' | 'esclusa' | 'invernadero' | 'exterior';
 
 /**
  * Dónde está el michi: dentro de la nave (protegido de las llamaradas, el traje se recarga), en el invernadero
@@ -9,7 +9,7 @@ export type Zone = 'ship' | 'greenhouse' | 'surface';
 
 /** Acciones de las máquinas. `forecast` pide el pronóstico solar a la Tierra (responde con demora). `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
 export type ActionId =
-  | 'repairAntenna' | 'forecast' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
+  | 'repairAntenna' | 'tellEarth' | 'forecast' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
 
 /**
  * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).
@@ -40,11 +40,10 @@ export interface SolarEvent {
 
 /**
  * Tarea de una investigación (jornada científica). Se cumple al llegar a `count`:
- * - action: veces que se hizo una acción; science: puntos de ciencia; shelter: llamaradas pasadas dentro de la nave.
+ * - action: veces que se hizo una acción; shelter: llamaradas pasadas dentro de la nave.
  */
 export type TaskGoal = (
   | { id: string; kind: 'action'; action: ActionId; count: number }
-  | { id: string; kind: 'science'; count: number }
   | { id: string; kind: 'shelter'; count: number }
 ) & {
   /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra": solo cuenta lo hecho después de terminar todas las de la etapa 1. */
@@ -68,8 +67,9 @@ export type SimEvent =
   | { type: 'dayStart'; day: number; light: number }
   | { type: 'flareWarning'; event: SolarEvent; inSec: number; forecasted: boolean }
   | { type: 'flareStart'; event: SolarEvent; forecasted: boolean }
-  | { type: 'flareEnd'; event: SolarEvent; dose: number; total: number } // total: lo que habría recibido afuera, sin protección
-  | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> & { science?: number } }
+  | { type: 'flareHit'; dose: number } // la llamarada te encontró afuera: radiación de golpe
+  | { type: 'flareEnd'; event: SolarEvent; dose: number; total: number; exposed: boolean } // total: lo que habría recibido afuera; exposed: te encontró afuera
+  | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> }
   | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
   | { type: 'actionResolved'; action: ActionId; message: 'forecast'; flares: number } // flares: llamaradas que quedan por venir
   | { type: 'critical'; resource: keyof Resources }
@@ -79,7 +79,7 @@ export type SimEvent =
   | { type: 'panelsFailing' }
   | { type: 'panelsRestored' }
   | { type: 'suitLow' }
-  | { type: 'suitEmpty'; oxygenLost: number }
+  | { type: 'suitEmpty'; oxygenLost: number; healthLost: number }
   | { type: 'taskDone'; id: string }
   | { type: 'stageUnlocked' }
   | { type: 'gameOver'; cause: DeathCause }
@@ -87,7 +87,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'repairFirst' | 'ended';
 }
 
 export interface SimStats {

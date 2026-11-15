@@ -14,9 +14,11 @@ import { DIFFICULTY_ICON } from '../core/iconMap';
 import { MICHI_ANIMS, type MichiAnim } from '../data/preload';
 import { t } from '../core/i18n';
 
-interface Option { id: string; title: string; subtitle: string; body: string; art: string; chips?: string[]; }
+interface Option { id: string; title: string; subtitle: string; body: string; art: string; chips?: string[]; wins?: number; }
 interface Step { key: 'mission' | 'character' | 'difficulty'; label: string; options: Option[]; }
 
+const ARROW_LEFT = '<svg class="mn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ARROW_RIGHT = ARROW_LEFT.replace('M15 5l-7 7 7 7', 'M9 5l7 7-7 7');
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
 
@@ -25,6 +27,9 @@ const ACTION_EVERY_MS = 8000;
 const PREVIEW_ACTIONS: { anim: MichiAnim; sec: number }[] = [
   { anim: 'walk', sec: 2.4 }, { anim: 'use', sec: 2.4 }, { anim: 'smile', sec: 2.4 }, { anim: 'blink', sec: 1.5 },
 ];
+
+/** «Ganada 3 veces»: cuántas veces se pasó esa investigación o dificultad. */
+const winsText = (n: number): string => (n === 0 ? t('select.wins.none') : t(n === 1 ? 'select.wins.one' : 'select.wins.many', { n }));
 
 /** «Casa» se desbloquea al ganar las tres jornadas. */
 const casaUnlocked = (): boolean => MISSIONS.every((m) => (state.progress.best[m.id]?.stars ?? 0) >= 1);
@@ -70,12 +75,13 @@ export class SelectScene extends Phaser.Scene {
           return {
             id: m.id, title: missionText(m.id, 'name'), subtitle: missionText(m.id, 'question'), body: missionText(m.id, 'brief'),
             art: missionArtSvg(m.id, tokenCss(m.accent)),
+            wins: state.progress.wins?.missions[m.id] ?? 0,
             chips: [t('select.tasks', { n: m.tasks.length }), t('select.new', { name: missionText(m.id, 'newObject') }), t(flares === 1 ? 'select.flares.one' : 'select.flares.many', { n: flares }), ...(best ? ['★'.repeat(best.stars)] : [])],
           };
         }),
           ...(casaUnlocked() ? [{
             id: 'casa', title: t('casa.name'), subtitle: t('casa.subtitle'), body: t('casa.body'),
-            art: CASA_ART, chips: [t('casa.phases'), ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
+            art: CASA_ART, wins: state.progress.wins?.missions.casa ?? 0, chips: [t('casa.phases'), ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
           }] : []),
         ],
       },
@@ -83,6 +89,7 @@ export class SelectScene extends Phaser.Scene {
         key: 'difficulty', label: t('select.step.difficulty'),
         options: DIFFICULTIES.map((d) => ({
           id: d.id, title: difficultyName(d.id), subtitle: '', body: difficultyDescription(d.id), // las estrellas ya dicen el nivel
+          wins: state.progress.wins?.difficulties[d.id] ?? 0,
           art: `<div class="option__icon">${icon(DIFFICULTY_ICON[d.id])}</div><div class="mn-stars">${STAR.repeat(d.stars)}${STAR_OFF.repeat(3 - d.stars)}</div>`,
         })),
       },
@@ -103,10 +110,17 @@ export class SelectScene extends Phaser.Scene {
     this.ui
       .on('pick', (el) => this.pick(el.dataset.id!))
       .on('back', () => (this.step === 0 ? fadeTo(this, SCENES.menu) : this.render(this.step - 1)))
-      .on('next', () => this.next());
+      .on('next', () => this.next())
+      .on('crew-prev', () => this.cycleCrew(-1))
+      .on('crew-next', () => this.cycleCrew(1));
 
     // Navegación con flechas entre tarjetas (teclado / mando mapeado a flechas)
     this.ui.el.addEventListener('keydown', (ev) => {
+      if (this.steps[this.step].key === 'character' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) {
+        this.cycleCrew(ev.key === 'ArrowRight' ? 1 : -1);
+        ev.preventDefault();
+        return;
+      }
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
       const cards = [...this.ui.el.querySelectorAll<HTMLElement>('.option')];
       const i = cards.indexOf(document.activeElement as HTMLElement);
@@ -134,21 +148,18 @@ export class SelectScene extends Phaser.Scene {
     grid.classList.toggle('is-roster', step.key === 'character');
     grid.classList.toggle('is-compact', step.key === 'difficulty');
     if (step.key === 'character') {
-      // michis en vertical a la izquierda y, al lado, el michi completo haciendo cosas
-      const cards = step.options.map((o) => `
-        <button class="option option--row" role="radio" aria-checked="${this.picks.character === o.id}" data-action="pick" data-id="${esc(o.id)}">
-          <div class="option__art">${o.art}</div>
-          <span class="option__text">
-            <span class="title option__title">${esc(o.title)}</span>
-            <span class="heading option__subtitle">${esc(o.subtitle)}</span>
-            <span class="body-sm option__body">${esc(o.body)}</span>
-          </span>
-        </button>`).join('');
-      grid.innerHTML = `<div class="roster">${cards}</div>
-        <aside class="preview mn-panel" aria-label="${t('select.preview')}">
-          <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="${t('select.sprite')}"></div></div>
-        </aside>`;
-      this.startPreview((this.picks.character as CharacterId | null) ?? CHARACTERS[0].id);
+      // el michi arriba, con una flecha a cada lado; debajo, nombre, rol y descripción de la criatura elegida
+      const dots = step.options.map((o) => `<i class="picker__dot" data-dot="${esc(o.id)}"></i>`).join('');
+      grid.innerHTML = `<div class="picker" role="radiogroup" aria-label="${t('select.step.character')}">
+        <div class="picker__row">
+          <button class="mn-btn mn-btn--secondary picker__arrow" data-action="crew-prev" aria-label="${t('select.prevCrew')}">${ARROW_LEFT}</button>
+          <div class="picker__stage" aria-label="${t('select.preview')}"><div class="preview__sprite" data-preview-sprite role="img" aria-label="${t('select.sprite')}"></div></div>
+          <button class="mn-btn mn-btn--secondary picker__arrow" data-action="crew-next" aria-label="${t('select.nextCrew')}">${ARROW_RIGHT}</button>
+        </div>
+        <div class="picker__dots" aria-hidden="true">${dots}</div>
+        <div class="picker__text mn-panel" data-picker-text aria-live="polite"></div>
+      </div>`;
+      this.showCrew((this.picks.character as CharacterId | null) ?? CHARACTERS[0].id, false);
     } else {
       grid.innerHTML = step.options
         .map((o) => `
@@ -158,20 +169,40 @@ export class SelectScene extends Phaser.Scene {
           <span class="title option__title">${esc(o.title)}</span>
           ${o.subtitle ? `<span class="heading option__subtitle">${esc(o.subtitle)}</span>` : ''}
           <span class="body-sm option__body">${esc(o.body)}</span>
+          ${o.wins !== undefined ? `<span class="option__wins ${o.wins ? 'has-wins' : ''}">${esc(winsText(o.wins))}</span>` : ''}
         </button>`)
         .join('');
     }
     const next = this.ui.q<HTMLButtonElement>('[data-next]');
     next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}${t('select.launch')}` : t('select.next');
     this.syncNext();
-    this.ui.focusFirst(this.picks[step.key] ? `.option[data-id="${this.picks[step.key]}"]` : '.option');
+    this.ui.focusFirst(step.key === 'character' ? '[data-action="crew-next"]' : this.picks[step.key] ? `.option[data-id="${this.picks[step.key]}"]` : '.option');
   }
 
   private pick(id: string): void {
     const step = this.steps[this.step];
     this.picks[step.key] = id;
-    if (step.key === 'character') this.startPreview(id as CharacterId, true);
     this.ui.el.querySelectorAll<HTMLElement>('.option').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === id)));
+    this.syncNext();
+  }
+
+  /** Cambia de tripulante (con vuelta al principio o al final) y actualiza michi, puntos y texto. */
+  private cycleCrew(d: 1 | -1): void {
+    const ids = CHARACTERS.map((c) => c.id);
+    const i = ids.indexOf((this.picks.character as CharacterId | null) ?? ids[0]);
+    this.showCrew(ids[(i + d + ids.length) % ids.length], true);
+  }
+
+  private showCrew(id: CharacterId, greet: boolean): void {
+    this.picks.character = id;
+    const o = this.steps[0].options.find((x) => x.id === id)!;
+    const text = this.ui.q('[data-picker-text]');
+    text.innerHTML = `<span class="title picker__name">${esc(o.title)}</span><span class="heading picker__role">${esc(o.subtitle)}</span><span class="body-sm picker__body">${esc(o.body)}</span>`;
+    text.classList.remove('is-swap');
+    void text.offsetWidth; // reinicia la animación de cambio
+    text.classList.add('is-swap');
+    this.ui.el.querySelectorAll<HTMLElement>('[data-dot]').forEach((d) => d.classList.toggle('is-on', d.dataset.dot === id));
+    this.startPreview(id, greet);
     this.syncNext();
   }
 

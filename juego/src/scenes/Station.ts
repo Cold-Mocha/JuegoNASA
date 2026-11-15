@@ -6,10 +6,10 @@ import { UiLayer, esc } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { settingsHtml, bindSettings } from '../core/settingsPanel';
-import { michiSvg, michiFaceSvg, addSvgTexture } from '../core/art';
+import { michiFaceSvg, addSvgTexture } from '../core/art';
 import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
-import { MISSIONS, MISSION_DAYS, missionEvents, missionText, realDate, sourceCredit, sourceName, taskLabel, type Mission } from '../data/missions';
+import { MISSIONS, MISSION_DAYS, missionEvents, missionTasks, missionText, realDate, sourceCredit, sourceName, taskLabel, type Mission, type ResearchTask } from '../data/missions';
 import { DIFFICULTIES, type Difficulty } from '../data/difficulties';
 import { CHARACTERS } from '../data/characters';
 import { ROOM_IDS, propPosition, roomName, roomProps, textureAsset, type RoomProp } from '../data/rooms';
@@ -18,7 +18,8 @@ import { CONTROLS, controlAction, keyLabel } from '../data/controls';
 import { t } from '../core/i18n';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
-import { FLARE_DURATION_SEC, SHELTER_FACTOR, SUIT_LOW, WALK_SPEED, WORLD_SCALE, quality } from '../sim/rules';
+import { FLARE_DURATION_SEC, FLARE_OUTSIDE_HIT, SHELTER_FACTOR, SUIT_LOW, WALK_SPEED, WORLD_SCALE, quality } from '../sim/rules';
+import { MINI_DIFFICULTY } from '../sim/minigames';
 import {
   GRAVITY, PX_PER_METER, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, type DashState,
 } from '../sim/physics';
@@ -31,11 +32,15 @@ import { computeScore } from '../sim/score';
 import { earnedAchievements } from '../sim/achievements';
 import type { ActionId, Resources, RoomId, SimEvent, Zone } from '../sim/types';
 import { icon, type IconName } from '../core/icons';
-import { mountDustGame, type DustGame } from '../core/dustGame';
-import { mountSealGame, type SealGame } from '../core/sealGame';
+import { mountDustGame } from '../core/dustGame';
+import { mountSealGame } from '../core/sealGame';
 import { mountTestPanel } from '../core/testPanelGame';
+import { decorateHint, miniFrameHtml, miniMsgsHtml, showMiniResult } from '../core/miniFrame';
+import { commanderSvg } from '../core/commander';
+import { mountLink } from '../core/casaGames';
+import { Spotlight, rectOf, unionRect, type SpotRect } from '../core/spotlight';
 import {
-  mountAlgae, mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, PEDAL_PASS, type MiniCallbacks, type MiniGameHandle,
+  mountAlgae, mountAntennaGame, mountIceDrill, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, moveFocus, MINI_KEYS, PEDAL_PASS, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
@@ -54,8 +59,15 @@ const CAMERA_LOOK_DOWN = -90;     // px de mapa que la cámara mira bajo los pie
 const CAMERA_MARGIN = 450;       // la cámara puede pasar un poco del borde del mapa para que el michi no se quede arriba cerca de los bordes
 
 interface Machine { room: RoomId; at: Point; sprite: Phaser.GameObjects.Image; prop: RoomProp; active?: boolean; }
-/** Paso del tutorial: `guide` es el objeto al que apunta la flecha; `manual` pide pulsar «Entendido» (si no, avanza solo al cumplirse). */
-interface TutorialStep { text: string; done: () => boolean; guide?: string; manual?: boolean; cta?: string; }
+/**
+ * Paso del tutorial: `guide` es el objeto al que apunta la flecha; `manual` pide pulsar «Entendido» (si no, avanza solo al cumplirse).
+ * `spot`: lo que ilumina el spotlight (selectores del HUD o `machine:<asset>`); `allow`: lo único que se puede hacer en el paso.
+ * `enter`: efecto al llegar al paso (p. ej. abrir la fisura de práctica); `demoFlare`: muestra una cuenta de llamarada de mentira.
+ */
+interface TutorialStep {
+  text: string; done: () => boolean; guide?: string; manual?: boolean; cta?: string;
+  spot?: string[]; allow?: { move?: boolean; machine?: string; action?: ActionId }; enter?: () => void; demoFlare?: boolean;
+}
 
 type Overlay = 'none' | 'pause' | 'settings' | 'map' | 'actions' | 'intro' | 'controls' | 'minigame';
 /** Paneles que detienen el reloj de la misión. */
@@ -64,6 +76,8 @@ const PAUSING: ReadonlySet<Overlay> = new Set(['pause', 'settings', 'intro', 'co
 export class StationScene extends Phaser.Scene {
   private sim!: Simulation;
   private mission!: Mission;
+  /** Tareas de esta partida (en el entrenamiento, solo las de práctica). */
+  private tasks: ResearchTask[] = [];
   private difficulty!: Difficulty;
   private ui!: UiLayer;
   private timescale = 1;
@@ -78,6 +92,8 @@ export class StationScene extends Phaser.Scene {
   private helmet = false;
   private anim: MichiAnim = 'idle';
   private oneShot = false;
+  /** Salud de la última vez que se miró: el michi solo se queja cuando baja (no mientras haya un recurso crítico). */
+  private lastHealth = 100;
   private here: RoomId | null = START_ROOM;
   private zone: Zone = 'ship';
   private machines: Machine[] = [];
@@ -97,14 +113,19 @@ export class StationScene extends Phaser.Scene {
   private floatPool!: Pool<Phaser.GameObjects.Text>;
   private alertTimer?: Phaser.Time.TimerEvent;
   private tipTimer?: Phaser.Time.TimerEvent;
+  private typeTimer?: Phaser.Time.TimerEvent;
+  private typing: { text: string; render: () => void } | null = null;
   private tutorial: TutorialStep[] = [];
   private tutorialIndex = -1;
+  private spot!: Spotlight;
   private flags = { moved: false, opened: false, map: false, archive: false };
   private ending = false;
-  private miniGame?: DustGame | SealGame | MiniGameHandle;
+  private miniGame?: MiniGameHandle;
   /** El minijuego se juega afuera (superficie): el reloj no se detiene y el traje sigue gastando oxígeno. */
   private miniOutdoor = false;
   private breachProp?: Machine;
+  private breachMarker?: Phaser.GameObjects.Container;
+  private breachAlertOn = false;
   private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
   private pulses = new Map<Machine, Phaser.Tweens.Tween>();
   private taskTab: 1 | 2 = 1;
@@ -128,6 +149,7 @@ export class StationScene extends Phaser.Scene {
     }
     this.mission = MISSIONS.find((m) => m.id === l.mission)!;
     this.difficulty = DIFFICULTIES.find((d) => d.id === l.difficulty)!;
+    this.tasks = missionTasks(this.mission, state.training);
     const scale = Number(new URLSearchParams(location.search).get('timescale'));
     this.timescale = Number.isFinite(scale) && scale >= 1 ? Math.min(scale, 50) : 1; // herramienta de QA (tests E2E)
 
@@ -135,13 +157,13 @@ export class StationScene extends Phaser.Scene {
       days: MISSION_DAYS,
       dayLengthSec: this.difficulty.dayLengthSec,
       drain: this.difficulty.drain,
-      tasks: this.mission.tasks,
+      tasks: this.tasks,
       events: missionEvents(this.mission),
       seed: Date.now() & 0xffff,
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1 });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, lastHealth: 100, breachProp: undefined, breachMarker: undefined, breachAlertOn: false, recycler: undefined, miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1 });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -156,7 +178,7 @@ export class StationScene extends Phaser.Scene {
     this.flareTint = this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, tokenColor('nebula-magenta'), 0).setOrigin(0).setScrollFactor(0).setDepth(9001);
     this.ghostPool = new Pool(
       // estela blanca: silueta del michi (tinte en modo relleno)
-      () => this.add.image(0, 0, michiKey(false, 'walk')).setOrigin(MICHI_ANCHOR.x, MICHI_ANCHOR.y).setVisible(false).setTint(0xffffff).setTintMode(Phaser.TintModes.FILL),
+      () => this.add.image(0, 0, michiKey(false, 'walk')).setOrigin(MICHI_ANCHOR.x, MICHI_ANCHOR.y).setVisible(false).setTint(tokenColor('comet-cyan')).setTintMode(Phaser.TintModes.FILL).setBlendMode(Phaser.BlendModes.ADD), // aura azul del impulso
       (g) => g.setVisible(false).setAlpha(1),
       GHOSTS,
     );
@@ -226,7 +248,7 @@ export class StationScene extends Phaser.Scene {
     this.machines.push(m);
     sprite.setInteractive({ useHandCursor: true });
     sprite.on('pointerdown', () => {
-      if (this.overlay !== 'none' && this.overlay !== 'actions') return;
+      if ((this.overlay !== 'none' && this.overlay !== 'actions') || !this.tutorialAllowsMachine(m)) return;
       audio.unlock();
       if (this.nearestMachine() === m) this.openActions();
       else this.walkTo({ x: m.at.x, y: m.at.y + MACHINE_FRONT }, true);
@@ -236,7 +258,7 @@ export class StationScene extends Phaser.Scene {
   /** Lista de tareas: las hechas quedan tachadas. */
   /** Lista de tareas en dos pestañas: las propias de la investigación y, solo cuando se terminan, "Avisar a la Tierra". */
   private renderTasks(): void {
-    const unlocked = this.sim.stage2Unlocked && this.mission.tasks.some((t) => t.stage === 2);
+    const unlocked = this.sim.stage2Unlocked && this.tasks.some((t) => t.stage === 2);
     if (!unlocked && this.taskTab === 2) this.taskTab = 1;
     this.ui.q('[data-tab2]').hidden = !unlocked;
     this.ui.el.querySelectorAll<HTMLElement>('.hud__tab').forEach((b) => {
@@ -244,7 +266,7 @@ export class StationScene extends Phaser.Scene {
       b.classList.toggle('is-current', on);
       b.setAttribute('aria-selected', String(on));
     });
-    const html = this.mission.tasks.filter((t) => (t.stage ?? 1) === this.taskTab).map((t) => {
+    const html = this.tasks.filter((t) => (t.stage ?? 1) === this.taskTab).map((t) => {
       const n = this.sim.taskProgress(t);
       const done = n >= t.count;
       return `<li class="mn-check ${done ? 'is-done' : ''}"><span class="mn-check__box" aria-hidden="true">${done ? icon('check') : ''}</span>
@@ -359,12 +381,14 @@ export class StationScene extends Phaser.Scene {
     const simPaused = this.tutorialIndex >= 0 || (paused && !(this.overlay === 'minigame' && this.miniOutdoor)); // afuera el tiempo corre aunque se juegue; en el tutorial el reloj está detenido
     if (!simPaused) {
       this.sim.tick(dt * this.timescale);
+      this.checkHealthLoss();
       for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
       tickDash(this.dash, dt);
     }
     this.updatePlayer(dt, paused);
     this.updateDarkness(dt);
     this.updateGuides();
+    this.updateSpot();
     this.hudTimer += dt;
     if (this.hudTimer >= 1 / HUD_HZ) {
       this.hudTimer = 0;
@@ -374,7 +398,7 @@ export class StationScene extends Phaser.Scene {
 
   private updatePlayer(dt: number, paused: boolean): void {
     const k = this.keys;
-    const canMove = !paused && this.overlay !== 'map' && !this.sim.ended;
+    const canMove = !paused && this.overlay !== 'map' && !this.sim.ended && this.tutorialAllowsMove();
     const input = { x: 0, y: 0 };
     if (canMove) {
       input.x = (k.RIGHT.isDown || k.D.isDown ? 1 : 0) - (k.LEFT.isDown || k.A.isDown ? 1 : 0);
@@ -404,7 +428,7 @@ export class StationScene extends Phaser.Scene {
       this.jumpT += dt;
       if (this.jumpT > airTime(JUMP_V0, GRAVITY.moon)) this.jumpT = -1;
     }
-    if (!this.oneShot) this.playAnim(moving ? 'walk' : this.sim.criticals.size ? 'hurt' : 'idle');
+    if (!this.oneShot) this.playAnim(moving ? 'walk' : 'idle');
 
     const loc = roomAt(this.pos);
     const zone = zoneAt(this.pos);
@@ -482,7 +506,7 @@ export class StationScene extends Phaser.Scene {
     let best: Machine | null = null;
     let bestD = INTERACT_RADIUS;
     for (const m of this.machines) {
-      if (m.room !== this.sim.room) continue;
+      if (m.room !== this.sim.room || !this.tutorialAllowsMachine(m)) continue;
       const d = Math.hypot(this.pos.x - m.at.x, this.pos.y - m.at.y);
       if (d < bestD) [best, bestD] = [m, d];
     }
@@ -530,13 +554,13 @@ export class StationScene extends Phaser.Scene {
 
   // ---------- salto e impulso
   private jump(): void {
-    if (this.overlay !== 'none' || this.jumpT >= 0 || this.sim.ended) return;
+    if (this.overlay !== 'none' || this.jumpT >= 0 || this.sim.ended || this.tutorialIndex >= 0) return;
     this.jumpT = 0;
     audio.play('jump');
   }
 
   private tryDash(): void {
-    if (this.overlay !== 'none' && this.overlay !== 'actions') return;
+    if ((this.overlay !== 'none' && this.overlay !== 'actions') || this.tutorialIndex >= 0) return;
     if (this.sim.ended) return;
     if (!startDash(this.dash)) {
       audio.play('error'); // sin carga: el impulso se recarga solo
@@ -547,7 +571,7 @@ export class StationScene extends Phaser.Scene {
     audio.play('jump');
   }
 
-  /** Estela del impulso: copias del michi que se desvanecen (pool; se omite en Ultra Ligero o con movimiento reducido). */
+  /** Estela del impulso: copias celestes y brillantes del michi (aura azul) que se desvanecen (pool; se omite en Ultra Ligero o con movimiento reducido). */
   private dropGhost(dt: number): void {
     if (state.calm || state.settings.ultraLight) return;
     this.ghostTimer -= dt;
@@ -565,6 +589,7 @@ export class StationScene extends Phaser.Scene {
     switch (ev.type) {
       case 'dayStart': {
         audio.play('day');
+        this.pulse(this.ui.q('[data-day]'), 'is-tick');
         const light = ev.light >= 1 ? t('day.light.day') : ev.light > 0 ? t('day.light.dusk') : t('day.light.night');
         this.alert(t('day.start', { day: ev.day, date: realDate(this.mission, ev.day), light }), 'info');
         if (ev.light === 0 && ev.day === 5) this.tip(t('tip.night'));
@@ -593,12 +618,14 @@ export class StationScene extends Phaser.Scene {
         this.flareTint.setAlpha(0);
         this.float(`+${ev.dose} ${resourceShort('radiation')}`, 'nebula-magenta');
         // la decisión, con el dato real de la llamarada: lo que recibiste y lo que habría pasado en el otro lugar
-        if (ev.dose <= ev.total * 0.3) this.alert(t('flare.end.shielded', { dose: ev.dose, outside: Math.round(ev.total) }), 'ok', FLARE_RESULT_MS);
+        if (!ev.exposed) this.alert(t('flare.end.shielded', { dose: ev.dose, outside: FLARE_OUTSIDE_HIT }), 'ok', FLARE_RESULT_MS);
         else this.alert(t('flare.end.exposed', { dose: ev.dose, inside: Math.round(ev.total * SHELTER_FACTOR) }), 'danger', FLARE_RESULT_MS);
-        if (ev.dose > 8) {
-          audio.play('hurt');
-          this.playAnim('hurt', true);
-        }
+        break;
+      case 'flareHit': // te encontró afuera: el golpe de radiación entero, de una vez
+        audio.play('hurt');
+        this.float(`+${ev.dose} ${resourceShort('radiation')}`, 'nebula-magenta');
+        if (!state.calm) this.cameras.main.shake(400, 0.006);
+        this.alert(t('flare.hit', { n: ev.dose }), 'danger', FLARE_RESULT_MS);
         break;
       case 'actionDone':
         this.showDelta(ev.delta);
@@ -621,10 +648,12 @@ export class StationScene extends Phaser.Scene {
       case 'taskDone': {
         audio.play('achievement'); // sin cartel: el avance se ve en la lista de tareas
         this.renderTasks();
+        this.pulse(this.ui.q('.hud__tasks'), 'is-tick');
         break;
       }
       case 'critical': {
         audio.play('error');
+        this.pulse(this.ui.q(`[data-res="${ev.resource}"]`), 'is-alarm');
         const advice: Record<keyof Resources, string> = {
           energy: t('tip.critical.energy'),
           oxygen: t('tip.critical.oxygen'),
@@ -639,11 +668,18 @@ export class StationScene extends Phaser.Scene {
       case 'breachOpened':
         audio.play('alarm');
         this.spawnBreach(ev.room);
-        this.alert(t('alert.breach'), 'danger');
+        this.breachAlertOn = true;
+        this.alert(t('alert.breach'), 'danger', 600_000); // queda a la vista hasta que se repara
+        this.pulse(this.ui.q('[data-res="oxygen"]'), 'is-alarm');
         this.tip(t('tip.breach', { room: roomName(ev.room) }));
         break;
       case 'breachRepaired':
         this.removeBreach();
+        if (this.breachAlertOn) {
+          this.breachAlertOn = false;
+          this.alertTimer?.remove();
+          this.ui.q('[data-alert]').hidden = true;
+        }
         audio.play('confirm');
         break;
       case 'dustStorm':
@@ -673,7 +709,7 @@ export class StationScene extends Phaser.Scene {
         audio.play('hurt');
         if (this.overlay === 'minigame') this.closeOverlay(); // se acabó el oxígeno limpiando: se cancela, sin costo ni efecto
         this.rescue();
-        this.alert(t('alert.suitEmpty', { n: ev.oxygenLost }), 'danger');
+        this.alert(t('alert.suitEmpty', { n: ev.oxygenLost, h: ev.healthLost }), 'danger');
         this.tip(t('tip.suit'));
         break;
       case 'gameOver':
@@ -690,12 +726,112 @@ export class StationScene extends Phaser.Scene {
     this.michi.play(michiKey(on, this.anim));
   }
 
+  /**
+   * Parte el texto en trozos: los nombres de los atributos (energía, oxígeno, comida, salud, radiación) salen aparte
+   * para mostrarlos en grande, con su color y su icono.
+   */
+  private splitAttributes(text: string): { text: string; key?: keyof Resources }[] {
+    const keys = ['energy', 'oxygen', 'food', 'health', 'radiation'] as (keyof Resources)[];
+    const names = new Map<string, keyof Resources>();
+    for (const key of keys) for (const name of [resourceLabel(key), resourceShort(key)]) names.set(name.toLowerCase(), key);
+    const escaped = [...names.keys()].sort((x, y) => y.length - x.length).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])(${escaped.join('|')})(?![\\p{L}\\p{N}])`, 'giu');
+    const out: { text: string; key?: keyof Resources }[] = [];
+    let last = 0;
+    for (const m of text.matchAll(re)) {
+      if (m.index > last) out.push({ text: text.slice(last, m.index) });
+      out.push({ text: m[0], key: names.get(m[0].toLowerCase()) });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) out.push({ text: text.slice(last) });
+    return out;
+  }
+
+  /** HTML del texto con las primeras `n` letras visibles; lo demás ocupa su lugar (invisible) para que el cuadro no crezca. */
+  private tipHtml(parts: { text: string; key?: keyof Resources }[], n: number): string {
+    let pos = 0;
+    return parts.map((p) => {
+      const start = pos;
+      pos += p.text.length;
+      const shown = Math.max(0, Math.min(p.text.length, n - start));
+      const body = `${esc(p.text.slice(0, shown))}<span class="hud__tip-rest">${esc(p.text.slice(shown))}</span>`;
+      if (!p.key) return body;
+      const icn = `<span class="attr__icon" ${shown < p.text.length ? 'style="visibility:hidden"' : ''}>${icon(RESOURCE_ICON[p.key])}</span>`;
+      return `<span class="attr" style="color:${tokenCss(RESOURCE_COLOR[p.key])}">${body}${icn}</span>`;
+    }).join('');
+  }
+
+  /** La Comandante «habla»: el texto sale letra a letra, la boca se abre y suena un pitido, como en una novela gráfica. */
+  private speak(text: string): void {
+    this.typeTimer?.remove();
+    this.typeTimer = undefined;
+    const el = this.ui.q('[data-tip-text]');
+    const portrait = this.ui.q('[data-portrait]');
+    this.ui.q('[data-tip]').setAttribute('aria-label', text);
+    const parts = this.splitAttributes(text);
+    const render = (n: number): void => void (el.innerHTML = this.tipHtml(parts, n));
+    portrait.classList.remove('is-open');
+    if (state.calm) {
+      render(text.length);
+      audio.blip();
+      this.typing = null;
+      return;
+    }
+    this.typing = { text, render: () => render(text.length) };
+    let n = 0;
+    let pause = 0;
+    render(0);
+    this.typeTimer = this.time.addEvent({
+      delay: 34, loop: true,
+      callback: () => {
+        if (pause > 0) { pause--; portrait.classList.remove('is-open'); return; }
+        n++;
+        render(n);
+        const ch = text[n - 1];
+        if (ch === ' ') portrait.classList.remove('is-open');
+        else {
+          portrait.classList.toggle('is-open', n % 2 === 1);
+          if (n % 2 === 0) audio.blip();
+          if (',.;:?!'.includes(ch)) pause = ch === ',' ? 3 : 7;
+        }
+        if (n >= text.length) this.finishSpeaking();
+      },
+    });
+  }
+
+  /** Termina de escribir al instante (clic en el texto) o al llegar al final. */
+  private finishSpeaking(): void {
+    this.typeTimer?.remove();
+    this.typeTimer = undefined;
+    this.typing?.render();
+    this.typing = null;
+    this.time.delayedCall(90, () => this.ui.q('[data-portrait]').classList.remove('is-open'));
+  }
+
+  /** Gesto de dolor una sola vez cada vez que la salud baja de verdad (no por tener algo crítico). */
+  private checkHealthLoss(): void {
+    const hp = this.sim.res.health;
+    if (hp < this.lastHealth - 1) {
+      this.lastHealth = hp;
+      this.playAnim('hurt', true);
+      this.pulse(this.ui.q('[data-res="health"]'), 'is-loss');
+    } else if (hp > this.lastHealth) this.lastHealth = hp;
+  }
+
+  /** Reinicia una animación corta de una clase sobre un elemento del HUD y la quita al terminar. */
+  private pulse(el: Element, cls: string): void {
+    if (state.calm) return;
+    el.classList.remove(cls);
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add(cls);
+    el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+  }
+
   private showDelta(d: ActionDelta): void {
-    const colors: Record<string, string> = { energy: 'star-gold', oxygen: 'comet-cyan', food: 'solar-coral', health: 'aurora-teal', radiation: 'nebula-magenta', science: 'nebula-violet' };
     let i = 0;
     for (const [key, v] of Object.entries(d) as [ResourceKey, number][]) {
       if (!v) continue;
-      this.time.delayedCall(i++ * 220, () => this.float(`${v > 0 ? '+' : '−'}${Math.abs(Math.round(v))} ${resourceShort(key)}`, colors[key]));
+      this.time.delayedCall(i++ * 220, () => this.float(`${v > 0 ? '+' : '−'}${Math.abs(Math.round(v))} ${resourceShort(key)}`, RESOURCE_COLOR[key]));
     }
   }
 
@@ -713,6 +849,7 @@ export class StationScene extends Phaser.Scene {
 
   // ======================================================== acciones y caminatas
   private act(id: ActionId): void {
+    if (this.tutorialIndex >= 0 && this.tutorial[this.tutorialIndex]?.allow?.action !== id) return audio.play('error');
     const check = this.sim.canAct(id);
     if (!check.ok) {
       audio.play('error');
@@ -724,6 +861,7 @@ export class StationScene extends Phaser.Scene {
     if (id === 'growLights') return this.openAlgaeGame();
     if (id === 'repair') return this.openSealGame();
     if (id === 'repairAntenna') return this.openAntennaFlow();
+    if (id === 'tellEarth') return this.openLinkGame();
     if (id === 'pedal') return this.openPedalGame();
     if (id === 'eva') return this.openBiosignatureGame();
     if (id === 'harvest') return this.openHarvestGame();
@@ -734,98 +872,127 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
-  /** Minijuego a pantalla completa: solo el juego y, los primeros segundos, una pista corta de qué hacer (se sale con Esc o con el botón Salir). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
+  /**
+   * Minijuego a pantalla completa con el marco común: el juego, la pista de los primeros segundos (gesto y teclas) y el botón Salir.
+   * Al terminar muestra 1 a 3 estrellas y la ganancia real; `finish` aplica la acción y devuelve su efecto.
+   */
+  private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => ActionDelta | null | undefined; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
-    this.openModal(`
-      <div class="mini-full" aria-label="${t('mini.label')}">
-        <div class="mini-full__stage" data-dust-root></div>
-        <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
-        <p class="mini-full__hint" data-mini-hint>${esc(cfg.hint)}</p>
-      </div>
-      <button class="mn-btn mn-btn--secondary mn-btn--sm mini-full__exit" data-action="close-actions">${icon('close')}${t('mini.exit')}</button>
+    this.openModal(`${miniFrameHtml('close-actions')}
       ${cfg.outdoor ? `<div class="mini-suit" aria-label="${t('mini.suit')}">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
-    const hint = this.ui.q('[data-mini-hint]');
-    this.time.delayedCall(MINI_HINT_MS, () => hint.isConnected && (hint.hidden = true));
-    this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
+    const frame = this.ui.q('[data-overlay]');
+    const msgs = this.ui.q('[data-msgs]');
+    msgs.innerHTML = miniMsgsHtml(cfg.hint);
+    this.ui.q('[data-hud]').classList.add('is-mini'); // las stats y los mensajes quedan a la vista sobre el minijuego
+    this.miniGame = cfg.mount(this.ui.q('[data-mini-stage]'), {
       onProgress: () => undefined,
       onDone: (result) => {
-        const failure = cfg.failed?.(result) ?? null; // no se alcanzó la meta: no hay marca de listo ni efecto
+        const failure = cfg.failed?.(result) ?? null; // no se alcanzó la meta: no hay estrellas ni efecto
         if (failure) {
           audio.play('error');
           this.alert(failure, 'danger');
         } else {
           audio.play('achievement');
-          this.ui.q('[data-dust-result]').hidden = false;
-          this.ui.q('.mini-full').classList.add('is-done');
-          cfg.finish(result);
+          showMiniResult(msgs, frame, result ?? 1, this.gainHtml(cfg.finish(result)));
         }
         for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
-        this.time.delayedCall(1100, () => {
+        this.time.delayedCall(MINI_RESULT_MS, () => {
           if (this.overlay !== 'minigame') return;
           if (cfg.next) cfg.next(); // minijuego encadenado (p. ej. cables y después el mensaje)
           else this.closeOverlay();
         });
       },
     });
+    decorateHint(msgs, this.miniGame);
+  }
+
+  /** Multiplicador de tiempo de los minijuegos según la dificultad (Cadete más, Comandante menos). */
+  private get miniTime(): number {
+    return MINI_DIFFICULTY[this.difficulty.id].time;
+  }
+
+  /** Lo que dio la acción en verde («+8 Energía» con el icono del atributo) y, abajo, chico y en rojo, lo que se perdió (con su icono). */
+  private gainHtml(d: ActionDelta | null | undefined): string {
+    if (!d) return '';
+    const entries = Object.entries(d) as [ResourceKey, number][];
+    const item = (key: ResourceKey, sign: string, v: number): string => `${icon(RESOURCE_ICON[key])}<b>${sign}${Math.round(Math.abs(v))}</b><i>${esc(resourceShort(key))}</i>`;
+    const gains = entries
+      .filter(([key, v]) => key !== 'radiation' && Math.round(v) > 0)
+      .map(([key, v]) => `<span class="mini-gain">${item(key, '+', v)}</span>`)
+      .join('');
+    const losses = entries
+      .filter(([key, v]) => (key === 'radiation' ? Math.round(v) > 0 : Math.round(v) < 0))
+      .map(([key, v]) => `<span class="mini-loss__item">${item(key, key === 'radiation' ? '+' : '−', v)}</span>`)
+      .join('');
+    return gains + (losses ? `<span class="mini-loss">${losses}</span>` : '');
   }
 
   private openDustGame(action: 'cleanDust'): void {
     this.openFullMini({
       hint: t('hint.dust'),
-      mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
-      finish: () => void this.sim.act(action),
+      mount: (root, cb) => ({ ...mountDustGame(root, { dust: this.sim.comp.dust, ...cb }), gesture: 'drag', keys: ['← ↑ → ↓'] }),
+      finish: (r) => this.sim.act(action, quality(r ?? 1)), // lo que queda sucio se suma después como resto de polvo
       outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
     });
   }
 
   /** Panel de pruebas (Energía del Sol): limpiarlo y orientarlo al Sol. Se juega afuera: el traje sigue gastando. */
   private openTestPanelGame(): void {
-    this.openFullMini({ hint: t('hint.testPanel'), mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ hint: t('hint.testPanel'), mount: (root, cb) => ({ ...mountTestPanel(root, cb, this.miniTime), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
   }
 
   /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja (en Cadete, sin la temperatura). */
   private openAlgaeGame(): void {
-    this.openFullMini({ hint: t('hint.algae'), mount: (root, cb) => mountAlgae(root, cb, this.difficulty.id === 'cadete' ? 2 : 3), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
+    this.openFullMini({
+      hint: t('hint.algae'),
+      mount: (root, cb) => mountAlgae(root, cb, MINI_DIFFICULTY[this.difficulty.id]),
+      finish: (r) => this.sim.act('growLights', quality(r ?? 1)),
+      failed: (r) => ((r ?? 1) > 0 ? null : t('alert.algaeFail')), // no se llenó la barra a tiempo: se pierde, sin costo ni efecto
+    });
   }
 
   private openSealGame(): void {
-    this.openFullMini({ hint: t('hint.seal'), mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
+    this.openFullMini({ hint: t('hint.seal'), mount: (root, cb) => ({ ...mountSealGame(root, cb), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('repair', quality(r ?? 1)) });
   }
 
   /**
    * Avisar a la Tierra: si la señal está floja primero se conectan los cables; después se recupera el mensaje dañado por la estática.
    * El aviso (la acción) se cobra al terminar el mensaje; su calidad cuenta para la ganancia.
    */
+  /** Reconectar con la Tierra (para irse): apuntar la antena y elegir el canal. Solo se desbloquea al terminar la investigación y con la antena sana. */
+  private openLinkGame(): void {
+    this.openFullMini({ hint: t('hint.casaLink'), mount: (root, cb) => mountLink(root, (r) => cb.onDone(r.score)), finish: (r) => this.sim.act('tellEarth', quality(r ?? 1)), outdoor: true });
+  }
+
   private openAntennaFlow(): void {
-    const message = (): void => this.openFullMini({ hint: t('hint.message'), mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
-    if (this.sim.comp.antenna < 0.7) this.openFullMini({ hint: t('hint.wires'), mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
+    const message = (): void => this.openFullMini({ hint: t('hint.message'), mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => this.sim.act('repairAntenna', quality(r ?? 1)), outdoor: true });
+    if (this.sim.comp.antenna < 0.7) this.openFullMini({ hint: t('hint.wires'), mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message, outdoor: true });
     else message();
   }
 
-  /** Taladro de hielo: emparejar los picos del espectro; la ciencia ganada escala con la calidad. Se juega afuera: el traje sigue gastando. */
+  /** Taladro de hielo: mantener el taladro sobre el punto hasta que el hielo se rompa; la ciencia ganada escala con la calidad. Se juega afuera: el traje sigue gastando. */
   private openBiosignatureGame(): void {
-    this.openFullMini({ hint: t('hint.spectrum'), mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => void this.sim.act('eva', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ hint: t('hint.drill'), mount: (root, cb) => mountIceDrill(root, cb), finish: (r) => this.sim.act('eva', quality(r ?? 1)), outdoor: true });
   }
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
   private openPedalGame(): void {
     this.openFullMini({
       hint: t('hint.pedal'),
-      mount: (root, cb) => mountPedal(root, cb),
-      finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
+      mount: (root, cb) => mountPedal(root, cb, this.miniTime),
+      finish: (r) => this.sim.act('pedal', quality(r ?? 1)),
       failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : t('alert.pedalFail')),
     });
   }
 
   /** Curarse: tratar cada herida manteniendo apretado. */
   private openHealGame(): void {
-    this.openFullMini({ hint: t('hint.heal'), mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
+    this.openFullMini({ hint: t('hint.heal'), mount: (root, cb) => mountHealGame(root, cb, this.miniTime), finish: (r) => this.sim.act('heal', quality(r ?? 1)) });
   }
 
   private openHarvestGame(): void {
-    this.openFullMini({ hint: t('hint.harvest'), mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', quality(result ?? 1)) });
+    this.openFullMini({ hint: t('hint.harvest'), mount: (root, cb) => mountHarvestGame(root, cb, this.miniTime), finish: (r) => this.sim.act('harvest', quality(r ?? 1)) });
   }
 
   /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */
@@ -839,13 +1006,28 @@ export class StationScene extends Phaser.Scene {
     const m: Machine = { room, at: rec.at, sprite, prop };
     sprite.setInteractive({ useHandCursor: true });
     sprite.on('pointerdown', () => {
-      if (this.overlay !== 'none' && this.overlay !== 'actions') return;
+      if ((this.overlay !== 'none' && this.overlay !== 'actions') || !this.tutorialAllowsMachine(m)) return;
       audio.unlock();
       if (this.nearestMachine() === m) this.openActions();
       else this.walkTo({ x: m.at.x, y: m.at.y + MACHINE_FRONT }, true);
     });
     this.machines.push(m);
     this.breachProp = m;
+    this.breachMarker = this.makeBreachMarker(rec.at.x, rec.at.y - sprite.displayHeight - 36);
+  }
+
+  /** Marcador sobre la máquina rota: un círculo rojo con «!» y un anillo que se expande (quieto si se pidió menos movimiento). */
+  private makeBreachMarker(x: number, y: number): Phaser.GameObjects.Container {
+    const red = tokenColor('danger');
+    const ring = this.add.circle(0, 0, 26).setStrokeStyle(4, red).setFillStyle(red, 0);
+    const disc = this.add.circle(0, 0, 24, red).setStrokeStyle(4, 0x0e0b33);
+    const bang = this.add.text(0, 1, '!', { fontFamily: 'Fredoka, system-ui, sans-serif', fontSize: '34px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5);
+    const box = this.add.container(x, y, [ring, disc, bang]).setDepth(9001);
+    if (!state.calm) {
+      this.tweens.add({ targets: ring, scale: 2, alpha: 0, duration: 1100, repeat: -1, ease: 'Quad.out' });
+      this.tweens.add({ targets: box, y: y - 8, duration: 550, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    }
+    return box;
   }
 
   /** Reparado: el reciclador vuelve a verse entero. */
@@ -855,6 +1037,8 @@ export class StationScene extends Phaser.Scene {
     this.pulses.get(m)?.stop();
     this.pulses.delete(m);
     m.sprite.destroy();
+    this.breachMarker?.destroy();
+    this.breachMarker = undefined;
     this.machines = this.machines.filter((x) => x !== m);
     if (this.focused === m) this.focused = null;
     this.recycler?.sprite.setVisible(true);
@@ -864,7 +1048,6 @@ export class StationScene extends Phaser.Scene {
 
   // ======================================================== HUD (HTML)
   private buildHud(): void {
-    const ch = CHARACTERS.find((c) => c.id === state.loadout!.character)!;
     const bar = (key: keyof Resources, cls: string): string => `
       <div class="mn-bar ${cls}" role="progressbar" aria-label="${resourceLabel(key)}" aria-valuemin="0" aria-valuemax="100" data-res="${key}">
         <span class="mn-bar__label">${icon(RESOURCE_ICON[key])}${resourceLabel(key)}</span>
@@ -883,6 +1066,7 @@ export class StationScene extends Phaser.Scene {
           <div class="hud__daybar" aria-hidden="true"><i data-daybar></i></div>
         </div>
         <div class="hud__guides" data-guides aria-live="polite"></div>
+        <div class="hud__restip mn-panel" data-res-tip hidden role="tooltip"></div>
         <div class="hud__left">
           <section class="hud__stats mn-panel" aria-label="${t('hud.stats')}">
             ${bar('energy', 'mn-bar--energy')}${bar('oxygen', 'mn-bar--oxygen')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
@@ -897,6 +1081,10 @@ export class StationScene extends Phaser.Scene {
           <section class="hud__systems mn-panel" data-systems hidden aria-label="${t('hud.systems')}">
             ${system('leak', 'oxygen', t('sys.recycler'))}${system('panels', 'panel', t('sys.panels'))}${system('radio', 'antenna', t('sys.radio'))}
           </section>
+          <!-- todos los mensajes van aquí, debajo de las stats: nunca al centro de la pantalla -->
+          <div class="hud__alert" data-alert role="status" aria-live="polite" hidden></div>
+          <div class="hud__countdown" data-countdown hidden>${icon('radiation')}<span data-countdown-text></span></div>
+          <div class="hud__msgs" data-msgs></div>
         </div>
         <div class="hud__top-right">
           <section class="hud__tasks mn-panel" aria-label="${t('hud.research')}">
@@ -908,16 +1096,14 @@ export class StationScene extends Phaser.Scene {
           </section>
           <span class="caption-mono hud__fps" data-fps hidden></span>
         </div>
-        <div class="hud__alert" data-alert role="status" aria-live="polite" hidden></div>
-        <div class="hud__countdown" data-countdown hidden>${icon('radiation')}<span data-countdown-text></span></div>
         <button class="hud__prompt" data-prompt data-action="use" hidden><span class="mn-key">E</span> <span data-prompt-label></span></button>
-        <div class="hud__tip mn-dialogue" data-tip hidden>
-          <div class="mn-dialogue__portrait hud__tip-portrait">${michiSvg({ ...ch, id: 'miu', name: t('commander.name'), fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined }, tokenCss('nebula-violet'))}</div>
-          <div>
+        <button class="mn-btn mn-btn--secondary mn-btn--sm hud__tutorial-skip" data-action="tutorial-skip">${icon('skip')}${t('tutorial.skip')}</button>
+        <div class="hud__tip" data-tip hidden>
+          <div class="hud__tip-portrait" data-portrait aria-hidden="true">${commanderSvg()}</div>
+          <div class="hud__tip-box mn-dialogue">
             <p class="mn-dialogue__name">${t('commander.name')}</p>
-            <p class="mn-dialogue__text" data-tip-text></p>
+            <p class="mn-dialogue__text" data-tip-text data-action="tip-skip" aria-hidden="true"></p>
             <div class="hud__tip-actions" data-tip-actions hidden>
-              <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="tutorial-skip">${icon('skip')}${t('tutorial.skip')}</button>
               <button class="mn-btn mn-btn--sm" data-action="tutorial-next">${icon('check')}${t('tutorial.ok')}</button>
             </div>
           </div>
@@ -930,6 +1116,7 @@ export class StationScene extends Phaser.Scene {
         </div>
         <aside class="hud__actions mn-panel" data-actions hidden aria-label="${t('hud.actions')}"></aside>
         <p class="hud__source">${esc(sourceCredit(this.mission))}</p>
+        <div class="spot" data-spot hidden><div class="spot__dim" data-spot-dim></div><div class="spot__ring" data-spot-ring hidden></div></div>
       </div>
       <div class="modal" data-overlay hidden></div>`, 'screen screen--clear');
 
@@ -952,10 +1139,46 @@ export class StationScene extends Phaser.Scene {
       .on('touch-map', () => this.toggleMap())
       .on('touch-jump', () => this.jump())
       .on('touch-dash', () => this.tryDash())
-      .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
+      .on('tasks-tab', () => { if (this.tutorialIndex >= 0) return; this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
+      .on('tip-skip', () => { if (this.typing) this.finishSpeaking(); })
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
     this.disposers.push(bindSettings(this.ui, () => undefined));
+    this.spot = new Spotlight(this.ui.q('[data-spot]'), GAME_WIDTH, GAME_HEIGHT);
+    this.bindResTips();
+  }
+
+  /** Al poner el cursor (o el foco) sobre una barra: qué es, y una imagen de dónde se recupera. */
+  private bindResTips(): void {
+    const tip = this.ui.q('[data-res-tip]');
+    const show = (bar: HTMLElement): void => {
+      const key = bar.dataset.res as keyof Resources;
+      const sources = RES_SOURCES[key];
+      const where = sources.length
+        ? `<div class="hud__restip-where"><span class="hud__restip-title">${t('hud.where')}</span>${sources.map((x) => `<span class="hud__restip-src"><img src="game/props/${x.asset}.svg" alt="" width="64" height="58"><span>${esc(t(x.label))}</span></span>`).join('')}</div>`
+        : `<div class="hud__restip-where"><span class="hud__restip-src">${icon('shield')}<span>${esc(t('where.shelter'))}</span></span></div>`;
+      tip.innerHTML = `<strong class="hud__restip-name">${esc(resourceLabel(key))}</strong><p>${esc(t(`resource.${key}.desc`))}</p>${where}`;
+      tip.hidden = false;
+      const hud = this.ui.q('[data-hud]');
+      const hr = hud.getBoundingClientRect();
+      const k = hr.width / (hud.offsetWidth || 1);
+      const br = bar.getBoundingClientRect();
+      tip.style.left = `${((br.right - hr.left) / k + 14).toFixed(0)}px`;
+      tip.style.top = `${Math.max(8, (br.top - hr.top) / k - 12).toFixed(0)}px`;
+    };
+    const hide = (): void => void (tip.hidden = true);
+    this.ui.el.addEventListener('pointerover', (ev) => {
+      const bar = (ev.target as HTMLElement).closest<HTMLElement>('[data-res]');
+      if (bar) show(bar);
+    });
+    this.ui.el.addEventListener('pointerout', (ev) => {
+      if ((ev.target as HTMLElement).closest('[data-res]')) hide();
+    });
+    this.ui.el.addEventListener('focusin', (ev) => {
+      const bar = (ev.target as HTMLElement).closest<HTMLElement>('[data-res]');
+      if (bar) show(bar);
+    });
+    this.ui.el.addEventListener('focusout', hide);
   }
 
   private renderHud(): void {
@@ -963,13 +1186,20 @@ export class StationScene extends Phaser.Scene {
     for (const key of ['energy', 'oxygen', 'food', 'health', 'radiation'] as (keyof Resources)[]) {
       const v = Math.round(s.res[key]);
       const id = `res-${key}`;
-      if (this.hudCache.get(id) === String(v)) continue;
-      this.hudCache.set(id, String(v));
+      const critical = key === 'radiation' ? s.res[key] >= 80 : s.res[key] <= 20; // mismo valor real que usa la simulación para avisar
+      const sig = `${v}|${critical}`;
+      if (this.hudCache.get(id) === sig) continue;
+      const prev = this.hudCache.get(id);
+      this.hudCache.set(id, sig);
       const el = this.ui.q(`[data-res="${key}"]`);
+      if (prev !== undefined) {
+        const delta = v - Number(prev.split('|')[0]);
+        if (Math.abs(delta) >= 3) this.pulse(el, (key === 'radiation' ? delta < 0 : delta > 0) ? 'is-gain' : 'is-loss'); // radiación: subir es malo
+      }
       el.setAttribute('aria-valuenow', String(v));
       (el.querySelector('[data-fill]') as HTMLElement).style.width = `${v}%`;
       (el.querySelector('[data-value]') as HTMLElement).textContent = key === 'radiation' ? `${v}%` : String(v);
-      el.classList.toggle('is-critical', key === 'radiation' ? v >= 80 : v <= 20);
+      el.classList.toggle('is-critical', critical);
     }
     this.setText('[data-day]', t('hud.day', { day: s.day, days: s.config.days }));
     this.setText('[data-light]', s.light >= 1 ? t('hud.light.day') : s.light > 0 ? t('hud.light.dusk') : t('hud.light.night'));
@@ -979,8 +1209,12 @@ export class StationScene extends Phaser.Scene {
     this.renderMiniSuit();
     const incoming = s.incomingFlare;
     const countdown = this.ui.q('[data-countdown]');
-    countdown.hidden = !incoming;
-    if (incoming) {
+    const demo = this.tutorialIndex >= 0 && !!this.tutorial[this.tutorialIndex]?.demoFlare; // tutorial: cuenta de muestra, sin llamarada real
+    countdown.hidden = !incoming && !demo;
+    if (demo && !incoming) {
+      this.setText('[data-countdown-text]', t('hud.countdown', { flare: flareName(DEMO_FLARE), s: 10 }));
+      countdown.classList.remove('is-safe');
+    } else if (incoming) {
       this.setText('[data-countdown-text]', t('hud.countdown', { flare: flareName(incoming.event.classType), s: Math.ceil(incoming.inSec) }));
       countdown.classList.toggle('is-safe', s.sheltered);
     }
@@ -1068,7 +1302,7 @@ export class StationScene extends Phaser.Scene {
   private tip(text: string): void {
     if (!this.difficulty.hints || this.tutorialIndex >= 0) return;
     this.ui.q('[data-tip-actions]').hidden = true;
-    this.setText('[data-tip-text]', text);
+    this.speak(text);
     this.ui.q('[data-tip]').hidden = false;
     this.tipTimer?.remove();
     this.tipTimer = this.time.delayedCall(7000, () => (this.ui.q('[data-tip]').hidden = true));
@@ -1112,18 +1346,30 @@ export class StationScene extends Phaser.Scene {
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */
   private machineActions(): ActionId[] {
-    return (this.focused ?? this.nearestMachine())?.prop.actions ?? [];
+    const ids = (this.focused ?? this.nearestMachine())?.prop.actions ?? [];
+    const only = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.allow?.action : undefined;
+    return only ? ids.filter((id) => id === only) : ids; // en el tutorial no se ofrece lo que no se está enseñando
   }
 
   /** Mapa (solo para mirar): el plano a escala y una carita de michi donde estás. */
   private toggleMap(): void {
     if (this.overlay === 'map') return this.closeOverlay();
+    if (this.tutorialIndex >= 0) return;
     if (this.overlay !== 'none' && this.overlay !== 'actions') return;
     this.closeOverlay();
     this.overlay = 'map';
     this.flags.map = true;
     const k = MAP_SCALE;
-    const halls = HALLS.map((h) => `<rect class="map__hall" x="${f(h.x * k)}" y="${f(h.y * k)}" width="${f(h.w * k)}" height="${f(h.h * k)}" rx="2"/>`).join('');
+    // una sola silueta: salas y pasillos se funden (filtro «gota») y el borde solo rodea el conjunto, con las esquinas de unión suavizadas
+    const shapes = [...HALLS.map((h) => ({ x: h.x * k, y: h.y * k, w: h.w * k, h: h.h * k })),
+      ...ROOM_IDS.map((id) => ({ x: ROOM_RECTS[id].x * k, y: (ROOM_RECTS[id].y - WALL_H) * k, w: ROOM_RECTS[id].w * k, h: (ROOM_RECTS[id].h + WALL_H) * k }))];
+    const shapeRects = (extra: string): string => shapes.map((r) => `<rect x="${f(r.x)}" y="${f(r.y)}" width="${f(r.w)}" height="${f(r.h)}" rx="8" ${extra}/>`).join('');
+    const here = this.here ? shapes[HALLS.length + ROOM_IDS.indexOf(this.here)] : undefined;
+    const halls = `<defs><filter id="map-goo" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="4"/>
+        <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"/></filter></defs>
+      <g filter="url(#map-goo)" class="map__edge">${shapeRects('stroke-width="7"')}</g>
+      <g filter="url(#map-goo)" class="map__fill">${shapeRects('')}</g>
+      ${here ? `<rect class="map__here" x="${f(here.x + 2)}" y="${f(here.y + 2)}" width="${f(here.w - 4)}" height="${f(here.h - 4)}" rx="7"/>` : ''}`;
     const rooms = ROOM_IDS.map((id) => {
       const r = ROOM_RECTS[id];
       return `<div class="map__room ${id === this.here ? 'is-here' : ''}" data-room="${id}"
@@ -1183,6 +1429,8 @@ export class StationScene extends Phaser.Scene {
     this.miniGame?.destroy();
     this.miniGame = undefined;
     this.miniOutdoor = false;
+    this.ui.q('[data-msgs]').innerHTML = '';
+    this.ui.q('[data-hud]').classList.remove('is-mini');
     this.overlay = 'none';
     this.ui.q('[data-overlay]').hidden = true;
     this.ui.q('[data-actions]').hidden = true;
@@ -1215,35 +1463,107 @@ export class StationScene extends Phaser.Scene {
   }
 
   /**
-   * Tutorial guiado, rápido y con el reloj detenido: caminar, usar una vez el objeto de la investigación y la cosecha,
-   * y un solo paso que explica los costos, las tareas y las llamaradas. Las acciones son reales y cuentan para las tareas.
+   * Tutorial guiado con el reloj detenido y todo bloqueado menos el paso actual (spotlight encima de lo que se enseña).
+   * Explica cada barra (qué es, cómo subirla y dónde) y los eventos; en el entrenamiento se practica cosechar y sellar una fisura
+   * abierta a propósito, y se muestran una tormenta de polvo y una llamarada de muestra. Al repetirlo en una misión real, solo se explica.
    */
   private runTutorial(): void {
     this.closeOverlay();
     this.flags = { ...this.flags, moved: false, opened: false, map: false };
     const done = (action: ActionId): boolean => (this.sim.stats.actionsBy[action] ?? 0) >= 1;
+    const read = (text: string, spot?: string[], extra: Partial<TutorialStep> = {}): TutorialStep => ({ text, done: () => false, manual: true, spot, ...extra });
+    const stat = (key: keyof Resources): TutorialStep => read(t(`tutorial.${key}`), [`[data-res="${key}"]`]);
     const own = this.mission.tutorial;
+    const practice: TutorialStep[] = [
+      { text: t('tutorial.harvest'), done: () => done('harvest'), guide: 'rack-plantas', spot: ['machine:rack-plantas'], allow: { move: true, machine: 'rack-plantas', action: 'harvest' } },
+      read(t('tutorial.foodUp'), ['[data-res="food"]']),
+      read(t('tutorial.breach'), ['[data-sys="leak"]', '[data-res="oxygen"]'], { enter: () => this.sim.forceBreach('soporte') }),
+      { text: t('tutorial.repair'), done: () => done('repair'), guide: BREACH_GUIDE, spot: [`machine:${BREACH_GUIDE}`], allow: { move: true, machine: BREACH_GUIDE, action: 'repair' } },
+      read(t('tutorial.dust'), ['[data-sys="panels"]', '[data-res="energy"]'], { enter: () => this.sim.forceDustStorm() }),
+      read(t('tutorial.flare'), ['[data-countdown]', '[data-res="radiation"]'], { demoFlare: true }),
+    ];
     this.tutorial = [
-      { text: t('tutorial.walk'), done: () => this.flags.moved },
-      { text: missionText(this.mission.id, 'tutorial'), done: () => own.handsOn && done(own.action), guide: own.asset, manual: !own.handsOn },
-      { text: t('tutorial.harvest'), done: () => done('harvest'), guide: 'rack-plantas' },
-      { text: t('tutorial.costs'), done: () => false, guide: 'consola-antena', manual: true },
-      state.training
-        ? { text: t('tutorial.doneTraining'), done: () => false, manual: true, cta: t('tutorial.choose') }
-        : { text: t('tutorial.done'), done: () => false, manual: true },
+      read(t('tutorial.welcome')),
+      read(t('tutorial.stats'), ['.hud__stats']),
+      stat('energy'), stat('oxygen'), stat('food'), stat('health'), stat('radiation'),
+      ...(state.training ? practice : [read(missionText(this.mission.id, 'tutorial'), [`machine:${own.asset}`], { guide: own.asset })]),
+      read(t('tutorial.clock'), ['.hud__clock']),
+      ...(state.training
+        ? [ // la investigación de práctica es una sola (cosechar, ya hecha): falta avisar a la Tierra y se ve la misión ganada
+          read(t('tutorial.tasksTraining'), ['.hud__tasks']),
+          { text: t('tutorial.tellEarth'), done: () => false, guide: 'consola-antena', spot: ['machine:consola-antena'], allow: { move: true, machine: 'consola-antena', action: 'tellEarth' as ActionId } },
+        ]
+        : [read(t('tutorial.tasks'), ['.hud__tasks']), read(t('tutorial.done'))]),
     ];
     this.tutorialIndex = 0;
+    this.ui.q('[data-hud]').classList.add('is-tutorial');
     this.showTutorial();
   }
 
   private showTutorial(): void {
     const step = this.tutorial[this.tutorialIndex];
-    this.setText('[data-tip-text]', step.text);
+    step.enter?.();
+    for (const ev of this.sim.drainEvents()) this.onSimEvent(ev); // la fisura o la tormenta de práctica se ven al instante
+    this.speak(step.text);
     this.ui.q('[data-tip-actions]').hidden = false;
     const next = this.ui.q('[data-action="tutorial-next"]');
     next.hidden = !step.manual; // los pasos con tarea avanzan solos
     next.innerHTML = `${icon('check')}${esc(step.cta ?? t('tutorial.ok'))}`;
     this.ui.q('[data-tip]').hidden = false;
+    this.renderHud();
+  }
+
+  /** En el tutorial solo se camina en los pasos de práctica. */
+  private tutorialAllowsMove(): boolean {
+    return this.tutorialIndex < 0 || !!this.tutorial[this.tutorialIndex]?.allow?.move;
+  }
+
+  /** En el tutorial solo responde la máquina del paso (las demás no se resaltan ni se abren). */
+  private tutorialAllowsMachine(m: Machine): boolean {
+    return this.tutorialIndex < 0 || this.tutorial[this.tutorialIndex]?.allow?.machine === m.prop.asset;
+  }
+
+  /** Spotlight sobre lo que enseña el paso; se recalcula cada frame porque la cámara se mueve. Oculto en pausa y en los minijuegos. */
+  private updateSpot(): void {
+    const step = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex] : undefined;
+    if (!step || (this.overlay !== 'none' && this.overlay !== 'actions')) return this.spot.hide();
+    const rects = (step.spot ?? []).map((target) => (target.startsWith('machine:') ? this.machineRect(target.slice(8)) : this.hudRect(target)));
+    this.spot.show(unionRect(rects), !!step.allow?.move, [this.michiRect()]); // el personaje siempre queda iluminado
+  }
+
+  /** El michi en la pantalla, dentro de un círculo con un poco de aire alrededor. */
+  private michiRect(): SpotRect {
+    const b = this.michi.getBounds();
+    const cam = this.cameras.main;
+    const v = cam.worldView;
+    const size = Math.max(b.width, b.height) * cam.zoom + 52;
+    const cx = (b.centerX - v.x) * cam.zoom;
+    const cy = (b.centerY - v.y) * cam.zoom;
+    return { x: cx - size / 2, y: cy - size / 2, w: size, h: size, round: true };
+  }
+
+  private hudRect(selector: string): SpotRect | null {
+    const el = this.ui.el.querySelector(selector);
+    return el ? rectOf(el, this.ui.el, GAME_WIDTH) : null;
+  }
+
+  /** Caja de una máquina en la pantalla (de mapa a pantalla, como las flechas de guía). */
+  private machineRect(asset: string): SpotRect | null {
+    const m = asset === BREACH_GUIDE ? this.breachProp : this.machines.find((x) => x.prop.asset === asset);
+    if (!m) return null;
+    const b = m.sprite.getBounds();
+    const cam = this.cameras.main;
+    const v = cam.worldView;
+    return { x: (b.x - v.x) * cam.zoom, y: (b.y - v.y) * cam.zoom, w: b.width * cam.zoom, h: b.height * cam.zoom };
+  }
+
+  /** Quita el tutorial de la pantalla (diálogo, spotlight y bloqueos) y lo marca como visto. */
+  private clearTutorial(): void {
+    this.tutorialIndex = -1;
+    this.ui.q('[data-tip]').hidden = true;
+    this.ui.q('[data-hud]').classList.remove('is-tutorial');
+    this.spot.hide();
+    state.saveProgress({ tutorialDone: true });
   }
 
   private checkTutorial(): void {
@@ -1259,9 +1579,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   private endTutorial(): void {
-    this.tutorialIndex = -1;
-    this.ui.q('[data-tip]').hidden = true;
-    state.saveProgress({ tutorialDone: true });
+    this.clearTutorial();
     if (!state.training) return;
     // fin del entrenamiento: se descarta la estación de práctica y se elige la primera misión
     state.training = false;
@@ -1271,14 +1589,40 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ---------- entrada ----------
+  /**
+   * Teclado en los minijuegos: las flechas mueven la herramienta (o el foco entre botones) y Espacio, Enter, 1-4 y A/S/D van al minijuego.
+   * Espacio y Enter que el minijuego no usa aprietan el botón con foco (no hacen saltar al michi de fondo). Devuelve true si la tecla se consumió.
+   */
+  private handleMiniKey(ev: KeyboardEvent, key: string): boolean {
+    if (key.startsWith('arrow')) {
+      const dx = key === 'arrowright' ? 1 : key === 'arrowleft' ? -1 : 0;
+      const dy = key === 'arrowdown' ? 1 : key === 'arrowup' ? -1 : 0;
+      if (this.miniGame?.nudge) this.miniGame.nudge(dx, dy);
+      else moveFocus(this.ui.q('[data-mini-stage]'), dx, dy);
+      ev.preventDefault();
+      return true;
+    }
+    if (!MINI_KEYS.has(key)) return false;
+    if (this.miniGame?.key && (ev.repeat || this.miniGame.key(key, true))) { // la repetición de una tecla mantenida no cuenta como otro toque
+      ev.preventDefault();
+      return true;
+    }
+    return key === ' ' || key === 'enter';
+  }
+
   private bindInput(): void {
     const kb = this.input.keyboard!;
+    kb.on('keyup', (ev: KeyboardEvent) => {
+      const key = ev.key.toLowerCase();
+      if (this.overlay === 'minigame' && MINI_KEYS.has(key) && this.miniGame?.key?.(key, false)) ev.preventDefault();
+    });
     this.keys = kb.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT', false) as Record<string, Phaser.Input.Keyboard.Key>;
     kb.on('keydown', (ev: KeyboardEvent) => {
       audio.unlock();
       const key = ev.key.toLowerCase();
-      if (this.overlay === 'minigame' && key.startsWith('arrow')) {
-        this.miniGame?.nudge?.(key === 'arrowright' ? 1 : key === 'arrowleft' ? -1 : 0, key === 'arrowdown' ? 1 : key === 'arrowup' ? -1 : 0);
+      if (this.overlay === 'minigame' && this.handleMiniKey(ev, key)) return;
+      if (this.tutorialIndex >= 0 && key === 'enter' && this.overlay === 'none' && this.tutorial[this.tutorialIndex]?.manual) {
+        this.nextTutorial(true); // Enter = «Entendido» en los pasos de leer
         ev.preventDefault();
         return;
       }
@@ -1300,7 +1644,7 @@ export class StationScene extends Phaser.Scene {
     });
     // clic o toque en el piso: caminar hasta ahí (alternativa al teclado)
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (over.length || this.overlay !== 'none') return;
+      if (over.length || this.overlay !== 'none' || !this.tutorialAllowsMove()) return;
       audio.unlock();
       const at = this.cameras.main.getWorldPoint(p.x, p.y); // la cámara del HUD no tiene zoom: se usa la del mundo
       if (isWalkable(at)) this.walkTo(at, false);
@@ -1313,12 +1657,23 @@ export class StationScene extends Phaser.Scene {
     this.ending = true;
     const summary = this.sim.summary();
     const score = computeScore(summary);
-    const earned = earnedAchievements(summary);
-    const newAchievements = state.unlock(earned);
-    const newBest = state.recordBest(this.mission.id, score.score, score.stars);
-    state.lastResult = { loadout: state.loadout!, summary, score, newAchievements, newBest };
+    const training = state.training; // el entrenamiento termina ganado para mostrar cómo se ve; no cuenta récords ni logros
+    if (this.tutorialIndex >= 0) this.clearTutorial();
+    const newAchievements = training ? [] : state.unlock(earnedAchievements(summary));
+    const newBest = training ? false : state.recordBest(this.mission.id, score.score, score.stars);
+    if (summary.won && !training) state.recordWin(this.mission.id, state.loadout!.difficulty);
+    state.lastResult = { loadout: state.loadout!, summary, score, newAchievements, newBest, training };
     audio.play(summary.won ? 'achievement' : 'hurt');
     this.playAnim(summary.won ? 'smile' : 'hurt', true);
+    if (summary.cause === 'radiation') { // radiación 100: muere de una, sin viaje de regreso
+      this.closeOverlay();
+      this.alert(t('alert.radiationDead'), 'danger');
+      audio.play('alarm');
+      if (!state.calm) this.cameras.main.shake(600, 0.01);
+      this.flareTint.setAlpha(0.45);
+      this.time.delayedCall(1600, () => fadeTo(this, SCENES.report, 500));
+      return;
+    }
     this.alert(summary.won ? t('alert.won') : t('alert.lost'), summary.won ? 'ok' : 'danger');
     this.time.delayedCall(1600, () => fadeTo(this, SCENES.returnTrip, 500)); // viaje de regreso a la Tierra y después el informe
   }
@@ -1331,9 +1686,19 @@ const GUIDE_ASSET: Record<Exclude<keyof Resources, 'radiation'>, string> = {
 };
 /** Sin polvo que limpiar (o sin sol), la energía se recupera pedaleando. */
 const BIKE_ASSET = 'bicicleta-estatica';
+/** De dónde se recupera cada barra (imagen del objeto y su lugar). La radiación no se puede sacar. */
+const RES_SOURCES: Record<keyof Resources, { asset: string; label: 'where.bike' | 'where.panel' | 'where.recycler' | 'where.plants' | 'where.bed' }[]> = {
+  energy: [{ asset: 'bicicleta-estatica', label: 'where.bike' }, { asset: 'panel-solar', label: 'where.panel' }],
+  oxygen: [{ asset: 'reciclador-aire', label: 'where.recycler' }],
+  food: [{ asset: 'rack-plantas', label: 'where.plants' }],
+  health: [{ asset: 'camilla-medica', label: 'where.bed' }],
+  radiation: [],
+};
 /** La Esclusa: adonde guía la flecha cuando hay que volver a la nave. */
 const DOOR_ASSET = 'esclusa';
 const BREACH_GUIDE = 'reciclador-roto';
+/** Clase de la llamarada de muestra del tutorial (no ocurre: solo se ve la cuenta regresiva). */
+const DEMO_FLARE = 'M2.0';
 /** Sala donde empieza cada jornada. */
 const START_ROOM: RoomId = 'puente';
 /** Nombre que se muestra de una máquina: el suyo propio o el de su sala. */
@@ -1351,7 +1716,10 @@ const FLARE_RESULT_MS = 7000;
 /** Tamaño de la llamarada en palabras, con su clase GOES real entre paréntesis (p. ej. "enorme (X9.3)"). */
 const flareName = (classType: string): string => `${t(`flare.size.${severity(classType)}`)} (${classType})`;
 /** Cuánto se ve la pista de cada minijuego. */
-const MINI_HINT_MS = 4000;
+/** Cuánto queda a la vista el resultado (estrellas y ganancia) antes de cerrar el minijuego. */
+const MINI_RESULT_MS = 1800;
+/** Color (token) de cada recurso en los textos flotantes y en el resultado de los minijuegos. */
+const RESOURCE_COLOR: Record<ResourceKey, string> = { energy: 'star-gold', oxygen: 'comet-cyan', food: 'solar-coral', health: 'aurora-teal', radiation: 'nebula-magenta' };
 /** Oscuridad según la energía: con 60 o más, luz plena; sin energía, casi a oscuras. */
 const darknessFor = (energy: number): number => (Math.min(60, Math.max(0, 60 - energy)) / 60) * 0.72;
 /** Escala del plano dentro del mapa (M). */

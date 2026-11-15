@@ -5,6 +5,21 @@
  */
 const clamp = (v: number, min: number, max: number): number => Math.min(max, Math.max(min, v));
 
+// ---------------------------------------------------------------- Fase 0: enlace con la Tierra
+/** [MODELO] ángulos y canales didácticos, no telemetría real: apuntar la antena y elegir el canal que usa la Tierra. */
+export const LINK_ANGLES: readonly number[] = [-40, -24, 22, 38];
+export const LINK_CHANNELS = 3;
+export const LINK_AIM_MAX = 65;
+/** Diferencia de ángulo (grados) con la que la señal queda firme. */
+export const LINK_LOCK_DEG = 9;
+/** Intensidad de la señal (0–1): sin el canal correcto no hay señal; con él, baja con la desviación del ángulo. */
+export const linkStrength = (aim: number, target: number, rightChannel: boolean): number =>
+  rightChannel ? clamp(1 - Math.abs(target - aim) / 64, 0, 1) : 0;
+export const linkLocked = (aim: number, target: number, rightChannel: boolean): boolean =>
+  rightChannel && Math.abs(target - aim) <= LINK_LOCK_DEG;
+/** Los canales equivocados pesan poco y la rapidez es opcional: nunca baja de 0,4. */
+export const linkScore = (errors: number, seconds: number): number => clamp(1 - errors * 0.08 - Math.max(0, seconds - 25) * 0.003, 0.4, 1);
+
 // ---------------------------------------------------------------- Fase 1: giro e inspección
 /** [REAL] velocidad del giro de 360° (R-bar Pitch Maneuver): 0,75 °/s, es decir 480 s por vuelta. */
 export const RPM_DEG_PER_SEC = 0.75;
@@ -68,6 +83,7 @@ export interface CasaResult {
   corridor: number;    // 0–1: tiempo dentro del corredor
   heatMax: number;
   glide: number;       // 0–1
+  link?: number;       // 0–1: enlace con la Tierra (opcional: los resultados antiguos no lo traen)
 }
 
 export function casaStars(r: CasaResult): 1 | 2 | 3 {
@@ -77,4 +93,4 @@ export function casaStars(r: CasaResult): 1 | 2 | 3 {
 }
 
 export const casaScore = (r: CasaResult): number =>
-  Math.round(1000 * (0.25 * r.inspected + 0.2 * r.burn + 0.3 * r.corridor + 0.25 * r.glide) + (r.heatMax <= HEAT_LIMIT ? 300 : 0));
+  Math.round(1000 * (0.25 * r.inspected + 0.2 * r.burn + 0.3 * r.corridor + 0.25 * r.glide) + (r.heatMax <= HEAT_LIMIT ? 300 : 0) + Math.round(100 * (r.link ?? 0)));

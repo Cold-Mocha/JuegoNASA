@@ -25,8 +25,7 @@ const BASE_ROOM_RECTS: Record<RoomId, Rect> = {
   soporte:        { x: 300,  y: 200,  w: 560,  h: 360 },
   puente:         { x: 920,  y: 200,  w: 560,  h: 360 },
   enfermeria:     { x: 1540, y: 200,  w: 560,  h: 360 },
-  comunicaciones: { x: 1540, y: 1020, w: 460,  h: 360 },
-  esclusa:        { x: 980,  y: 1020, w: 440,  h: 360 },
+  esclusa:        { x: 820,  y: 1020, w: 760,  h: 360 },
   exterior:       { x: 200,  y: 1600, w: 2000, h: 520 },
   invernadero:    { x: 400,  y: 2300, w: 760,  h: 380 },
 };
@@ -43,7 +42,6 @@ const BASE_HALLS: readonly Hall[] = [
   { x: 1135, y: 480, w: 130, h: 290 },  // → Puente
   { x: 1755, y: 480, w: 130, h: 290 },  // → Enfermería
   { x: 1135, y: 750, w: 130, h: 350 },  // → Esclusa
-  { x: 1705, y: 750, w: 130, h: 350 },  // → Comunicaciones
   { x: 1135, y: 1300, w: 130, h: 380, outdoors: true }, // Esclusa → superficie lunar
   { x: 715, y: 2040, w: 130, h: 340, outdoors: true },  // superficie → invernadero
 ];

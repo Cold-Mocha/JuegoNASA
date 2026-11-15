@@ -4,7 +4,7 @@ import { state } from '../core/state';
 import { drawStarfield } from '../core/starfield';
 import { UiLayer, esc } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
-import { MISSIONS, archiveFor, missionText, taskLabel } from '../data/missions';
+import { MISSIONS, archiveFor, missionTasks, missionText, taskLabel } from '../data/missions';
 import { achievementTitle } from '../data/achievements';
 import { ENTRIES, entryText, type EntryId } from '../data/encyclopedia';
 import { t, type TKey } from '../core/i18n';
@@ -58,8 +58,8 @@ export class MissionReportScene extends Phaser.Scene {
     const entry = ENTRIES.find((e) => e.id === lesson.entry)!;
     const week = archiveFor(mission);
 
-    const tasks = mission.tasks.map((t) => {
-      const n = taskProgress(t, s.stats, s.science);
+    const tasks = missionTasks(mission, !!r.training).map((t) => {
+      const n = taskProgress(t, s.stats);
       return `<li class="mn-check ${n >= t.count ? 'is-done' : ''}"><span class="mn-check__box" aria-hidden="true">${n >= t.count ? icon('check') : ''}</span>
         <span class="mn-check__text">${icon(taskIcon(t))}${esc(taskLabel(t))}</span><span class="mn-check__meta">${n}/${t.count}</span></li>`;
     }).join('');
@@ -73,7 +73,7 @@ export class MissionReportScene extends Phaser.Scene {
     const ui = new UiLayer(this, /* html */ `
       <div class="report" data-report="${s.won ? 'won' : 'lost'}">
         <div class="mn-panel report__main">
-          <h1 class="display-lg report__title">${s.won ? t('report.title.won') : t('report.title.lost')}</h1>
+          <h1 class="display-lg report__title">${s.won ? t('report.title.won') : cause === 'radiation' ? t('report.title.radiation') : t('report.title.lost')}</h1>
           <p class="mn-panel__body report__question">${icon(MISSION_ICON[mission.id])}${esc(missionText(mission.id, 'name'))}: ${esc(missionText(mission.id, 'question'))}</p>
           <ul class="mn-checklist report__tasks">${tasks}</ul>
           <div class="mn-stars report__stars" aria-label="${t('report.stars', { n: r.score.stars })}">${STAR.repeat(r.score.stars)}${STAR_OFF.repeat(3 - r.score.stars)}</div>
@@ -90,15 +90,24 @@ export class MissionReportScene extends Phaser.Scene {
         </div>
         <aside class="report__side">
           ${achievements}
-          <div class="report__buttons">
+          ${r.training
+            ? `<p class="mn-panel__body report__training">${t('report.training')}</p>
+          <div class="report__buttons"><button class="mn-btn" data-action="select">${icon('play')}${t('tutorial.choose')}</button></div>`
+            : `<div class="report__buttons">
             <button class="mn-btn" data-action="retry">${icon('retry')}${t('common.retry')}</button>
             <button class="mn-btn mn-btn--secondary" data-action="select">${icon('list')}${t('report.other')}</button>
             <button class="mn-btn mn-btn--secondary" data-action="menu">${icon('home')}${t('common.menu')}</button>
-          </div>
+          </div>`}
         </aside>
       </div>`);
     ui.on('retry', () => fadeTo(this, SCENES.station)) // reintentar va directo a la estación: el despegue ya se vio
-      .on('select', () => fadeTo(this, SCENES.select))
+      .on('select', () => {
+        if (r.training) { // fin del entrenamiento: se descarta la estación de práctica y se elige la primera misión
+          state.training = false;
+          state.loadout = null;
+        }
+        fadeTo(this, SCENES.select);
+      })
       .on('menu', () => fadeTo(this, SCENES.menu));
     ui.focusFirst();
   }

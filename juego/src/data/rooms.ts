@@ -38,7 +38,7 @@ const wall = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 
 const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ...p, missions: Array.isArray(missions) ? missions : [missions] });
 
 /**
- * Orden del mapa: las puertas de los pasillos dan a las franjas x ≈ 215–345 (Comunicaciones 165–295; Esclusa 155–285 arriba y abajo;
+ * Orden del mapa: las puertas de los pasillos dan a las franjas x ≈ 215–345 (Esclusa 315–445 arriba y abajo;
  * Invernadero 315–445; Exterior 935–1065 arriba y 515–645 abajo). Esas franjas y el centro quedan libres para caminar; las máquinas
  * y casilleros van contra la pared, y las cajas y plantas en los costados, una sola pila por lado y sin montarse sobre otro objeto.
  */
@@ -61,21 +61,19 @@ export const ROOMS: Record<RoomId, Room> = {
       deco('casillero', 62, 62), wall('extintor', 165, 12),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
-  comunicaciones: {
-    id: 'comunicaciones',
-    props: [machine('consola-antena', 355, 72, ['repairAntenna', 'forecast'], 'machine.antenna'),
-      deco('casillero', 62, 62), wall('extintor', 140, 12),
-      deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 400, 350)],
-  },
   esclusa: {
     id: 'esclusa',
-    props: [deco('casillero-trajes', 80, 66), deco('casillero-trajes', 370, 66), wall('extintor', 300, 12),
-      deco('planta', 45, 235), deco('cajas', 400, 350)],
+    // sala ancha: cuatro casilleros de trajes contra la pared, cuadros y extintores, y a cada lado cajas y plantas (las puertas quedan libres en x ≈ 315–445)
+    props: [deco('casillero-trajes', 70, 66), deco('casillero-trajes', 190, 66), deco('casillero-trajes', 570, 66), deco('casillero-trajes', 690, 66),
+      wall('extintor', 255, 12), wall('extintor', 520, 12), wall('cuadro-tierra', 130, -8), wall('cuadro-tierra', 640, -8),
+      deco('planta', 45, 235), deco('planta', 715, 235), deco('casillero', 62, 160), deco('casillero', 698, 160),
+      deco('cajas', 110, 350), deco('cajas', 650, 350), deco('mesa-comedor', 200, 352), deco('mesa-comedor', 560, 352)],
   },
   exterior: {
     id: 'exterior',
     props: [deco('panel-solar', 760, 250), deco('panel-solar', 1260, 250), deco('panel-solar', 1600, 250),
       machine('estacion-limpieza', 1600, 480, ['cleanDust'], 'machine.dustStation'),
+      machine('consola-antena', 170, 430, ['repairAntenna', 'tellEarth', 'forecast'], 'machine.antenna'), // la antena, afuera y a la izquierda
       deco('roca', 160, 150), deco('roca', 900, 470), deco('roca', 1900, 420),
       // objetos de cada investigación
       only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'machine.drill')),
@@ -89,7 +87,13 @@ export const ROOMS: Record<RoomId, Room> = {
       // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
       only('huerto-lunar', machine('tanque-algas', 115, 90, ['growLights'], 'machine.algae')),
       only('huerto-lunar', deco('bandeja-cultivo', 250, 350)), only('huerto-lunar', deco('bandeja-cultivo', 470, 350)),
-      only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250))],
+      only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250)),
+      // en las otras investigaciones no hay tanque de algas: el invernadero igual se ve cultivado (bandejas, macetas y cajas de cosecha)
+      only(['paneles-solares', 'hielo-lunar'], deco('planta', 70, 80)), only(['paneles-solares', 'hielo-lunar'], deco('planta', 170, 80)),
+      only(['paneles-solares', 'hielo-lunar'], wall('cuadro-tierra', 420, -8)),
+      only(['paneles-solares', 'hielo-lunar'], deco('bandeja-cultivo', 250, 350)), only(['paneles-solares', 'hielo-lunar'], deco('bandeja-cultivo', 520, 350)),
+      only(['paneles-solares', 'hielo-lunar'], deco('planta', 50, 250)), only(['paneles-solares', 'hielo-lunar'], deco('planta', 710, 250)),
+      only(['paneles-solares', 'hielo-lunar'], deco('cajas', 720, 360))],
   },
 };
 

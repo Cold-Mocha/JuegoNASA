@@ -7,8 +7,8 @@ export const GOOD_HEALTH = 50;
 export const GREAT_HEALTH = 80;
 
 /**
- * Puntaje y estrellas de una jornada científica. Siete términos:
- * tareas×300 + ciencia×100 + llamaradas dentro de la nave×100 + días ahorrados×100 + salud final×2 + recursos sobrantes (promedio) + estrellas×200.
+ * Puntaje y estrellas de una jornada científica. Seis términos:
+ * tareas×300 + llamaradas dentro de la nave×100 + días ahorrados×100 + salud final×2 + recursos sobrantes (promedio) + estrellas×200.
  * ★ completar la investigación · ★★ además volver con salud ≥ 50 · ★★★ además salud ≥ 80 y todas las llamaradas dentro de la nave.
  */
 export function computeScore(s: MissionSummary): ScoreResult {
@@ -18,7 +18,6 @@ export function computeScore(s: MissionSummary): ScoreResult {
   const early = s.won ? Math.max(0, s.days - s.daysSurvived) : 0; // volver antes del plazo suma
   const score =
     s.tasksDone * 300 +
-    s.science * 100 +
     s.stats.shelteredFlares * 100 +
     early * 100 +
     Math.round(health) * 2 +

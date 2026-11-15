@@ -801,6 +801,6 @@ export class LaunchLoadingScene extends Phaser.Scene {
   private arrive(): void {
     this.done = true;
     this.tweens.add({ targets: this.ui, alpha: 0, duration: 250 });
-    this.time.delayedCall(150, () => fadeTo(this, SCENES.station, 400));
+    this.time.delayedCall(150, () => fadeTo(this, SCENES.flight, 400));
   }
 }

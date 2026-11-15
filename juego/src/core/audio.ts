@@ -4,7 +4,7 @@ import { state } from './state';
  * Audio 100 % procedural con Web Audio API: cero archivos, cero latencia de carga.
  * El AudioContext se crea con el primer gesto del jugador (requisito de los navegadores).
  */
-export type Sfx = 'click' | 'confirm' | 'error' | 'alarm' | 'achievement' | 'door' | 'thrust' | 'hurt' | 'jump' | 'radio' | 'day';
+export type Sfx = 'click' | 'confirm' | 'error' | 'alarm' | 'achievement' | 'door' | 'thrust' | 'hurt' | 'jump' | 'radio' | 'day' | 'hit' | 'miss' | 'beat' | 'page';
 
 type Note = [freq: number, start: number, dur: number, type?: OscillatorType, gain?: number];
 
@@ -20,6 +20,11 @@ const SFX: Record<Sfx, Note[]> = {
   jump: [[330, 0, 0.12, 'sine', 0.2], [495, 0.06, 0.14, 'sine', 0.15]],
   radio: [[1200, 0, 0.04, 'square', 0.08], [900, 0.06, 0.04, 'square', 0.08], [1500, 0.12, 0.05, 'square', 0.08]],
   day: [[392, 0, 0.2, 'sine', 0.2], [523, 0.18, 0.35, 'sine', 0.2]],
+  // minijuegos: acierto, error y tic de ritmo (cortos para no tapar el juego)
+  hit: [[784, 0, 0.06, 'triangle', 0.2], [1175, 0.05, 0.09, 'triangle', 0.18]],
+  miss: [[196, 0, 0.14, 'triangle', 0.22]],
+  beat: [[1046, 0, 0.03, 'square', 0.07]],
+  page: [[240, 0, 0.16, 'sawtooth', 0.035], [170, 0.06, 0.2, 'triangle', 0.04]], // pasar la hoja: un roce corto
 };
 
 /** Escala pentatónica (Do mayor) para la música ambiente: nunca suena “mal”, ideal para generar al azar. */
@@ -58,6 +63,12 @@ class AudioEngine {
     if (!this.ctx || !this.sfxBus || state.settings.sfxVolume <= 0) return;
     const t0 = this.ctx.currentTime;
     for (const [freq, start, dur, type = 'sine', gain = 0.3] of SFX[name]) this.tone(this.sfxBus, freq, t0 + start, dur, type, gain);
+  }
+
+  /** Sonido de voz de un personaje al «hablar» (una letra): pitido corto de tono casi igual, como en Undertale. */
+  blip(base = 640): void {
+    if (!this.ctx || !this.sfxBus || state.settings.sfxVolume <= 0) return;
+    this.tone(this.sfxBus, base * (0.92 + Math.random() * 0.3), this.ctx.currentTime, 0.055, 'square', 0.07);
   }
 
   /** Música ambiente: un zumbido grave + notas suaves al azar (cada ~1,5 s). */

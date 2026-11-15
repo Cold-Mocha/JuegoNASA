@@ -65,7 +65,7 @@ describe('ninguna decisión es gratis', () => {
 
   it('reparar la antena la deja al 100 % tras la demora de la respuesta', () => {
     const sim = makeSim({ drain: 0 });
-    goTo(sim, 'comunicaciones');
+    goTo(sim, 'exterior');
     sim.comp.antenna = 0.3;
     sim.act('repairAntenna');
     expect(sim.comp.antenna).toBe(0.3);
@@ -281,7 +281,7 @@ describe('tareas en dos etapas: "Avisar a la Tierra" solo se desbloquea al termi
 
   it('la antena está bloqueada hasta cumplir la etapa 1; al cumplirla avisa y se puede usar', () => {
     const sim = makeSim({ drain: 0, tasks });
-    goTo(sim, 'comunicaciones');
+    goTo(sim, 'exterior');
     expect(sim.stage2Unlocked).toBe(false);
     expect(sim.canAct('repairAntenna').reason).toBe('locked');
     expect(sim.available('repairAntenna')).toBe(false);
@@ -289,7 +289,7 @@ describe('tareas en dos etapas: "Avisar a la Tierra" solo se desbloquea al termi
     sim.act('heal');
     expect(sim.stage2Unlocked).toBe(true);
     expect(types(sim.drainEvents())).toContain('stageUnlocked');
-    goTo(sim, 'comunicaciones');
+    goTo(sim, 'exterior');
     expect(sim.canAct('repairAntenna').ok).toBe(true);
     expect(sim.ended).toBeNull(); // todavía falta avisar a la Tierra
     sim.act('repairAntenna');

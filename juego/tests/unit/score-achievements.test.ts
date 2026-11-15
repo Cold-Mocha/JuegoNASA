@@ -5,7 +5,7 @@ import type { MissionSummary } from '../../src/sim/simulation';
 import { ACHIEVEMENT_IDS } from '../../src/data/achievements';
 
 const base: MissionSummary = {
-  won: true, cause: null, daysSurvived: 5, days: 7, science: 6, tasksDone: 3, tasksTotal: 3,
+  won: true, cause: null, daysSurvived: 5, days: 7, tasksDone: 3, tasksTotal: 3,
   resources: { energy: 40, oxygen: 40, food: 40, health: 90, radiation: 20 },
   stats: { shelteredFlares: 2, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 3, antennaAligns: 1, actions: 20, nightActions: 0, actionsBy: {}, stage2By: {} },
 };
@@ -25,7 +25,7 @@ describe('puntaje y estrellas', () => {
   });
 
   it('el puntaje se calcula con la fórmula documentada (volver antes suma)', () => {
-    expect(computeScore(base).score).toBe(3 * 300 + 6 * 100 + 2 * 100 + 2 * 100 + 90 * 2 + 40 + 3 * 200);
+    expect(computeScore(base).score).toBe(3 * 300 + 2 * 100 + 2 * 100 + 90 * 2 + 40 + 3 * 200);
   });
 
   it('cada tarea cumplida suma, aunque la investigación quede incompleta', () => {
@@ -40,7 +40,7 @@ describe('logros científicos', () => {
   });
 
   it('una partida sin acciones no entrega logros', () => {
-    const empty: MissionSummary = { ...base, won: false, daysSurvived: 2, science: 0,
+    const empty: MissionSummary = { ...base, won: false, daysSurvived: 2,
       stats: { shelteredFlares: 0, unshieldedFlares: 1, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {} } };
     expect(earnedAchievements(empty)).toEqual([]);
   });

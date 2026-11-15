@@ -26,7 +26,9 @@ const PANEL_SVG = `<svg viewBox="0 0 160 110" width="160" height="110" aria-hidd
 const SUN_SVG = `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><circle cx="32" cy="32" r="14" fill="#ffcb47" stroke="#0e0b33" stroke-width="4"/>
   <path d="M32 6v8M32 50v8M6 32h8M50 32h8M14 14l6 6M44 44l6 6M14 50l6-6M44 20l6-6" stroke="#ffcb47" stroke-width="5" stroke-linecap="round"/></svg>`;
 
-export function mountTestPanel(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+/** `time`: multiplica el tiempo para apuntar al Sol (más difícil, menos tiempo). */
+export function mountTestPanel(root: HTMLElement, cb: MiniCallbacks, time = 1): MiniGameHandle {
+  const aimSeconds = AIM_SECONDS * time;
   let handle: MiniGameHandle = { destroy() { /* se reemplaza al montar el primer paso */ } };
   let destroyed = false;
   let timer = 0;
@@ -37,7 +39,7 @@ export function mountTestPanel(root: HTMLElement, cb: MiniCallbacks): MiniGameHa
     const sx = PIVOT.x + SUN_R * Math.sin((sunAngle * Math.PI) / 180);
     const sy = PIVOT.y - SUN_R * Math.cos((sunAngle * Math.PI) / 180);
     root.innerHTML = `<div class="aim" style="width:${W}px;height:${H}px">
-      <div class="aim__time" role="progressbar" aria-label="${t('mini.time')}" aria-valuemin="0" aria-valuemax="${AIM_SECONDS}"><i data-time></i></div>
+      <div class="aim__time" role="progressbar" aria-label="${t('mini.time')}" aria-valuemin="0" aria-valuemax="${aimSeconds}"><i data-time></i></div>
       <div class="aim__sun" style="left:${sx - 32}px;top:${sy - 32}px">${SUN_SVG}</div>
       <div class="aim__panel" data-panel style="left:${PIVOT.x - 80}px;top:${PIVOT.y - 100}px">${PANEL_SVG}</div>
       <div class="aim__meter" role="meter" aria-label="${t('mini.power')}" aria-valuemin="0" aria-valuemax="100"><i data-power></i></div>
@@ -77,9 +79,9 @@ export function mountTestPanel(root: HTMLElement, cb: MiniCallbacks): MiniGameHa
       angle = clamp(angle + dir * ROTATE_DEG_PER_SEC * dt, -80, 80);
       const p = render();
       held = p >= HOLD_AT ? held + dt : 0;
-      time.style.width = `${Math.max(0, 1 - elapsed / AIM_SECONDS) * 100}%`;
+      time.style.width = `${Math.max(0, 1 - elapsed / aimSeconds) * 100}%`;
       cb.onProgress(0.5 + 0.5 * best);
-      if (held >= HOLD_SECONDS || elapsed >= AIM_SECONDS) return finish();
+      if (held >= HOLD_SECONDS || elapsed >= aimSeconds) return finish();
       raf = requestAnimationFrame(tick);
     };
     stage.querySelectorAll<HTMLButtonElement>('[data-dir]').forEach((b) => {

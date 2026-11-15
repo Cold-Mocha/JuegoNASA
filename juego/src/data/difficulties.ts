@@ -12,9 +12,9 @@ export interface Difficulty {
 }
 
 export const DIFFICULTIES: Difficulty[] = [
-  { id: 'cadete', stars: 1, drain: 0.7, dayLengthSec: 120, hints: true },
-  { id: 'piloto', stars: 2, drain: 1, dayLengthSec: 90, hints: true },
-  { id: 'comandante', stars: 3, drain: 1.15, dayLengthSec: 72, hints: false },
+  { id: 'cadete', stars: 1, drain: 0.85, dayLengthSec: 120, hints: true },
+  { id: 'piloto', stars: 2, drain: 1.15, dayLengthSec: 90, hints: true },
+  { id: 'comandante', stars: 3, drain: 1.35, dayLengthSec: 72, hints: false },
 ];
 
 export const difficultyName = (id: DifficultyId): string => t(`difficulty.${id}.name`);

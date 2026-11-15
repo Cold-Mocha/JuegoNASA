@@ -44,6 +44,11 @@ export type MissionField = 'name' | 'question' | 'brief' | 'tagline' | 'newObjec
 export const missionText = (id: MissionId, field: MissionField): string => t(`mission.${id}.${field}`);
 export const taskLabel = (task: ResearchTask): string => t(`task.${task.id}`);
 
+/** Entrenamiento: una sola tarea de investigación (cosechar) más el aviso a la Tierra, para ver una misión ganada de punta a punta. */
+const TRAINING_TASKS: readonly TaskId[] = ['huerto-cosecha', 'huerto-datos'];
+/** Tareas que cuentan en la partida: todas las de la jornada o, en el entrenamiento, solo las de práctica. */
+export const missionTasks = (m: Mission, training: boolean): ResearchTask[] => (training ? m.tasks.filter((x) => TRAINING_TASKS.includes(x.id)) : m.tasks);
+
 /** Tres jornadas: la primera con el Sol tranquilo y las otras dos con semanas reales de llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
   {
@@ -53,7 +58,7 @@ export const MISSIONS: Mission[] = [
       act('huerto-luces', 'growLights', 3),
       act('huerto-cosecha', 'harvest', 1),
       act('huerto-polvo', 'cleanDust', 1),
-      act('huerto-datos', 'repairAntenna', 1, 2),
+      act('huerto-datos', 'tellEarth', 1, 2),
     ],
   },
   {
@@ -63,7 +68,7 @@ export const MISSIONS: Mission[] = [
       act('paneles-prueba', 'cleanTestPanel', 3),
       act('paneles-polvo', 'cleanDust', 1),
       act('paneles-cosecha', 'harvest', 1),
-      act('paneles-datos', 'repairAntenna', 1, 2),
+      act('paneles-datos', 'tellEarth', 1, 2),
     ],
   },
   {
@@ -73,7 +78,7 @@ export const MISSIONS: Mission[] = [
       act('hielo-muestras', 'eva', 2),
       act('hielo-polvo', 'cleanDust', 1),
       act('hielo-cosecha', 'harvest', 1),
-      act('hielo-datos', 'repairAntenna', 1, 2),
+      act('hielo-datos', 'tellEarth', 1, 2),
     ],
   },
 ];

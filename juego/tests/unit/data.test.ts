@@ -92,7 +92,7 @@ describe('Archivo Científico', () => {
   });
 
   it('las salas con dato real tienen su "¿Sabías qué?"', () => {
-    for (const room of ['esclusa', 'enfermeria', 'comunicaciones', 'puente', 'exterior', 'invernadero'] as const) expect(entryForRoom(room)).toBeDefined();
+    for (const room of ['esclusa', 'enfermeria', 'puente', 'exterior', 'invernadero'] as const) expect(entryForRoom(room)).toBeDefined();
     expect(ROOM_IDS).toHaveLength(7);
   });
 });

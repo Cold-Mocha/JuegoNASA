@@ -44,7 +44,7 @@ export const ENTRIES: Entry[] = [
   { id: 'osdr', category: 'vida', url: 'https://osdr.nasa.gov/bio/', room: 'enfermeria' },
   { id: 'algae-oxygen', category: 'vida', url: 'https://www.esa.int/Science_Exploration/Human_and_Robotic_Exploration/Research/A_decade-long_quest_to_build_an_ecosystem_in_a_room', room: 'invernadero' },
   { id: 'plants-space', category: 'vida', url: 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/', room: 'invernadero' },
-  { id: 'comm-delay', category: 'vida', url: 'https://www.nasa.gov/communicating-with-missions/', room: 'comunicaciones' },
+  { id: 'comm-delay', category: 'vida', url: 'https://www.nasa.gov/communicating-with-missions/', room: 'exterior' },
   { id: 'mars-gravity', category: 'universo', url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html' },
   { id: 'artemis', category: 'misiones', url: 'https://www.nasa.gov/humans-in-space/artemis/' },
   { id: 'perseverance', category: 'misiones', url: 'https://science.nasa.gov/mission/mars-2020-perseverance/', room: 'esclusa' },

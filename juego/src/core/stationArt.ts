@@ -120,6 +120,19 @@ function surface(): string {
 const MODULE_ROOMS: readonly RoomId[] = ROOM_IDS.filter((id) => ROOM_ZONE[id] !== 'surface');
 const isGreenhouse = (id: RoomId): boolean => ROOM_ZONE[id] === 'greenhouse';
 
+/** Detalles de piso de la Esclusa: franjas de precaución a los lados de la puerta de salida y una zona de presión marcada frente a ella. */
+function airlockMarks(): string {
+  const r = ROOM_RECTS.esclusa;
+  const exit = HALLS.find((h) => h.outdoors && h.x >= r.x && h.x + h.w <= r.x + r.w && Math.abs(h.y - (r.y + r.h)) < 200);
+  if (!exit) return '';
+  const y = r.y + r.h - 34;
+  const left = rect({ x: r.x + 26, y, w: exit.x - r.x - 26 - 20, h: 16 }, 'url(#hazard)', 'opacity=".85"');
+  const right = rect({ x: exit.x + exit.w + 20, y, w: r.x + r.w - 26 - (exit.x + exit.w + 20), h: 16 }, 'url(#hazard)', 'opacity=".85"');
+  const zone = `<rect x="${f(exit.x - 36)}" y="${f(r.y + r.h - 236)}" width="${f(exit.w + 72)}" height="196" rx="18" fill="#ffcb47" fill-opacity=".07" stroke="#ffcb47" stroke-opacity=".6" stroke-width="5" stroke-dasharray="26 16"/>`;
+  const chevrons = [0, 1, 2].map((i) => `<path d="M${f(exit.x + exit.w / 2 - 22)} ${f(r.y + r.h - 190 + i * 40)} l22 18 l22 -18" fill="none" stroke="#ffcb47" stroke-opacity=".7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+  return `<g clip-path="url(#floor-esclusa)">${left}${right}${zone}${chevrons}</g>`;
+}
+
 export function stationSvg(): string {
   const shapes: { r: Rect; radius: number }[] = [
     ...HALLS.map((h) => ({ r: h.outdoors ? h : body(h), radius: 10 })), // los tubos de afuera no tienen pared de fondo
@@ -170,5 +183,6 @@ export function stationSvg(): string {
     return `<g clip-path="url(#floor-${id})">${rect(r, isGreenhouse(id) ? 'url(#gh-tiles)' : 'url(#tiles)')}
       <rect x="${r.x}" y="${r.y}" width="${r.w}" height="18" fill="${INK}" opacity=".12"/></g>`;
   }).join('');
+  s += airlockMarks();
   return `${s}</svg>`;
 }

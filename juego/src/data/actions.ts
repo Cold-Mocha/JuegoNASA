@@ -8,7 +8,7 @@ export const actionWhy = (id: ActionId): string => t(`action.${id}.why`);
 
 export const blockReason = (reason: NonNullable<ActionCheck['reason']>): string => t(`block.${reason}`);
 
-export type ResourceKey = keyof Resources | 'science';
+export type ResourceKey = keyof Resources;
 export const resourceLabel = (key: ResourceKey): string => t(`resource.${key}.label`);
 /** Nombre corto para los textos flotantes y las fichas de costo. */
 export const resourceShort = (key: ResourceKey): string => t(`resource.${key}.short`);

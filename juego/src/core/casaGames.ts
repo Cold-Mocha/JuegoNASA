@@ -3,11 +3,12 @@
  * Todas se juegan con ratón, dedo o flechas y terminan solas.
  */
 import {
-  BLACKOUT, BURN_TOLERANCE, CORRIDOR_HALF, GLIDE_SECONDS, INSPECT_GAME_SECONDS, REENTRY_SECONDS, bellyFacing, burnStep, corridorCenter,
-  glideScore, glideStep, initialReentry, spinAngle, stepReentry,
+  BLACKOUT, BURN_TOLERANCE, LINK_AIM_MAX, LINK_ANGLES, LINK_CHANNELS, CORRIDOR_HALF, GLIDE_SECONDS, INSPECT_GAME_SECONDS, REENTRY_SECONDS, bellyFacing, burnStep, corridorCenter,
+  glideScore, glideStep, initialReentry, linkLocked, linkScore, linkStrength, spinAngle, stepReentry,
 } from '../sim/entry';
 import type { MiniGameHandle } from './miniGames';
 import { t as tr } from './i18n'; // `t` es el tiempo en varias fases de este archivo
+import { audio } from './audio';
 
 export const CASA_W = 380;
 export const CASA_H = 500;
@@ -17,6 +18,114 @@ export type PhaseDone = (r: PhaseResult) => void;
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 const SHIP = `<svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true"><path d="M60 8 C78 26 84 52 80 84 L92 108 L68 100 L60 112 L52 100 L28 108 L40 84 C36 52 42 26 60 8Z" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5" stroke-linejoin="round"/><path d="M42 84 L60 92 L78 84 L80 98 L60 106 L40 98Z" fill="#0e0b33"/><circle cx="60" cy="44" r="9" fill="#4cc3f5" stroke="#0e0b33" stroke-width="4"/></svg>`;
+
+// ------------------------------------------------------------------ Fase 0: enlace con la Tierra
+const LINK_SYMBOLS = ['●', '■', '▲'] as const;
+const LINK_COLORS = ['#ff7a59', '#4cc3f5', '#ffcb47'] as const;
+const LINK_CX = 190;
+const LINK_CY = 190;
+const LINK_LEN = 150;
+const linkPoint = (angle: number, len: number): { x: number; y: number } => ({
+  x: LINK_CX + Math.sin((angle * Math.PI) / 180) * len,
+  y: LINK_CY - Math.cos((angle * Math.PI) / 180) * len,
+});
+
+/**
+ * Llamar a la Tierra: apuntar la antena al planeta (flechas, botones o arrastrando) y elegir el canal que muestra el planeta.
+ * Al quedar firme la señal por un instante, la fase termina. Sin texto; ángulos y canales son un modelo didáctico.
+ */
+export function mountLink(root: HTMLElement, cb: PhaseDone): MiniGameHandle {
+  const target = LINK_ANGLES[Math.floor(Math.random() * LINK_ANGLES.length)];
+  const wanted = Math.floor(Math.random() * LINK_CHANNELS);
+  const stars = [[17, 26], [55, 68], [97, 31], [146, 74], [212, 28], [295, 43], [344, 31], [29, 121], [111, 111], [254, 96], [328, 116], [360, 154], [53, 163]]
+    .map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1.7 : 2.8}" fill="#f5f5f2" opacity=".65"/>`).join('');
+  const e = linkPoint(target, LINK_LEN);
+  root.innerHTML = `<div class="casa-stage link" style="width:${CASA_W}px;height:${CASA_H}px">
+    <svg class="link__space" viewBox="0 0 380 230" aria-hidden="true">
+      <rect width="380" height="230" fill="#10153c"/>${stars}
+      <path d="M190 190 L190 40" stroke="#697194" stroke-width="3" stroke-dasharray="4 9" opacity=".6"/>
+      <line data-beam x1="190" y1="190" x2="190" y2="40" stroke="#4cc3f5" stroke-width="9" opacity=".22" stroke-linecap="round"/>
+      <line data-core x1="190" y1="190" x2="190" y2="40" stroke="#4cc3f5" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>
+      <g transform="translate(${e.x} ${e.y})" data-earth>
+        <circle r="32" fill="none" stroke="#ffcb47" stroke-width="2" stroke-dasharray="5 5" opacity=".8"/>
+        <circle r="22" fill="#3a8de0" stroke="#0e0b33" stroke-width="3"/>
+        <path d="M-12 -8 Q-2 -16 8 -8 Q2 0 10 10 Q-4 8 -12 -8Z" fill="#5ad6b2"/>
+        <text y="5" x="0" text-anchor="middle" font-size="22" font-weight="900" fill="${LINK_COLORS[wanted]}" stroke="#0e0b33" stroke-width="1.5" paint-order="stroke">${LINK_SYMBOLS[wanted]}</text>
+      </g>
+      <g transform="translate(190 190)"><path d="M-31 6 L0 -22 L31 6" fill="#c4c2e0" stroke="#0e0b33" stroke-width="3"/><rect x="-27" y="4" width="54" height="18" rx="4" fill="#f5f5f2" stroke="#0e0b33" stroke-width="3"/><circle cy="-19" r="6" fill="#ffcb47" stroke="#0e0b33" stroke-width="2"/></g>
+    </svg>
+    <div class="link__aim">
+      <button class="link__turn" data-turn="-1" aria-label="${tr('mini.turnLeft')}">◀</button>
+      <span class="link__angle" data-angle>0°</span>
+      <button class="link__turn" data-turn="1" aria-label="${tr('mini.turnRight')}">▶</button>
+    </div>
+    <div class="link__channels">${LINK_SYMBOLS.map((sym, i) =>
+      `<button class="link__channel" data-ch="${i}" style="--c:${LINK_COLORS[i]}" aria-pressed="false" aria-label="${tr('mini.channel')} ${sym}">${sym}</button>`).join('')}</div>
+    <div class="link__signal"><i data-level></i></div></div>`;
+  const stage = root.querySelector<HTMLElement>('.link')!;
+  const beam = root.querySelector<SVGLineElement>('[data-beam]')!;
+  const core = root.querySelector<SVGLineElement>('[data-core]')!;
+  const angleEl = root.querySelector<HTMLElement>('[data-angle]')!;
+  const level = root.querySelector<HTMLElement>('[data-level]')!;
+  const svg = root.querySelector<SVGSVGElement>('.link__space')!;
+  const t0 = performance.now();
+  let aim = 0;
+  let channel = -1;
+  let errors = 0;
+  let over = false;
+  let lock = 0;
+  const render = (): void => {
+    const p = linkPoint(aim, LINK_LEN);
+    for (const l of [beam, core]) { l.setAttribute('x2', String(p.x)); l.setAttribute('y2', String(p.y)); }
+    angleEl.textContent = `${aim > 0 ? '+' : ''}${Math.round(aim)}°`;
+    const right = channel === wanted;
+    const strong = linkLocked(aim, target, right);
+    level.style.width = `${linkStrength(aim, target, right) * 100}%`;
+    stage.classList.toggle('is-locked', strong);
+    root.querySelectorAll<HTMLElement>('[data-ch]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.ch) === channel)));
+    window.clearTimeout(lock);
+    if (strong && !over) {
+      audio.play('radio');
+      lock = window.setTimeout(() => {
+        if (over) return;
+        over = true;
+        stage.classList.add('is-done');
+        cb({ score: linkScore(errors, (performance.now() - t0) / 1000) });
+      }, 1050);
+    }
+  };
+  const turn = (d: number): void => { if (!over) { aim = clamp(aim + d, -LINK_AIM_MAX, LINK_AIM_MAX); render(); } };
+  root.querySelectorAll<HTMLElement>('[data-turn]').forEach((b) => b.addEventListener('click', () => turn(Number(b.dataset.turn) * 5)));
+  root.querySelectorAll<HTMLElement>('[data-ch]').forEach((b) => b.addEventListener('click', () => {
+    if (over) return;
+    channel = Number(b.dataset.ch);
+    if (channel !== wanted) { errors++; audio.play('miss'); }
+    render();
+  }));
+  const point = (ev: PointerEvent): void => {
+    const r = svg.getBoundingClientRect();
+    const sx = ((ev.clientX - r.left) / r.width) * 380 - LINK_CX;
+    const sy = LINK_CY - ((ev.clientY - r.top) / r.height) * 230;
+    if (sy <= 4) return;
+    aim = clamp((Math.atan2(sx, sy) * 180) / Math.PI, -LINK_AIM_MAX, LINK_AIM_MAX);
+    if (!over) render();
+  };
+  svg.addEventListener('pointerdown', (ev) => { svg.setPointerCapture(ev.pointerId); point(ev); });
+  svg.addEventListener('pointermove', (ev) => { if (ev.buttons || ev.pointerType === 'touch') point(ev); });
+  render();
+  return {
+    gesture: 'drag',
+    keys: ['← →', '1 2 3'],
+    nudge(dx) { if (dx !== 0) turn(Math.sign(dx) * 3); },
+    key(k, down) { // 1, 2 y 3 eligen el canal
+      const i = Number(k) - 1;
+      if (!(i >= 0 && i < LINK_CHANNELS)) return false;
+      if (down) root.querySelector<HTMLElement>(`[data-ch="${i}"]`)?.click();
+      return true;
+    },
+    destroy() { over = true; window.clearTimeout(lock); },
+  };
+}
 
 // ------------------------------------------------------------------ Fase 1: giro e inspección
 /** La nave gira; cuando el vientre pasa frente a las ventanas, se tocan las losetas dañadas (brillan) para fotografiarlas. */
@@ -44,18 +153,19 @@ export function mountInspect(root: HTMLElement, damaged: number, cb: PhaseDone):
     cancelAnimationFrame(raf);
     cb({ score: found / damaged, unfound: damaged - found });
   };
-  root.querySelectorAll<HTMLButtonElement>('.insp__tile').forEach((tile) => tile.addEventListener('pointerdown', (ev) => {
-    ev.preventDefault();
+  const shoot = (tile: HTMLButtonElement): void => {
     if (over || !bellyFacing(spinAngle((performance.now() - t0) / 1000))) return;
     if (tile.classList.contains('is-crack') && !tile.classList.contains('is-found')) {
       tile.classList.add('is-found');
       found++;
+      audio.play('hit');
       flash.classList.remove('is-on');
       void flash.offsetWidth;
       flash.classList.add('is-on');
       if (found === damaged) window.setTimeout(finish, 500);
     }
-  }));
+  };
+  root.querySelectorAll<HTMLButtonElement>('.insp__tile').forEach((tile) => tile.addEventListener('pointerdown', (ev) => { ev.preventDefault(); shoot(tile); }));
   const frame = (): void => {
     const t = (performance.now() - t0) / 1000;
     const a = spinAngle(t);
@@ -66,7 +176,17 @@ export function mountInspect(root: HTMLElement, damaged: number, cb: PhaseDone):
     else if (!over) raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
-  return { destroy() { over = true; cancelAnimationFrame(raf); } };
+  return {
+    gesture: 'tap',
+    keys: ['← ↑ → ↓', 'Enter'],
+    key(k, down) { // las flechas mueven el foco entre losetas; Enter o Espacio fotografía la que tiene foco
+      const tile = document.activeElement;
+      if ((k !== 'enter' && k !== ' ') || !(tile instanceof HTMLButtonElement) || !tile.classList.contains('insp__tile')) return false;
+      if (down) shoot(tile);
+      return true;
+    },
+    destroy() { over = true; cancelAnimationFrame(raf); },
+  };
 }
 
 // ------------------------------------------------------------------ Fase 2: quemada
@@ -119,7 +239,7 @@ export function mountBurn(root: HTMLElement, cb: PhaseDone): MiniGameHandle {
   };
   stage.addEventListener('pointerdown', (ev) => { stage.setPointerCapture(ev.pointerId); move(ev); });
   stage.addEventListener('pointermove', (ev) => { if (ev.buttons || ev.pointerType === 'touch') move(ev); });
-  return { nudge(dx) { x = clamp(x + dx * 0.08, -1, 1); }, destroy() { over = true; cancelAnimationFrame(raf); } };
+  return { gesture: 'drag', keys: ['← →'], nudge(dx) { x = clamp(x + dx * 0.08, -1, 1); }, destroy() { over = true; cancelAnimationFrame(raf); } };
 }
 
 // ------------------------------------------------------------------ Fase 3: corredor de reingreso
@@ -199,7 +319,7 @@ export function mountReentry(root: HTMLElement, heatMult: number, cb: PhaseDone)
   const release = (): void => void (pointerX = null);
   stage.addEventListener('pointerup', release);
   stage.addEventListener('pointercancel', release);
-  return { nudge(dx) { if (dx !== 0) keyRoll = dx; }, destroy() { over = true; cancelAnimationFrame(raf); } };
+  return { gesture: 'drag', keys: ['← →'], nudge(dx) { if (dx !== 0) keyRoll = dx; }, destroy() { over = true; cancelAnimationFrame(raf); } };
 }
 
 // ------------------------------------------------------------------ Fase 4: planeo
@@ -264,5 +384,5 @@ export function mountGlide(root: HTMLElement, cb: PhaseDone): MiniGameHandle {
     b.addEventListener('pointerup', () => void (hold = 0));
     b.addEventListener('pointercancel', () => void (hold = 0));
   });
-  return { nudge(_dx, dy) { if (dy !== 0) keyPitch = dy; }, destroy() { over = true; cancelAnimationFrame(raf); } };
+  return { gesture: 'hold', keys: ['↑ ↓'], nudge(_dx, dy) { if (dy !== 0) keyPitch = dy; }, destroy() { over = true; cancelAnimationFrame(raf); } };
 }

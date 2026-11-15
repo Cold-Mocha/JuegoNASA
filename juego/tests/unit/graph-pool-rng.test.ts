@@ -6,8 +6,8 @@ import { ROOM_IDS } from '../../src/data/rooms';
 
 describe('tiempo de caminata entre salas', () => {
   it('cuesta según la distancia real del plano: la superficie queda más lejos del Puente que Comunicaciones', () => {
-    expect(travelTime('puente', 'exterior')).toBeGreaterThan(travelTime('puente', 'comunicaciones'));
-    expect(travelTime('puente', 'comunicaciones')).toBeGreaterThan(1);
+    expect(travelTime('puente', 'exterior')).toBeGreaterThan(travelTime('puente', 'enfermeria'));
+    expect(travelTime('puente', 'enfermeria')).toBeGreaterThan(1);
     expect(travelTime('puente', 'puente')).toBe(0);
   });
 

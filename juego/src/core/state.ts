@@ -36,6 +36,8 @@ export interface Progress {
   tutorialDone: boolean;
   /** Mejor resultado de la misión final «Casa». */
   casa?: { score: number; stars: number };
+  /** Veces ganadas, por investigación (y «casa») y por dificultad. */
+  wins?: { missions: Partial<Record<MissionId | 'casa', number>>; difficulties: Partial<Record<DifficultyId, number>> };
 }
 
 export interface LastResult {
@@ -44,6 +46,8 @@ export interface LastResult {
   score: ScoreResult;
   newAchievements: AchievementId[];
   newBest: boolean;
+  /** Fue el entrenamiento: el informe muestra cómo se ve una misión ganada y lleva a elegir la primera misión. */
+  training?: boolean;
 }
 
 const SETTINGS_KEY = 'michinautas:settings:v1';
@@ -98,6 +102,15 @@ class GameState {
     safeWrite(SETTINGS_KEY, this.settings);
   }
 
+  /** Hard reset: borra todo el progreso (récords, logros, archivo leído, tutorial) y vuelve a empezar. Los ajustes se conservan. */
+  resetProgress(): void {
+    this.progress = { ...emptyProgress, best: {}, achievements: [], readEntries: [] };
+    safeWrite(PROGRESS_KEY, this.progress);
+    this.training = false;
+    this.loadout = null;
+    this.lastResult = null;
+  }
+
   saveProgress(patch: Partial<Progress>): void {
     this.progress = { ...this.progress, ...patch };
     safeWrite(PROGRESS_KEY, this.progress);
@@ -116,6 +129,17 @@ class GameState {
     if (prev && prev.score >= score) return false;
     this.saveProgress({ best: { ...this.progress.best, [mission]: { score, stars: Math.max(stars, prev?.stars ?? 0) } } });
     return true;
+  }
+
+  /** Suma una victoria a la investigación y a la dificultad (la misión final no tiene dificultad). */
+  recordWin(mission: MissionId | 'casa', difficulty?: DifficultyId): void {
+    const w = this.progress.wins ?? { missions: {}, difficulties: {} };
+    this.saveProgress({
+      wins: {
+        missions: { ...w.missions, [mission]: (w.missions[mission] ?? 0) + 1 },
+        difficulties: difficulty ? { ...w.difficulties, [difficulty]: (w.difficulties[difficulty] ?? 0) + 1 } : w.difficulties,
+      },
+    });
   }
 
   markRead(entryId: string): number {

@@ -1,7 +1,7 @@
 import {
-  ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
-  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
-  GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
+  ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, ANTENNA_REPAIR_MIN, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
+  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_RESIDUE, REPAIR_OXYGEN, scoreOf, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_OUTSIDE_HIT, FLARE_WARNING_SEC,
+  GREENHOUSE_FLARE_FACTOR, SUIT_EMPTY_HEALTH_LOSS, GREENHOUSE_LIGHT_FACTOR, GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
   NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, START_RESOURCES, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
@@ -12,17 +12,17 @@ import type {
   ActionCheck, ActionId, Components, DeathCause, Resources, RoomId, SimConfig, SimEvent, SimStats, SolarEvent, TaskGoal, Zone,
 } from './types';
 
-export type ActionDelta = Partial<Resources> & { science?: number };
+export type ActionDelta = Partial<Resources>;
 
-interface ActiveFlare { event: SolarEvent; remaining: number; total: number; received: number; }
-interface Pending { action: ActionId; at: number; }
+/** `hit`: ya te encontró afuera (el golpe de radiación se cobra una sola vez por llamarada). */
+interface ActiveFlare { event: SolarEvent; remaining: number; total: number; received: number; hit: boolean; }
+interface Pending { action: ActionId; at: number; quality: number; }
 
 export interface MissionSummary {
   won: boolean;
   cause: DeathCause | null;
   daysSurvived: number;
   days: number;
-  science: number;
   tasksDone: number;
   tasksTotal: number;
   resources: Resources;
@@ -32,8 +32,8 @@ export interface MissionSummary {
 const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health', 'radiation'];
 
 /** Avance de una tarea (0..count) según lo hecho: sirve en la partida y en el informe final. */
-export function taskProgress(t: TaskGoal, stats: SimStats, science: number): number {
-  const n = t.kind === 'action' ? (t.stage === 2 ? stats.stage2By : stats.actionsBy)[t.action] ?? 0 : t.kind === 'science' ? science : stats.shelteredFlares;
+export function taskProgress(t: TaskGoal, stats: SimStats): number {
+  const n = t.kind === 'action' ? (t.stage === 2 ? stats.stage2By : stats.actionsBy)[t.action] ?? 0 : stats.shelteredFlares;
   return Math.min(t.count, n);
 }
 
@@ -52,7 +52,6 @@ export class Simulation {
   suit = 100;
   res: Resources = { ...START_RESOURCES };
   comp: Components = { antenna: 1, dust: 0 };
-  science = 0;
   /** El panel de pruebas se ensució con la última tormenta de polvo y todavía no se limpió. */
   testDirty = false;
   private lastStormDay = 0;
@@ -70,6 +69,7 @@ export class Simulation {
   private doneToday = new Map<ActionId, { day: number; n: number }>(); // cuántas veces se hizo hoy cada acción con tope diario
   private duskOxygen = 0;
   private duskFood = 0;
+  private flaresToday = 0;
   private travelUntil = 0;
   private travelTo: RoomId | null = null;
   private hall = false;
@@ -120,7 +120,7 @@ export class Simulation {
 
   /** Avance de una tarea (0..count). */
   taskProgress(t: TaskGoal): number {
-    return taskProgress(t, this.stats, this.science);
+    return taskProgress(t, this.stats);
   }
 
   /** ¿Se terminaron las tareas de la investigación? Desde entonces cuentan las acciones de "Avisar a la Tierra" (etapa 2). */
@@ -177,6 +177,13 @@ export class Simulation {
     return (this.suit / 100) * (SUIT_SECONDS / Math.max(0.1, this.config.drain));
   }
 
+  /** 0–1: cuánto rinde hoy el invernadero (luz del día y llamaradas de hoy). */
+  get greenhouseFactor(): number {
+    const byLight = this.light >= 1 ? GREENHOUSE_LIGHT_FACTOR.day : this.light > 0 ? GREENHOUSE_LIGHT_FACTOR.dusk : GREENHOUSE_LIGHT_FACTOR.night;
+    const hit = this.flaresToday > 0 || this.flareActive ? GREENHOUSE_FLARE_FACTOR : 1;
+    return byLight * hit;
+  }
+
   get flareActive(): boolean {
     return this.active.length > 0;
   }
@@ -186,6 +193,7 @@ export class Simulation {
     if (this.ended) return false;
     if (action === 'repair' && !this.breach) return false;
     if (action === 'forecast' && (this.forecastOn || !this.radioOk)) return false;
+    if (action === 'tellEarth' && (!this.stage2Unlocked || !this.radioOk)) return false; // solo al querer irse y con la antena sana
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
     if (this.dailyLimitReached(action)) return false;
     const d = this.preview(action);
@@ -237,10 +245,11 @@ export class Simulation {
   preview(action: ActionId): ActionDelta {
     const rule = ACTIONS[action];
     const d: ActionDelta = { ...rule.cost };
-    for (const [k, v] of Object.entries(rule.gain) as [keyof Resources, number][]) d[k] = (d[k] ?? 0) + v;
+    const yieldFactor = rule.room === 'invernadero' ? this.greenhouseFactor : 1; // lo que se cultiva rinde según la luz y las llamaradas
+    for (const [k, v] of Object.entries(rule.gain) as [keyof Resources, number][]) d[k] = (d[k] ?? 0) + v * yieldFactor;
     if (this.breach && d.oxygen !== undefined && d.oxygen > 0) delete d.oxygen; // con fractura el oxígeno no se regenera
     if (action === 'eva' && this.flareActive) d.radiation = (d.radiation ?? 0) * EVA_FACTOR;
-    if (rule.science) d.science = rule.science;
+    if (action === 'repair') d.oxygen = (d.oxygen ?? 0) + REPAIR_OXYGEN; // sellar devuelve aire (va después del recorte de arriba)
     return d;
   }
 
@@ -259,6 +268,8 @@ export class Simulation {
     const d = this.preview(action);
     if (d.energy !== undefined && d.energy < 0 && this.res.energy + d.energy < 0) return { ok: false, reason: 'noEnergy' };
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
+    if (action === 'tellEarth' && !this.stage2Unlocked) return { ok: false, reason: 'locked' };
+    if (action === 'tellEarth' && !this.radioOk) return { ok: false, reason: 'repairFirst' };
     if (action === 'forecast' && this.forecastOn) return { ok: false, reason: 'forecastOn' };
     if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
     if (!this.needsCleaning(action)) return { ok: false, reason: 'clean' };
@@ -272,7 +283,6 @@ export class Simulation {
     const d = this.preview(action);
     if (scale !== 1) for (const k of Object.keys(d) as (keyof ActionDelta)[]) if ((d[k] ?? 0) > 0) d[k] = Math.round((d[k] as number) * scale); // minijuegos: se gana según lo logrado
     this.apply(d);
-    if (d.science) this.science += d.science;
     this.cooldowns.set(action, this.time + ACTION_COOLDOWN_SEC);
     const cap = this.dailyCap(action);
     if (cap !== Infinity) {
@@ -285,15 +295,19 @@ export class Simulation {
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 
     switch (action) {
-      case 'growLights': if (!this.breach) this.duskOxygen += GROW_LIGHTS_AT_DUSK.oxygen; this.duskFood += GROW_LIGHTS_AT_DUSK.food; break;
-      case 'cleanDust': this.comp.dust = 0; break;
+      case 'growLights':
+        if (!this.breach) this.duskOxygen += GROW_LIGHTS_AT_DUSK.oxygen * this.greenhouseFactor;
+        this.duskFood += GROW_LIGHTS_AT_DUSK.food * this.greenhouseFactor;
+        break;
+      case 'cleanDust': this.comp.dust = DUST_RESIDUE * (1 - scoreOf(scale)); break;
       case 'cleanTestPanel': this.testDirty = false; break; // el panel de pruebas no limpia los paneles de la estación
       case 'repair': this.breach = null; this.events.push({ type: 'breachRepaired' }); break;
       case 'eva': this.stats.evas++; break;
       default: break;
     }
-    if (ACTIONS[action].delayed) this.pending.push({ action, at: this.time + EARTH_MOON_ROUND_TRIP_SEC });
+    if (ACTIONS[action].delayed) this.pending.push({ action, at: this.time + EARTH_MOON_ROUND_TRIP_SEC, quality: scale });
     this.events.push({ type: 'actionDone', action, delta: d });
+    this.checkDepleted(); // si la acción llevó la radiación a 100, se muere en el acto (no espera al siguiente tick)
     this.checkTasks();
     return d;
   }
@@ -370,6 +384,21 @@ export class Simulation {
     this.events.push({ type: 'breachOpened', room: this.breach });
   }
 
+  /** Tutorial de entrenamiento: abre una fractura ahora (sin sorteo ni día mínimo) para practicar cómo se sella. */
+  forceBreach(room: RoomId): void {
+    if (this.breach) return;
+    this.breach = room;
+    this.events.push({ type: 'breachOpened', room });
+  }
+
+  /** Tutorial de entrenamiento: una tormenta fuerte ahora, para que se vea cómo fallan los paneles (con 0,8 de polvo no alcanzan ni en Cadete). */
+  forceDustStorm(): void {
+    this.lastStormDay = this.day;
+    this.comp.dust = Math.max(this.comp.dust, 0.8);
+    this.testDirty = true;
+    this.events.push({ type: 'dustStorm' });
+  }
+
   /** Avisa cuando los paneles empiezan a fallar (la energía va a bajar) y cuando se arreglan. */
   private checkPanels(): void {
     const ok = this.panelsOk;
@@ -406,24 +435,30 @@ export class Simulation {
     }
     while (this.fired < events.length && this.time >= this.eventTime(events[this.fired])) {
       const event = events[this.fired++];
-      this.active.push({ event, remaining: FLARE_DURATION_SEC, total: flareDose(event.classType, event.sep), received: 0 });
+      this.active.push({ event, remaining: FLARE_DURATION_SEC, total: flareDose(event.classType, event.sep), received: 0, hit: false });
+      this.flaresToday++;
       this.events.push({ type: 'flareStart', event, forecasted: this.forecasted });
     }
     for (const f of this.active) {
       const secs = Math.min(dt, f.remaining);
       const portion = secs / FLARE_DURATION_SEC;
-      const dose = f.total * portion * this.flareShield;
+      let dose = this.sheltered ? f.total * portion * this.flareShield : 0; // en la nave: poco a poco, atenuada por el blindaje
+      if (!this.sheltered && !f.hit) { // afuera: el golpe entero de una vez
+        f.hit = true;
+        dose = FLARE_OUTSIDE_HIT;
+        this.events.push({ type: 'flareHit', dose });
+      }
       if (this.sheltered) this.res.energy = clamp(this.res.energy - SHIELD_ENERGY_PER_SEC * secs); // el blindaje gasta energía mientras dura la llamarada
       f.received += dose;
       f.remaining -= dt;
       this.res.radiation = clamp(this.res.radiation + dose);
     }
     for (const f of this.active.filter((a) => a.remaining <= 0)) {
-      if (f.received <= f.total * 0.3) this.stats.shelteredFlares++;
-      else this.stats.unshieldedFlares++;
+      if (f.hit) this.stats.unshieldedFlares++;
+      else this.stats.shelteredFlares++;
       this.stats.flareDose += f.received;
-      this.stats.flareDoseOutside += f.total;
-      this.events.push({ type: 'flareEnd', event: f.event, dose: Math.round(f.received), total: f.total });
+      this.stats.flareDoseOutside += FLARE_OUTSIDE_HIT;
+      this.events.push({ type: 'flareEnd', event: f.event, dose: Math.round(f.received), total: f.total, exposed: f.hit });
     }
     this.active = this.active.filter((a) => a.remaining > 0);
     this.checkTasks();
@@ -442,12 +477,12 @@ export class Simulation {
       this.events.push({ type: 'suitLow' });
     }
     if (this.suit > 0) return;
-    this.apply({ oxygen: SUIT_RESCUE_OXYGEN });
+    this.apply({ oxygen: SUIT_RESCUE_OXYGEN, health: SUIT_EMPTY_HEALTH_LOSS });
     this.room = 'esclusa';
     this.zone = 'ship';
     this.travelTo = null;
     this.hall = false;
-    this.events.push({ type: 'suitEmpty', oxygenLost: -SUIT_RESCUE_OXYGEN });
+    this.events.push({ type: 'suitEmpty', oxygenLost: -SUIT_RESCUE_OXYGEN, healthLost: -SUIT_EMPTY_HEALTH_LOSS });
     this.checkDepleted();
   }
 
@@ -457,7 +492,7 @@ export class Simulation {
     this.pending = this.pending.filter((p) => this.time < p.at);
     for (const p of due) {
       if (p.action === 'repairAntenna') {
-        this.comp.antenna = 1;
+        this.comp.antenna = ANTENNA_REPAIR_MIN + (1 - ANTENNA_REPAIR_MIN) * scoreOf(p.quality);
         this.stats.antennaAligns++;
         this.events.push({ type: 'actionResolved', action: p.action, message: 'linkRestored' });
       } else if (p.action === 'forecast') {
@@ -502,6 +537,7 @@ export class Simulation {
       return;
     }
     this.day++;
+    this.flaresToday = 0;
     this.events.push({ type: 'dayStart', day: this.day, light: this.light });
     this.rollBreach();
     this.rollDustStorm();
@@ -552,7 +588,6 @@ export class Simulation {
       cause: this.cause,
       daysSurvived: this.ended === 'won' || this.cause === 'timeout' ? this.day : this.day - 1,
       days: this.config.days,
-      science: this.science,
       tasksDone: this.tasksDone,
       tasksTotal: this.tasks.length,
       resources: { ...this.res },

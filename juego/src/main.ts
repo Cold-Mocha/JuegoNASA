@@ -12,13 +12,13 @@ import './styles/app.css';
 import { GAME_WIDTH, GAME_HEIGHT } from './core/config';
 import { BootScene } from './scenes/Boot';
 import { MainMenuScene } from './scenes/MainMenu';
-import { StoryScene } from './scenes/Story';
 import { SelectScene } from './scenes/Select';
 import { LaunchLoadingScene } from './scenes/LaunchLoading';
 import { StationScene } from './scenes/Station';
 import { EncyclopediaScene } from './scenes/Encyclopedia';
 import { ReturnTripScene } from './scenes/ReturnTrip';
 import { ReentryScene } from './scenes/Reentry';
+import { FlightScene } from './scenes/Flight';
 import { MissionReportScene } from './scenes/MissionReport';
 import { audio } from './core/audio';
 import { state } from './core/state';
@@ -41,7 +41,7 @@ const game = new Phaser.Game({
   // GPU integrada: pedir el modo de bajo consumo y sin buffers extra
   render: { powerPreference: 'low-power', antialias: true, clearBeforeRender: true },
   banner: false,
-  scene: [BootScene, MainMenuScene, StoryScene, SelectScene, LaunchLoadingScene, StationScene, EncyclopediaScene, ReturnTripScene, ReentryScene, MissionReportScene],
+  scene: [BootScene, MainMenuScene, SelectScene, LaunchLoadingScene, FlightScene, StationScene, EncyclopediaScene, ReturnTripScene, ReentryScene, MissionReportScene],
 });
 
 // El audio solo puede arrancar tras un gesto del jugador (política de autoplay de los navegadores).

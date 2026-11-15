@@ -42,7 +42,7 @@ export class StoryScene extends Phaser.Scene {
             <div class="mn-dialogue__hint">Continuar <span class="mn-key">Espacio</span></div>
           </div>
         </div>
-        <div class="story__meta"><span class="caption-mono" data-credit></span><span class="story__dots" data-dots></span></div>
+        <div class="story__meta"><span class="story__credit" data-credit></span><span class="story__dots" data-dots></span></div>
       </div>`, 'screen screen--clear');
 
     this.ui.on('advance', () => this.advance()).on('skip', () => this.finish());

@@ -85,6 +85,5 @@ export class MainMenuScene extends Phaser.Scene {
     g.fillStyle(tokenColor('nebula-violet'), 1).fillCircle(x, y, 210);
     g.fillStyle(tokenColor('space-600'), 0.55).fillCircle(x + 60, y + 40, 150);
     g.lineStyle(10, tokenColor('nebula-magenta'), 1).strokeEllipse(x, y, 620, 120);
-    if (!state.calm) this.tweens.add({ targets: g, y: -10, duration: 3200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 }

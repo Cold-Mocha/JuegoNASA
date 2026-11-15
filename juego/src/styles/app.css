@@ -94,6 +94,8 @@ button { font-family: inherit; }
   background: var(--space-900); border: 2px solid var(--line); font: 600 18px/24px var(--font-display); color: var(--ink); text-align: center; }
 .hud__alert--danger { border-color: var(--danger); color: var(--ink); box-shadow: 0 0 0 2px var(--danger); }
 .hud__alert--ok { border-color: var(--aurora-teal); }
+/* crédito de la fuente del clima solar: siempre a la vista, al pie */
+.hud__source { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); margin: 0; white-space: nowrap; font: 500 13px/16px var(--font-display); color: var(--ink-muted); text-shadow: 0 1px 0 var(--space-900); pointer-events: none; }
 .hud__prompt { position: absolute; left: 50%; bottom: 230px; transform: translateX(-50%); padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill);
   background: var(--space-900); border: 2px solid var(--star-gold); font: 600 18px/24px var(--font-display); color: var(--ink); }
 .hud__tip { position: absolute; left: var(--space-4); bottom: var(--space-4); width: 560px; grid-template-columns: 72px 1fr; padding: var(--space-4); }

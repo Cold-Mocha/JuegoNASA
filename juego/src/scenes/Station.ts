@@ -9,7 +9,7 @@ import { settingsHtml, bindSettings } from '../core/settingsPanel';
 import { michiSvg, michiFaceSvg, addSvgTexture } from '../core/art';
 import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
-import { MISSIONS, MISSION_DAYS, missionEvents, realDate, type Mission } from '../data/missions';
+import { MISSIONS, MISSION_DAYS, missionEvents, realDate, sourceCredit, sourceName, type Mission } from '../data/missions';
 import { DIFFICULTIES, type Difficulty } from '../data/difficulties';
 import { CHARACTERS } from '../data/characters';
 import { ROOMS, ROOM_IDS, propPosition, roomProps, textureAsset, type RoomProp } from '../data/rooms';
@@ -17,7 +17,7 @@ import { ACTION_TEXT, BLOCK_REASON, RESOURCE_TEXT } from '../data/actions';
 import { CONTROLS, POINTER_HINT } from '../data/controls';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
-import { FLARE_DURATION_SEC, SUIT_LOW, WALK_SPEED, WORLD_SCALE, quality } from '../sim/rules';
+import { FLARE_DURATION_SEC, SHELTER_FACTOR, SUIT_LOW, WALK_SPEED, WORLD_SCALE, quality } from '../sim/rules';
 import {
   GRAVITY, PX_PER_METER, airTime, jumpHeight, createDash, startDash, tickDash, dashSpeedFactor, type DashState,
 } from '../sim/physics';
@@ -572,7 +572,7 @@ export class StationScene extends Phaser.Scene {
       }
       case 'flareStart': {
         const sev = severity(ev.event.classType);
-        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)}${!this.sim.sheltered ? '. ¡Vuelve a la nave!' : this.sim.res.energy > 0 ? '. Estás protegido: el blindaje gasta energía.' : '. Sin energía el blindaje protege la mitad.'}`, 'danger', FLARE_DURATION_SEC * 1000);
+        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)} (${sourceName(this.mission)})${!this.sim.sheltered ? '. ¡Vuelve a la nave!' : this.sim.res.energy > 0 ? '. Estás protegido: el blindaje gasta energía.' : '. Sin energía el blindaje protege la mitad.'}`, 'danger', FLARE_DURATION_SEC * 1000);
         audio.play('alarm');
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
         this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);
@@ -584,6 +584,9 @@ export class StationScene extends Phaser.Scene {
         this.tweens.killTweensOf(this.flareTint);
         this.flareTint.setAlpha(0);
         this.float(`+${ev.dose} ${RESOURCE_TEXT.radiation.short}`, 'nebula-magenta');
+        // la decisión, con el dato real de la llamarada: lo que recibiste y lo que habría pasado en el otro lugar
+        if (ev.dose <= ev.total * 0.3) this.alert(`Con el escudo recibiste ${ev.dose} de radiación. Afuera habrían sido ${Math.round(ev.total)}.`, 'ok', FLARE_RESULT_MS);
+        else this.alert(`Recibiste ${ev.dose} de radiación. Dentro de la nave, con energía, habrían sido ${Math.round(ev.total * SHELTER_FACTOR)}.`, 'danger', FLARE_RESULT_MS);
         if (ev.dose > 8) {
           audio.play('hurt');
           this.playAnim('hurt', true);
@@ -911,6 +914,7 @@ export class StationScene extends Phaser.Scene {
           </div>
         </div>
         <aside class="hud__actions mn-panel" data-actions hidden aria-label="Acciones de la sala"></aside>
+        <p class="hud__source">${esc(sourceCredit(this.mission))}</p>
       </div>
       <div class="modal" data-overlay hidden></div>`, 'screen screen--clear');
 
@@ -1326,6 +1330,7 @@ const controlsHtml = (basicOnly = false): string => `
   </ul>
   <p class="controls__pointer">${esc(POINTER_HINT)}</p>`;
 const ALERT_MS = 4500;
+const FLARE_RESULT_MS = 7000;
 const FLARE_SIZE = { minor: 'pequeña', moderate: 'mediana', severe: 'enorme' } as const;
 /** Tamaño de la llamarada en palabras, con su clase GOES real entre paréntesis (p. ej. "enorme (X9.3)"). */
 const flareName = (classType: string): string => `${FLARE_SIZE[severity(classType)]} (${classType})`;

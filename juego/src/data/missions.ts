@@ -96,6 +96,8 @@ export function realDate(m: Mission, day: number): string {
   return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
+/** Quién registró las llamaradas de la jornada: DONKI solo si la semana ya se contrastó con su API. */
+export const sourceName = (m: Mission): string => (archiveFor(m).verifiedAgainstDonki ? 'NASA DONKI' : 'NASA / NOAA');
+
 /** Texto de crédito honesto: dice si el dato es archivado y si ya se verificó contra DONKI. */
-export const sourceCredit = (m: Mission): string =>
-  archiveFor(m).verifiedAgainstDonki ? 'FUENTE: NASA DONKI, archivo histórico (no en vivo)' : 'FUENTE: NASA / NOAA, archivo histórico (no en vivo)';
+export const sourceCredit = (m: Mission): string => `Clima solar real: ${sourceName(m)}, archivo histórico (no en vivo)`;

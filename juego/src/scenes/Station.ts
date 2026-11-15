@@ -1175,7 +1175,7 @@ export class StationScene extends Phaser.Scene {
     if (!state.training) return;
     this.openModal(`
       <h2 class="mn-panel__title">Entrenamiento en la estación</h2>
-      ${controlsHtml()}
+      ${controlsHtml(true)}
       <p class="mn-panel__body">Esta es una estación de práctica: aquí no se pierde nada y el reloj está detenido. ¿Quieres que la Comandante Nébula te enseñe cómo se juega?</p>
       <div class="mn-panel__footer">
         <button class="mn-btn mn-btn--secondary" data-action="tutorial-decline">${icon('skip')}Saltar tutorial</button>
@@ -1196,8 +1196,8 @@ export class StationScene extends Phaser.Scene {
   }
 
   /**
-   * Tutorial guiado, rápido y con el reloj detenido: el juego lleva al jugador a usar una vez el objeto de su investigación y la cosecha,
-   * y explica en una frase los eventos y cómo se completa la jornada. Las acciones son reales y cuentan para las tareas.
+   * Tutorial guiado, rápido y con el reloj detenido: caminar, usar una vez el objeto de la investigación y la cosecha,
+   * y un solo paso que explica los costos, las tareas y las llamaradas. Las acciones son reales y cuentan para las tareas.
    */
   private runTutorial(): void {
     this.closeOverlay();
@@ -1205,12 +1205,10 @@ export class StationScene extends Phaser.Scene {
     const done = (action: ActionId): boolean => (this.sim.stats.actionsBy[action] ?? 0) >= 1;
     const own = this.mission.tutorial;
     this.tutorial = [
-      { text: 'Camina con WASD o las flechas, o toca el piso. Shift es un impulso y Espacio, un salto.', done: () => this.flags.moved },
-      { text: 'Cada acción cuesta: mira tus barras arriba a la izquierda. Abajo están el aire de la nave, los paneles y la radio.', done: () => false, manual: true },
+      { text: 'Camina con WASD o las flechas, o toca el piso.', done: () => this.flags.moved },
       { text: own.text, done: () => own.handsOn && done(own.action), guide: own.asset, manual: !own.handsOn },
       { text: 'La cosecha: ve al Rack de plantas del invernadero y úsalo. Sales por la Esclusa; afuera el traje gasta oxígeno. Se cosecha una vez al día.', done: () => done('harvest'), guide: 'rack-plantas' },
-      { text: 'Eventos: una tormenta de polvo cubre los paneles y los limpias afuera. Si viene una llamarada, vuelve a la nave.', done: () => false, manual: true },
-      { text: 'Cumple las tareas de arriba a la derecha (algunas, una vez al día). Al terminar, repara la antena en Comunicaciones y vuelves a la Tierra.', done: () => false, guide: 'consola-antena', manual: true },
+      { text: 'Cada acción cuesta algo: mira tus barras. Cumple las tareas de arriba a la derecha y, al terminar, avisa a la Tierra desde Comunicaciones. Si viene una llamarada, vuelve a la nave.', done: () => false, guide: 'consola-antena', manual: true },
       state.training
         ? { text: '¡Entrenamiento completo, michinauta! Ahora elige tu tripulante y tu primera misión.', done: () => false, manual: true, cta: 'Elegir mi misión' }
         : { text: '¡Listo! Sigue con tus tareas. ¡Suerte!', done: () => false, manual: true },
@@ -1323,9 +1321,9 @@ const START_ROOM: RoomId = 'puente';
 /** Nombre que se muestra de una máquina: el suyo propio o el de su sala. */
 const machineName = (m: Machine): string => m.prop.name ?? ROOMS[m.room].name;
 
-/** Tabla de controles (intro y Pausa → Controles). */
-const controlsHtml = (): string => `
-  <ul class="controls">${CONTROLS.map((c) => `<li class="controls__row">
+/** Tabla de controles: en el entrenamiento inicial solo los básicos (caminar, usar y pausa); completa en Pausa → Controles. */
+const controlsHtml = (basicOnly = false): string => `
+  <ul class="controls">${CONTROLS.filter((c) => !basicOnly || c.basic).map((c) => `<li class="controls__row">
     <span class="controls__keys">${c.keys.map((k) => `<span class="mn-key">${esc(k)}</span>`).join('')}${c.alt ? ` <span class="controls__alt">${esc(c.alt)}</span>` : ''}</span>
     <span class="controls__action">${esc(c.action)}</span></li>`).join('')}
   </ul>

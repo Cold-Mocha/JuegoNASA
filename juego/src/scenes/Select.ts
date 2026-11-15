@@ -49,9 +49,10 @@ export class SelectScene extends Phaser.Scene {
   create(): void {
     this.step = 0;
     this.picks = {
-      mission: state.loadout?.mission ?? null,
-      character: state.loadout?.character ?? null,
-      difficulty: state.loadout?.difficulty ?? null,
+      // la primera vez ya viene elegido lo más fácil: basta con pulsar Siguiente
+      mission: state.loadout?.mission ?? 'huerto-lunar',
+      character: state.loadout?.character ?? 'miu',
+      difficulty: state.loadout?.difficulty ?? 'cadete',
     };
     this.steps = [
       {

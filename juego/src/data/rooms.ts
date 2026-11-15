@@ -81,7 +81,7 @@ export const ROOMS: Record<RoomId, Room> = {
       machine('consola-antena', 170, 430, ['repairAntenna', 'tellEarth', 'forecast'], 'machine.antenna'), // la antena, afuera y a la izquierda
       deco('roca', 160, 150), deco('roca', 900, 470), deco('roca', 1900, 420),
       // objetos de cada investigación
-      only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'machine.drill')),
+      only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva', 'analyze'], 'machine.drill')),
       only('paneles-solares', machine('panel-solar', 440, 260, ['cleanTestPanel'], 'machine.testPanel'))],
   },
   invernadero: {

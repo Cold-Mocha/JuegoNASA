@@ -57,7 +57,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {}, dna: 0, bioTests: 0, bioScore: 0 };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -128,6 +128,16 @@ export class Simulation {
     return this.tasks.filter((t) => (t.stage ?? 1) === 1).every((t) => this.taskProgress(t) >= t.count);
   }
 
+  /** Biofirmas: hay una muestra de hielo recogida que todavía no se analizó. */
+  get hasSample(): boolean {
+    return this.stats.evas > this.stats.bioTests;
+  }
+
+  /** ADN de papel (opcional): guarda la mejor nota del circuito; desde entonces cada cosecha rinde un poco más (ver `dnaBonus`). */
+  setDna(score: number): void {
+    this.stats.dna = Math.max(this.stats.dna, Math.min(1, Math.max(0, score)));
+  }
+
   get tasksDone(): number {
     return this.tasks.filter((t) => this.taskProgress(t) >= t.count).length;
   }
@@ -194,6 +204,7 @@ export class Simulation {
     if (action === 'repair' && !this.breach) return false;
     if (action === 'forecast' && (this.forecastOn || !this.radioOk)) return false;
     if (action === 'tellEarth' && (!this.stage2Unlocked || !this.radioOk)) return false; // solo al querer irse y con la antena sana
+    if (action === 'analyze' && !this.hasSample) return false;
     if ((this.cooldowns.get(action) ?? 0) > this.time || this.isPending(action)) return false;
     if (this.dailyLimitReached(action)) return false;
     const d = this.preview(action);
@@ -270,6 +281,7 @@ export class Simulation {
     if (d.food !== undefined && d.food < 0 && this.res.food + d.food < 0) return { ok: false, reason: 'noFood' };
     if (action === 'tellEarth' && !this.stage2Unlocked) return { ok: false, reason: 'locked' };
     if (action === 'tellEarth' && !this.radioOk) return { ok: false, reason: 'repairFirst' };
+    if (action === 'analyze' && !this.hasSample) return { ok: false, reason: 'noSample' };
     if (action === 'forecast' && this.forecastOn) return { ok: false, reason: 'forecastOn' };
     if (action === 'forecast' && !this.radioOk) return { ok: false, reason: 'noLink' };
     if (!this.needsCleaning(action)) return { ok: false, reason: 'clean' };
@@ -303,6 +315,7 @@ export class Simulation {
       case 'cleanTestPanel': this.testDirty = false; break; // el panel de pruebas no limpia los paneles de la estación
       case 'repair': this.breach = null; this.events.push({ type: 'breachRepaired' }); break;
       case 'eva': this.stats.evas++; break;
+      case 'analyze': this.stats.bioTests++; this.stats.bioScore += scoreOf(scale); break;
       default: break;
     }
     if (ACTIONS[action].delayed) this.pending.push({ action, at: this.time + EARTH_MOON_ROUND_TRIP_SEC, quality: scale });

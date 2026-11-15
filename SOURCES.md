@@ -46,6 +46,9 @@ Notas científicas:
 - Puntos de Lagrange: [NASA Science](https://science.nasa.gov/resource/what-is-a-lagrange-point/) · Cinturón de Kuiper: [NASA Science](https://science.nasa.gov/solar-system/kuiper-belt/)
 - Exoplanetas: [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/) · TRAPPIST-1: [NASA Science](https://science.nasa.gov/exoplanets/trappist1/)
 - Efemérides (referencia para futuras misiones orbitales): [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/)
+- Biología sintética (taller de «ADN de papel»): [NASA, Space Synthetic Biology (SynBio)](https://www.nasa.gov/space-synthetic-biology-synbio/): BioNutrients, levadura modificada para producir nutrientes a pedido, en la ISS desde 2019 · apoyo: [What is BioNutrients?](https://www.nasa.gov/general/what-is-bionutrients/)
+- Biofirma posible (minijuego «Analizar la muestra»): [NASA Science, What is a Potential Biosignature?](https://science.nasa.gov/resource/what-is-a-potential-biosignature/) · apoyo: [NASA/JPL, Will We Know Life When We See It?](https://www.jpl.nasa.gov/news/nasa-asks-will-we-know-life-when-we-see-it/)
+- Microbio resistente a la radiación (*Deinococcus radiodurans*, ~500 veces la dosis humana): [NASA Astrobiology, Life in the Extreme: Radiation](https://astrobiology.nasa.gov/news/life-in-the-extreme-radiation/)
 
 ## 4. Contexto chileno (fichas «Desde Chile» del Archivo)
 
@@ -69,6 +72,7 @@ Lo ocurrido en Chile no está en sitios de agencias espaciales: estas fichas cit
 - La **escala de recursos** (0–100) y la **dosis de juego** de cada llamarada son simplificaciones. La dosis crece de forma logarítmica con el flujo real de rayos X (`flareDose`) para que una X9 pese más que una M5 sin volverse imposible. La barra de radiación es "% del límite de la misión", no mSv.
 - La base **Estación Central** es ficticia (silueta inspirada en Lunar Palace 1, sin nombre ni logos reales).
 - 7 jornadas comprimen un día lunar completo; el atardecer y la noche siguen la proporción real.
+- **ADN de papel y biofirmas:** los costos de cada pieza (10/15/15 %, «solo cuando detecta» 40 %), el bonus de cosecha (hasta +25 %) y las tres pruebas de biofirma son diseño propio **[MODELO]**; las piezas protectoras se *inspiran* en microbios extremos, las algas del huerto no son esos microbios.
 - No se usan logos ni insignias de la NASA (14 CFR 1221). Créditos: "Usa datos e imágenes abiertas de la NASA; la NASA no respalda este proyecto."
 
 

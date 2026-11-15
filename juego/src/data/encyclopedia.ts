@@ -15,7 +15,8 @@ export type EntryId =
   | 'comm-delay' | 'mars-gravity' | 'artemis' | 'perseverance' | 'webb'
   | 'lagrange' | 'voyager' | 'kuiper' | 'trappist' | 'exoplanets'
   | 'chile-sky' | 'mataveri' | 'chile-auroras' | 'guina'
-  | 'chile-artemis' | 'chile-seguimiento' | 'chile-act' | 'chile-arads' | 'chile-1960' | 'chile-tololo';
+  | 'chile-artemis' | 'chile-seguimiento' | 'chile-act' | 'chile-arads' | 'chile-1960' | 'chile-tololo'
+  | 'synthetic-biology-light' | 'biosignature' | 'radiation-microbe';
 
 export interface Entry {
   id: EntryId;
@@ -45,6 +46,9 @@ export const ENTRIES: Entry[] = [
   { id: 'osdr', category: 'vida', url: 'https://osdr.nasa.gov/bio/', room: 'enfermeria' },
   { id: 'algae-oxygen', category: 'vida', url: 'https://www.esa.int/Science_Exploration/Human_and_Robotic_Exploration/Research/A_decade-long_quest_to_build_an_ecosystem_in_a_room', room: 'invernadero' },
   { id: 'plants-space', category: 'vida', url: 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/', room: 'invernadero' },
+  { id: 'synthetic-biology-light', category: 'vida', url: 'https://www.nasa.gov/space-synthetic-biology-synbio/' },
+  { id: 'biosignature', category: 'vida', url: 'https://science.nasa.gov/resource/what-is-a-potential-biosignature/' },
+  { id: 'radiation-microbe', category: 'vida', url: 'https://astrobiology.nasa.gov/news/life-in-the-extreme-radiation/' },
   { id: 'comm-delay', category: 'vida', url: 'https://www.nasa.gov/communicating-with-missions/', room: 'exterior' },
   { id: 'mars-gravity', category: 'universo', url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html' },
   { id: 'artemis', category: 'misiones', url: 'https://www.nasa.gov/humans-in-space/artemis/' },

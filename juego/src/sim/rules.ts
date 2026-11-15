@@ -109,6 +109,7 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
   cleanDust:    { room: 'exterior', cost: { energy: -2, radiation: 3 }, gain: {} },
   cleanTestPanel: { room: 'exterior', cost: { energy: -2, radiation: 3 }, gain: {} },  // panel de pruebas (solo en Energía del Sol): mide, no limpia la estación
   eva:          { room: 'exterior', cost: { energy: -3, radiation: 6 }, gain: {} }, // recoger muestras de hielo en la roca
+  analyze:      { room: 'exterior', cost: { energy: -2 }, gain: {} }, // biofirmas: analizar una muestra ya recogida (solo suma puntaje)
   repair:       { room: 'soporte', cost: { energy: -4 }, gain: {} }, // la sala real es la de la fractura (ver Simulation.breach)
   pedal:        { room: 'puente', cost: { food: -3 }, gain: { energy: 10 } },                // bicicleta: energía de emergencia, × calidad del minijuego
   heal:         { room: 'enfermeria', cost: { energy: -8, food: -4 }, gain: { health: 25 } },
@@ -116,7 +117,7 @@ export const ACTIONS: Record<ActionId, ActionRule> = {
 
 /** Las algas siguen creciendo: más oxígeno y comida al terminar la jornada. */
 /** Acciones que solo se pueden hacer una vez por jornada: las propias de cada investigación y la cosecha (no tiene sentido repetirlas el mismo día). */
-export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva', 'harvest']);
+export const ONCE_PER_DAY: ReadonlySet<ActionId> = new Set<ActionId>(['growLights', 'cleanTestPanel', 'eva', 'analyze', 'harvest']);
 /** Otras acciones con tope diario mayor que uno (la bicicleta cansa: 3 por jornada). */
 export const MAX_PER_DAY: Partial<Record<ActionId, number>> = { pedal: 3 };
 

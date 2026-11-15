@@ -89,6 +89,8 @@ export class MissionReportScene extends Phaser.Scene {
             <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.score')}</span><span class="mn-telemetry__value" data-score>${r.score.score}</span></div>
             <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.days')}</span><span class="mn-telemetry__value">${s.daysSurvived}/${s.days}</span></div>
             <div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.shielded')}</span><span class="mn-telemetry__value">${s.stats.shelteredFlares}/${s.stats.shelteredFlares + s.stats.unshieldedFlares}</span></div>
+            ${s.stats.dna ? `<div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.dna')}</span><span class="mn-telemetry__value">${Math.round(s.stats.dna * 100)} %</span></div>` : ''}
+            ${s.stats.bioTests ? `<div class="mn-telemetry"><span class="mn-telemetry__label">${t('report.bio')}</span><span class="mn-telemetry__value">${s.stats.bioTests}</span></div>` : ''}
           </div>
           ${r.newBest ? `<p class="heading report__best">${t('report.best')}</p>` : ''}
           <h2 class="heading report__h">${t('report.learned')}</h2>

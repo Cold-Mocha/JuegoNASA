@@ -9,7 +9,7 @@ export type Zone = 'ship' | 'greenhouse' | 'surface';
 
 /** Acciones de las máquinas. `forecast` pide el pronóstico solar a la Tierra (responde con demora). `repairAntenna`, `cleanDust`, `harvest` y `repair` (fractura) abren un minijuego. */
 export type ActionId =
-  | 'repairAntenna' | 'tellEarth' | 'forecast' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'heal' | 'repair' | 'pedal';
+  | 'repairAntenna' | 'tellEarth' | 'forecast' | 'growLights' | 'harvest' | 'cleanDust' | 'cleanTestPanel' | 'eva' | 'analyze' | 'heal' | 'repair' | 'pedal';
 
 /**
  * 5 recursos de la estación: energía, oxígeno, comida, salud y radiación (dosis acumulada en % del límite).
@@ -87,7 +87,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'repairFirst' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'locked' | 'repairFirst' | 'noSample' | 'ended';
 }
 
 export interface SimStats {
@@ -102,4 +102,9 @@ export interface SimStats {
   actionsBy: Partial<Record<ActionId, number>>;
   /** Acciones hechas con la investigación ya terminada: son las que cuentan para las tareas de la etapa 2. */
   stage2By: Partial<Record<ActionId, number>>;
+  /** ADN de papel: mejor nota (0–1) del circuito de la jornada; 0 si no se diseñó (es opcional). */
+  dna: number;
+  /** Biofirmas: muestras de hielo analizadas y suma de sus notas (0–1 cada una). */
+  bioTests: number;
+  bioScore: number;
 }

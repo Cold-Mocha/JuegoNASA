@@ -42,6 +42,8 @@ import { Spotlight, rectOf, unionRect, type SpotRect } from '../core/spotlight';
 import {
   mountAlgae, mountAntennaGame, mountIceDrill, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, moveFocus, MINI_KEYS, PEDAL_PASS, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
+import { mountBiofirmas, mountDnaWorkshop } from '../core/dnaGame';
+import { DNA_MAX_BONUS, dnaBonus } from '../sim/dna';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
@@ -869,6 +871,7 @@ export class StationScene extends Phaser.Scene {
     if (id === 'tellEarth') return this.openLinkGame();
     if (id === 'pedal') return this.openPedalGame();
     if (id === 'eva') return this.openBiosignatureGame();
+    if (id === 'analyze') return this.openBioTestsGame();
     if (id === 'harvest') return this.openHarvestGame();
     if (id === 'heal') return this.openHealGame();
     this.sim.act(id);
@@ -996,8 +999,28 @@ export class StationScene extends Phaser.Scene {
     this.openFullMini({ hint: t('hint.heal'), mount: (root, cb) => mountHealGame(root, cb, this.miniTime), finish: (r) => this.sim.act('heal', quality(r ?? 1)) });
   }
 
+  /** Cosechar; si se diseñó el ADN de papel (opcional), la cosecha rinde un poco más (sin taller, ×1: igual que siempre). */
   private openHarvestGame(): void {
-    this.openFullMini({ hint: t('hint.harvest'), mount: (root, cb) => mountHarvestGame(root, cb, this.miniTime), finish: (r) => this.sim.act('harvest', quality(r ?? 1)) });
+    this.openFullMini({ hint: t('hint.harvest'), mount: (root, cb) => mountHarvestGame(root, cb, this.miniTime), finish: (r) => this.sim.act('harvest', quality(r ?? 1) * dnaBonus(this.sim.stats.dna)) });
+  }
+
+  /** Taller de ADN de papel (opcional, en el Rack de plantas): no cuesta recursos; su nota da el bonus de las cosechas siguientes. */
+  private openDnaGame(): void {
+    this.openFullMini({
+      hint: t('hint.dna'),
+      mount: (root, cb) => mountDnaWorkshop(root, { mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => cb.onDone(score) }),
+      finish: (r) => { this.sim.setDna(r ?? 0); return undefined; },
+    });
+  }
+
+  /** Biofirmas: analizar una muestra de hielo ya recogida con tres pruebas independientes. Se juega afuera: el traje sigue gastando. */
+  private openBioTestsGame(): void {
+    this.openFullMini({
+      hint: t('hint.bio'),
+      mount: (root, cb) => mountBiofirmas(root, { hard: this.difficulty.id === 'comandante', seed: this.sim.day * 31 + this.sim.stats.bioTests * 7, onDone: (score) => cb.onDone(score) }),
+      finish: (r) => this.sim.act('analyze', quality(r ?? 1)),
+      outdoor: true,
+    });
   }
 
   /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */
@@ -1137,6 +1160,7 @@ export class StationScene extends Phaser.Scene {
       .on('settings', () => this.openSettings())
       .on('archive', () => this.openArchive())
       .on('read-entry', (el) => this.openArchive(el.dataset.entry))
+      .on('dna', () => this.openDnaGame())
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
@@ -1410,8 +1434,16 @@ export class StationScene extends Phaser.Scene {
       <div class="hud__actions-head"><h2 class="mn-panel__title">${icon(ROOM_ICON[m.room])}${esc(machineName(m))}</h2>
       <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="${t('common.close')}">${icon('close')}</button></div>
       <ul class="action-list">${items.join('')}</ul>
+      ${m.prop.asset === 'rack-plantas' && this.tutorialIndex < 0 ? this.dnaHtml() : ''}
       ${m.prop.entry ? `<p class="body-sm action__why">${t('poster.body')}</p>
       <button class="mn-btn mn-btn--sm action__btn" data-action="read-entry" data-entry="${esc(m.prop.entry)}">${icon('book')}${t('chapter.readReal')}</button>` : ''}`);
+  }
+
+  /** Rack de plantas: el taller opcional de ADN de papel (una vez por jornada) o el bonus que ya da a la cosecha. */
+  private dnaHtml(): string {
+    if (this.sim.stats.dna > 0) return `<p class="body-sm action__why">${icon('check')}${t('dna.done', { n: Math.round((dnaBonus(this.sim.stats.dna) - 1) * 100) })}</p>`;
+    return `<button class="mn-btn mn-btn--secondary mn-btn--sm action__btn" data-action="dna" ${this.sim.ended ? 'disabled' : ''}>${icon('flask')}${t('dna.open')}</button>
+      <p class="body-sm action__why">${t('dna.openWhy', { n: Math.round(DNA_MAX_BONUS * 100) })}</p>`;
   }
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */

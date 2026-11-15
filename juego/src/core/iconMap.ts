@@ -11,7 +11,7 @@ export const RESOURCE_ICON: Record<keyof Resources, IconName> = {
 };
 
 export const ACTION_ICON: Record<ActionId, IconName> = {
-  repairAntenna: 'antenna', tellEarth: 'radar', forecast: 'sun', growLights: 'sprout', harvest: 'sprout', cleanDust: 'panel', cleanTestPanel: 'panel', eva: 'snowflake', heal: 'heart', repair: 'gear', pedal: 'bolt',
+  repairAntenna: 'antenna', tellEarth: 'radar', forecast: 'sun', growLights: 'sprout', harvest: 'sprout', cleanDust: 'panel', cleanTestPanel: 'panel', eva: 'snowflake', analyze: 'flask', heal: 'heart', repair: 'gear', pedal: 'bolt',
 };
 
 export const ROOM_ICON: Record<RoomId, IconName> = {

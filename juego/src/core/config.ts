@@ -12,4 +12,5 @@ export const SCENES = {
   returnTrip: 'ReturnTrip',
   reentry: 'Reentry',
   report: 'MissionReport',
+  miniLab: 'MiniLab',
 } as const;

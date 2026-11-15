@@ -38,6 +38,7 @@ export class MainMenuScene extends Phaser.Scene {
             <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="credits">${icon('info')}${t('menu.credits')}</button>
           </div>
         </nav>
+        <button class="mn-btn mn-btn--secondary mn-btn--sm menu__debug" data-action="debug">${icon('flask')}${t('lab.open')}</button>
         <button class="mn-btn mn-btn--secondary mn-btn--sm menu__reset" data-action="reset">${icon('retry')}${t('menu.reset')}</button>
       </div>
       <div class="modal" data-modal hidden></div>`);
@@ -80,6 +81,7 @@ export class MainMenuScene extends Phaser.Scene {
         state.resetProgress(); // todo de cero: Jugar vuelve a empezar por el entrenamiento con tutorial
         this.play();
       })
+      .on('debug', () => fadeTo(this, SCENES.miniLab))
       .on('credits', () =>
         openModal(`
           <h2 class="mn-panel__title">${t('menu.credits')}</h2>

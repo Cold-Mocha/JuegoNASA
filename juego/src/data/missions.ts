@@ -35,7 +35,7 @@ export const MISSION_DAYS = 7;
 
 const act = (id: string, action: ActionId, count: number, label: string, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, label, stage });
 
-/** Tres jornadas: las dos primeras con el Sol tranquilo y la tercera con llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
+/** Tres jornadas: la primera con el Sol tranquilo y las otras dos con semanas reales de llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
   {
     id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Cultivo de algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
@@ -50,10 +50,10 @@ export const MISSIONS: Mission[] = [
     ],
   },
   {
-    id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
+    id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'may-2024', tagline: 'Sol de mayo de 2024',
     tutorial: { asset: 'panel-solar', action: 'cleanTestPanel', handsOn: false, text: 'Tu investigación: el Panel de pruebas, afuera. Cuando una tormenta de polvo lo ensucie, límpialo y oriéntalo al Sol para medir su energía.' },
     question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
-    brief: 'Mantén limpios los paneles solares.',
+    brief: 'Mide los paneles en una semana de tormentas solares.',
     tasks: [
       act('paneles-prueba', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
       act('paneles-polvo', 'cleanDust', 1, 'Limpiar los paneles de la estación'),

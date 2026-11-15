@@ -3,7 +3,7 @@ import { SCENES, GAME_WIDTH } from '../core/config';
 import { state } from '../core/state';
 import { tokenColor } from '../core/theme';
 import { drawStarfield } from '../core/starfield';
-import { UiLayer } from '../core/ui';
+import { UiLayer, labelDialog } from '../core/ui';
 import { fadeTo, fadeIn } from '../core/fade';
 import { settingsHtml, bindSettings, langButtonsHtml } from '../core/settingsPanel';
 import { ACHIEVEMENT_IDS, achievementText, achievementTitle } from '../data/achievements';
@@ -43,6 +43,7 @@ export class MainMenuScene extends Phaser.Scene {
     const modal = ui.q('[data-modal]');
     const openModal = (html: string): void => {
       modal.innerHTML = `<div class="mn-panel modal__panel" role="dialog" aria-modal="true">${html}</div>`;
+      labelDialog(modal);
       modal.hidden = false;
       ui.focusFirst('.modal [data-action]');
     };

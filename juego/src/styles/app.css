@@ -888,3 +888,16 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 }
 [data-calm] :is(.mn-bar__ghost, .mn-bar__ghost.is-good, .mn-bar__ghost.is-bad) { animation: none; transition: none; }
 [data-calm] :is(.hud__toast, .mn-bar__delta) { translate: none !important; }
+
+/* ---------- Proporciones y scroll: nada queda fuera del lienzo de 1280×720 ---------- */
+/* Selector: pasos fijos arriba y Atrás/Siguiente fijos abajo; solo las tarjetas se desplazan si no caben. */
+.select > .stepper, .select > .select__footer { flex: none; }
+.select__grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: safe center; padding: var(--space-2) var(--space-2) var(--space-3); overscroll-behavior: contain; }
+.select__footer { padding-top: var(--space-2); }
+/* Ventanas (ajustes, logros, créditos): nunca más altas que la pantalla */
+.modal__panel:not(.modal__panel--full) { max-height: calc(100% - var(--space-6) * 2); overflow-y: auto; overscroll-behavior: contain; }
+/* Informe final: cada columna se desplaza sin esconder los botones */
+.report { grid-template-rows: minmax(0, 1fr); }
+.report__main, .report__side { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+/* Barras de desplazamiento visibles y del estilo del juego */
+.select__grid, .modal__panel, .report__main, .report__side { scrollbar-width: thin; scrollbar-color: var(--star-gold) var(--space-700); }

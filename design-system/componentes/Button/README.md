@@ -7,7 +7,7 @@ Botón grueso tipo "cartoon" con canto inferior que se hunde al presionar; es la
 | `.mn-btn` | Acción primaria: **una por pantalla** (Despegar, Continuar). Relleno `star-gold`, texto `ink-dark` (11:1). |
 | `.mn-btn--secondary` | Volver, opciones. Relleno `space-600` con borde `line`. |
 | `.mn-btn--danger` | Abortar misión, borrar partida. Siempre pide confirmación en un Panel. |
-| `.mn-btn--sm` | Dentro de paneles o diálogos. Altura 40px. |
+| `.mn-btn--sm` | Dentro de paneles o diálogos. Altura 44px (objetivo táctil mínimo). |
 | `.mn-btn--icon` | Pausa, ajustes, audio. Requiere `aria-label` / etiqueta accesible. |
 
 ## Estados

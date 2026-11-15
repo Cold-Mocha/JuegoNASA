@@ -496,6 +496,7 @@ export const en: Record<TKey, string> = {
   'select.preview': 'Crew member preview',
   'select.prevCrew': 'Previous crew member',
   'select.sprite': 'Your astronaut michi',
+  'select.steps': 'Steps to start the mission',
   'select.step.character': 'Crew member',
   'select.step.difficulty': 'Difficulty',
   'select.step.mission': 'Science mission',

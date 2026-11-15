@@ -99,8 +99,8 @@ export class SelectScene extends Phaser.Scene {
     drawStarfield(this, 'select', !state.calm);
     this.ui = new UiLayer(this, /* html */ `
       <div class="select">
-        <ol class="stepper" data-stepper></ol>
-        <div class="select__grid" role="radiogroup" data-grid></div>
+        <ol class="stepper" data-stepper aria-label="${t('select.steps')}"></ol>
+        <div class="select__grid" role="radiogroup" aria-label="${t('select.steps')}" data-grid></div>
         <div class="select__footer">
           <button class="mn-btn mn-btn--secondary" data-action="back">${t('select.back')}</button>
           <button class="mn-btn" data-action="next" data-next>${t('select.next')}</button>
@@ -141,7 +141,7 @@ export class SelectScene extends Phaser.Scene {
     this.step = i;
     const step = this.steps[i];
     this.ui.q('[data-stepper]').innerHTML = this.steps
-      .map((s, k) => `<li class="stepper__item ${k === i ? 'is-current' : k < i ? 'is-done' : ''}"><span class="stepper__num">${k + 1}</span>${esc(s.label)}</li>`)
+      .map((s, k) => `<li class="stepper__item ${k === i ? 'is-current' : k < i ? 'is-done' : ''}"${k === i ? ' aria-current="step"' : ''}><span class="stepper__num">${k + 1}</span>${esc(s.label)}</li>`)
       .join('');
     const grid = this.ui.q('[data-grid]');
     this.stopPreview();

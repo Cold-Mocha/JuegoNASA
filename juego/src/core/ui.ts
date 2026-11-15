@@ -56,3 +56,13 @@ export class UiLayer {
 /** Escapa texto que venga de datos antes de interpolarlo en HTML. */
 export const esc = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+let dialogSeq = 0;
+/** Da nombre accesible a la ventana recién abierta: el lector de pantalla lee su título (`.mn-panel__title`) al entrar. */
+export function labelDialog(root: HTMLElement): void {
+  const dialog = root.querySelector<HTMLElement>('[role="dialog"]');
+  const title = dialog?.querySelector<HTMLElement>('.mn-panel__title');
+  if (!dialog || !title) return;
+  title.id ||= `dialog-title-${++dialogSeq}`;
+  dialog.setAttribute('aria-labelledby', title.id);
+}

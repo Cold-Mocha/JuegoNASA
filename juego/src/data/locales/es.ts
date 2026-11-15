@@ -494,6 +494,7 @@ export const es = {
   'select.preview': 'Vista previa del tripulante',
   'select.prevCrew': 'Tripulante anterior',
   'select.sprite': 'Tu michi astronauta',
+  'select.steps': 'Pasos para empezar la misión',
   'select.step.character': 'Tripulante',
   'select.step.difficulty': 'Dificultad',
   'select.step.mission': 'Jornada científica',

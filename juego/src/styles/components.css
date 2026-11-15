@@ -31,7 +31,7 @@
 .mn-btn--secondary:active, .mn-btn--secondary.is-pressed { box-shadow: inset 0 0 0 2px var(--line), 0 2px 0 var(--space-900); }
 .mn-btn--secondary:focus-visible, .mn-btn--secondary.is-focus { box-shadow: inset 0 0 0 2px var(--line), var(--shadow-press), var(--shadow-focus); }
 .mn-btn--danger { background: var(--danger); color: var(--ink-dark); box-shadow: var(--shadow-press); }
-.mn-btn--sm { min-height: 40px; padding: var(--space-2) var(--space-4); font-size: 15px; }
+.mn-btn--sm { min-height: 44px; padding: var(--space-2) var(--space-4); font-size: 15px; }
 .mn-btn--icon { width: 56px; padding: 0; border-radius: var(--radius-pill); }
 .mn-icon { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.18em; margin-right: .3em; }
 .mn-btn .mn-icon { margin-right: 0; }

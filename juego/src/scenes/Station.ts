@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../core/config';
 import { state } from '../core/state';
 import { tokenColor, tokenCss, FONT_DISPLAY } from '../core/theme';
-import { UiLayer, esc } from '../core/ui';
+import { UiLayer, esc, labelDialog } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { settingsHtml, bindSettings } from '../core/settingsPanel';
@@ -1487,6 +1487,7 @@ export class StationScene extends Phaser.Scene {
     this.ui.q('[data-actions]').hidden = true;
     const modal = this.ui.q('[data-overlay]');
     modal.innerHTML = `<div class="mn-panel modal__panel ${extra}" role="dialog" aria-modal="true">${html}</div>`;
+    labelDialog(modal);
     modal.hidden = false;
     this.ui.focusFirst('.modal [data-action]');
   }

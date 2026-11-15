@@ -14,7 +14,8 @@ export type EntryId =
   | 'water-shield' | 'body-in-space' | 'osdr' | 'algae-oxygen' | 'plants-space'
   | 'comm-delay' | 'mars-gravity' | 'artemis' | 'perseverance' | 'webb'
   | 'lagrange' | 'voyager' | 'kuiper' | 'trappist' | 'exoplanets'
-  | 'chile-sky' | 'mataveri' | 'chile-auroras' | 'guina';
+  | 'chile-sky' | 'mataveri' | 'chile-auroras' | 'guina'
+  | 'chile-artemis' | 'chile-seguimiento' | 'chile-act' | 'chile-arads' | 'chile-1960' | 'chile-tololo';
 
 export interface Entry {
   id: EntryId;
@@ -58,6 +59,13 @@ export const ENTRIES: Entry[] = [
   { id: 'mataveri', category: 'chile', url: 'https://www.upi.com/Archives/1987/08/17/Emergency-space-shuttle-landing-strip-opened/9293556171200/' },
   { id: 'chile-auroras', category: 'chile', url: 'https://www.meganoticias.cl/nacional/447271-tormenta-solar-auroras-australes-boreales-polares-punta-arenas-brk-10-5-2024.html' },
   { id: 'guina', category: 'chile', url: 'https://news.mongabay.com/2018/01/smallest-wild-cat-in-the-americas-faces-big-problems-but-hope-exists/' },
+  // cooperación Chile–EE. UU. (capa «Laboratorio Chile»): cada capítulo y cada cartel de la estación lleva a una de estas
+  { id: 'chile-artemis', category: 'chile', url: 'https://www.nasa.gov/news-release/nasa-welcomes-chile-as-newest-artemis-accords-signatory' },
+  { id: 'chile-seguimiento', category: 'chile', url: 'https://www.nasa.gov/communicating-with-missions/history-of-the-networks/' },
+  { id: 'chile-act', category: 'chile', url: 'https://lambda.gsfc.nasa.gov/product/act/' },
+  { id: 'chile-arads', category: 'chile', url: 'https://www.nasa.gov/?p=427586' },
+  { id: 'chile-1960', category: 'chile', url: 'https://history.state.gov/historicaldocuments/frus1958-60v05mSupp/ch_d37' },
+  { id: 'chile-tololo', category: 'chile', url: 'https://noirlab.edu/public/about/timeline' },
 ];
 
 /** Ficha "¿Sabías qué?" de una sala (la primera que la mencione). */

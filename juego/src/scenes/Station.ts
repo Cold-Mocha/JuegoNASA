@@ -234,8 +234,9 @@ export class StationScene extends Phaser.Scene {
         at = { x: Phaser.Math.Clamp(at.x, r.x + half, r.x + r.w - half), y: at.y };
         img.setX(at.x);
         if (p.asset === 'reciclador-aire') this.recycler = { sprite: img, at };
-        if (p.kind === 'wall') {
+        if (p.kind === 'wall' || p.kind === 'poster') {
           img.setDepth(at.y - 500); // colgado de la pared: siempre detrás del michi
+          if (p.kind === 'poster') this.addMachine(room, p, img, at); // se puede leer, pero no estorba al caminar
           continue;
         }
         this.obstacles.push({ x: at.x, y: at.y, r: OBSTACLE_R[p.kind] });
@@ -562,7 +563,7 @@ export class StationScene extends Phaser.Scene {
     }
     const prompt = this.ui.q('[data-prompt]');
     prompt.hidden = !m || this.overlay !== 'none';
-    if (m) this.setText('[data-prompt-label]', t('hud.use', { name: machineName(m) }));
+    if (m) this.setText('[data-prompt-label]', t(m.prop.kind === 'poster' ? 'hud.read' : 'hud.use', { name: machineName(m) }));
   }
 
   // ---------- salto e impulso
@@ -1135,6 +1136,7 @@ export class StationScene extends Phaser.Scene {
       })
       .on('settings', () => this.openSettings())
       .on('archive', () => this.openArchive())
+      .on('read-entry', (el) => this.openArchive(el.dataset.entry))
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
@@ -1380,7 +1382,7 @@ export class StationScene extends Phaser.Scene {
     this.flags.opened = true;
     this.ui.q('[data-actions]').hidden = false;
     this.renderActions();
-    this.ui.focusFirst('[data-actions] [data-action="act"]:not([disabled])');
+    this.ui.focusFirst('[data-actions] [data-action="act"]:not([disabled]), [data-actions] [data-action="read-entry"]');
   }
 
   private renderActions(): void {
@@ -1407,7 +1409,9 @@ export class StationScene extends Phaser.Scene {
     this.setHtml('[data-actions]', `
       <div class="hud__actions-head"><h2 class="mn-panel__title">${icon(ROOM_ICON[m.room])}${esc(machineName(m))}</h2>
       <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="${t('common.close')}">${icon('close')}</button></div>
-      <ul class="action-list">${items.join('')}</ul>`);
+      <ul class="action-list">${items.join('')}</ul>
+      ${m.prop.entry ? `<p class="body-sm action__why">${t('poster.body')}</p>
+      <button class="mn-btn mn-btn--sm action__btn" data-action="read-entry" data-entry="${esc(m.prop.entry)}">${icon('book')}${t('chapter.readReal')}</button>` : ''}`);
   }
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */

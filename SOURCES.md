@@ -49,7 +49,7 @@ Notas científicas:
 
 ## 4. Contexto chileno (fichas «Desde Chile» del Archivo)
 
-Lo ocurrido en Chile no está en sitios de agencias espaciales: estas fichas citan a ESO y, donde no hay fuente oficial, prensa o divulgación con fecha.
+Lo ocurrido en Chile no está en sitios de agencias espaciales: estas fichas citan a ESO y, donde no hay fuente oficial, prensa o divulgación con fecha. Las de cooperación Chile–EE. UU. (capa «Laboratorio Chile») citan a la NASA, al Departamento de Estado y a NOIRLab. Los mensajes de la Dra. Almendra que abren cada capítulo son **[RECREACIÓN]**: el personaje es ficticio.
 
 | Dato | Dónde se usa | Fuente |
 |---|---|---|
@@ -57,6 +57,12 @@ Lo ocurrido en Chile no está en sitios de agencias espaciales: estas fichas cit
 | La NASA alargó la pista de Mataveri (Rapa Nui) como aterrizaje de emergencia del transbordador; se inauguró en agosto de 1987 y nunca se usó para eso | Ficha «Una pista para el transbordador en Rapa Nui» y rótulo de la fase de planeo de «Casa» | [UPI, 17-08-1987](https://www.upi.com/Archives/1987/08/17/Emergency-space-shuttle-landing-strip-opened/9293556171200/) (el sitio bloquea clientes automáticos: revisar a mano) |
 | Auroras australes en Punta Arenas el 10 de mayo de 2024, durante la tormenta geomagnética G5 | Ficha «Auroras en el sur de Chile» y descripción de la jornada «Energía del Sol» | [Meganoticias, 10-05-2024](https://www.meganoticias.cl/nacional/447271-tormenta-solar-auroras-australes-boreales-polares-punta-arenas-brk-10-5-2024.html) |
 | La güiña (*Leopardus guigna*) es el felino silvestre más pequeño de América; vive en Chile y Argentina | Ficha «La güiña» y tripulante Güiña | [Mongabay, 2018](https://news.mongabay.com/2018/01/smallest-wild-cat-in-the-americas-faces-big-problems-but-hope-exists/) |
+| Chile firmó los Acuerdos Artemis el 25 de octubre de 2024 (país n.º 47) | Ficha «Chile y los Acuerdos Artemis», capítulo 4 y cartel del Puente | [NASA, 2024](https://www.nasa.gov/news-release/nasa-welcomes-chile-as-newest-artemis-accords-signatory) |
+| La red Minitrack tuvo una estación en Santiago; la NASA la heredó en 1958 | Ficha «Una antena en Chile para seguir satélites», capítulo 2 y cartel de la Esclusa | [NASA, History of the Networks](https://www.nasa.gov/communicating-with-missions/history-of-the-networks/) |
+| El Telescopio Cosmológico de Atacama (6 m, Cerro Toco) observó hasta 2022; sus mapas son públicos | Ficha «Un telescopio del desierto, con datos para todos» y capítulo 3 | [NASA LAMBDA](https://lambda.gsfc.nasa.gov/product/act/) |
+| ARADS: la NASA probó en Atacama un róver que perfora y busca vida | Ficha «ARADS», capítulo 1 y cartel del Invernadero (Huerto lunar) | [NASA](https://www.nasa.gov/?p=427586) |
+| Tras el terremoto de 1960, EE. UU. envió por aire 2 hospitales de campaña y 10 helicópteros | Ficha «Ayuda por aire tras el terremoto de 1960» y cartel de la Enfermería | [Office of the Historian, FRUS 1958–60](https://history.state.gov/historicaldocuments/frus1958-60v05mSupp/ch_d37) |
+| Cerro Tololo: elegido en 1962, inaugurado en noviembre de 1967 | Ficha «Cerro Tololo» y cartel de la Esclusa | [NOIRLab, Timeline](https://noirlab.edu/public/about/timeline) |
 
 ## 5. Qué es simulado (y se dice en el juego)
 

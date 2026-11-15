@@ -13,6 +13,7 @@ import { icon } from '../core/icons';
 import { DIFFICULTY_ICON } from '../core/iconMap';
 import { MICHI_ANIMS, type MichiAnim } from '../data/preload';
 import { t } from '../core/i18n';
+import { chapterFor } from '../data/chapters';
 
 interface Option { id: string; title: string; subtitle: string; body: string; art: string; chips?: string[]; wins?: number; }
 interface Step { key: 'mission' | 'character' | 'difficulty'; label: string; options: Option[]; }
@@ -76,7 +77,7 @@ export class SelectScene extends Phaser.Scene {
             id: m.id, title: missionText(m.id, 'name'), subtitle: missionText(m.id, 'question'), body: missionText(m.id, 'brief'),
             art: missionArtSvg(m.id, tokenCss(m.accent)),
             wins: state.progress.wins?.missions[m.id] ?? 0,
-            chips: [t('select.tasks', { n: m.tasks.length }), t('select.new', { name: missionText(m.id, 'newObject') }), t(flares === 1 ? 'select.flares.one' : 'select.flares.many', { n: flares }), ...(best ? ['★'.repeat(best.stars)] : [])],
+            chips: [t('chapter.label', { n: chapterFor(m.id).number }), t('select.tasks', { n: m.tasks.length }), t('select.new', { name: missionText(m.id, 'newObject') }), t(flares === 1 ? 'select.flares.one' : 'select.flares.many', { n: flares }), ...(best ? ['★'.repeat(best.stars)] : [])],
           };
         }),
           ...(casaUnlocked() ? [{

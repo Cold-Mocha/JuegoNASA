@@ -3,15 +3,16 @@ import type { MissionId } from './missions';
 import { ROOM_RECTS, type Point } from '../sim/stationMap';
 import { WORLD_SCALE } from '../sim/rules';
 import { t, type TKey } from '../core/i18n';
+import type { EntryId } from './encyclopedia';
 
 /**
  * Salas de la Estación Central sobre el plano continuo (`sim/stationMap.ts`).
  * Posiciones (x, y) relativas a la esquina del piso de cada sala, en px del diseño base (se multiplican por WORLD_SCALE):
- * todos los objetos van en el piso ('interactive' y 'deco'): (x, y) = pies del objeto (centro inferior).
+ * todos los objetos van en el piso ('interactive' y 'deco'): (x, y) = pies del objeto (centro inferior); 'wall' y 'poster' cuelgan de la pared del fondo.
  * Cada máquina dice sus acciones (vacío = sala de lectura o información) y, si hace falta, su propio nombre.
  * El mapa base es fijo; cada investigación suma sus propios objetos (`only(...)`), que solo aparecen al elegirla.
  */
-export type PropKind = 'interactive' | 'deco' | 'wall';
+export type PropKind = 'interactive' | 'deco' | 'wall' | 'poster';
 
 export interface RoomProp {
   asset: string;
@@ -23,6 +24,8 @@ export interface RoomProp {
   nameKey?: TKey;
   /** Si está, el objeto solo aparece en estas investigaciones (los demás están siempre). */
   missions?: MissionId[];
+  /** Cartel: ficha real del Archivo que se abre al leerlo. */
+  entry?: EntryId;
 }
 
 export interface Room {
@@ -34,6 +37,8 @@ const machine = (asset: string, x: number, y: number, actions: ActionId[], nameK
 const deco = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'deco', x, y });
 /** Adorno colgado en la pared del fondo: no estorba al caminar ni proyecta sombra en el piso. */
 const wall = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'wall', x, y });
+/** Cartel de pared que se puede leer (mismo marco que el cuadro de la Tierra): abre su ficha real en el Archivo. No estorba al caminar. */
+const poster = (asset: string, x: number, y: number, nameKey: TKey, entry: EntryId): RoomProp => ({ asset, kind: 'poster', x, y, actions: [], nameKey, entry });
 /** El objeto solo aparece cuando se elige esa investigación. */
 const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ...p, missions: Array.isArray(missions) ? missions : [missions] });
 
@@ -51,21 +56,21 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   puente: {
     id: 'puente',
-    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
+    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), poster('cartel-artemis', 290, -8, 'poster.artemis', 'chile-artemis'),
       machine('bicicleta-estatica', 445, 120, ['pedal'], 'machine.bike'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   enfermeria: {
     id: 'enfermeria',
     props: [machine('camilla-medica', 450, 66, ['heal']),
-      deco('casillero', 62, 62), wall('extintor', 165, 12),
+      deco('casillero', 62, 62), wall('extintor', 165, 12), poster('cartel-terremoto-1960', 300, -8, 'poster.terremoto-1960', 'chile-1960'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   esclusa: {
     id: 'esclusa',
     // sala ancha: cuatro casilleros de trajes contra la pared, cuadros y extintores, y a cada lado cajas y plantas (las puertas quedan libres en x ≈ 315–445)
     props: [deco('casillero-trajes', 70, 66), deco('casillero-trajes', 190, 66), deco('casillero-trajes', 570, 66), deco('casillero-trajes', 690, 66),
-      wall('extintor', 255, 12), wall('extintor', 520, 12), wall('cuadro-tierra', 130, -8), wall('cuadro-tierra', 640, -8),
+      wall('extintor', 255, 12), wall('extintor', 520, 12), poster('cartel-tololo', 130, -8, 'poster.tololo', 'chile-tololo'), poster('cartel-seguimiento', 640, -8, 'poster.seguimiento', 'chile-seguimiento'),
       deco('planta', 45, 235), deco('planta', 715, 235), deco('casillero', 62, 160), deco('casillero', 698, 160),
       deco('cajas', 110, 350), deco('cajas', 650, 350), deco('mesa-comedor', 200, 352), deco('mesa-comedor', 560, 352)],
   },
@@ -86,6 +91,7 @@ export const ROOMS: Record<RoomId, Room> = {
       machine('rack-plantas', 620, 100, ['harvest'], 'machine.plantRack'),
       // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
       only('huerto-lunar', machine('tanque-algas', 115, 90, ['growLights'], 'machine.algae')),
+      only('huerto-lunar', poster('cartel-arads', 420, -8, 'poster.arads', 'chile-arads')),
       only('huerto-lunar', deco('bandeja-cultivo', 250, 350)), only('huerto-lunar', deco('bandeja-cultivo', 470, 350)),
       only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250)),
       // en las otras investigaciones no hay tanque de algas: el invernadero igual se ve cultivado (bandejas, macetas y cajas de cosecha)

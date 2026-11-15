@@ -8,8 +8,8 @@ import { parseFlareClass } from '../../src/sim/flares';
 
 /** Auditoría científica automática: datos bien formados y fuentes solo oficiales. */
 const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|noaa\.gov|caltech\.edu|dlr\.de|eso\.org)\//;
-/** Las fichas «Desde Chile» citan además prensa y divulgación con fecha (lo ocurrido en Chile no está en sitios de agencias). */
-const CHILE_SOURCES = /^https:\/\/([a-z0-9-]+\.)*(eso\.org|upi\.com|meganoticias\.cl|mongabay\.com)\//;
+/** Las fichas «Desde Chile» citan además prensa y divulgación con fecha (lo ocurrido en Chile no está en sitios de agencias) y, las de cooperación Chile–EE. UU., NASA, el Departamento de Estado y NOIRLab. */
+const CHILE_SOURCES = /^https:\/\/([a-z0-9-]+\.)*(eso\.org|upi\.com|meganoticias\.cl|mongabay\.com|nasa\.gov|state\.gov|noirlab\.edu)\//;
 
 describe('archivo DONKI', () => {
   it('cada semana tiene 7 días, fuente oficial y llamaradas válidas dentro de la semana', () => {

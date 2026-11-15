@@ -135,27 +135,67 @@ def tanque_algas():
     return w, h, b
 
 
+def lechuga(x, yb):
+    """Lechuga en roseta: hojas en abanico (las de atrás más oscuras) y un cogollo claro al centro."""
+    b = ''
+    for ang, h, fill in [(-72, 24, '#4fb04a'), (72, 24, '#4fb04a'), (-48, 30, '#6ccb55'), (48, 30, '#6ccb55'), (-24, 36, '#82dd62'), (24, 36, '#82dd62'), (0, 40, '#9be86a')]:
+        b += leaf(x, yb, 11, h, ang, fill, '#2f8f3a')
+    b += circ(x, yb - 9, 4.5, '#c9f59a', 2) + path(f'M{x - 2} {yb - 10} q2 -3 4 0', stroke='#2f8f3a', sw=1.5)
+    return b
+
+
+def tomatera(x, yb):
+    """Tomatera: tallo con soporte, hojas dentadas, flores amarillas y tomates con brillo y cáliz."""
+    b = path(f'M{x} {yb} C{x - 4} {yb - 14} {x + 4} {yb - 28} {x} {yb - 46}', stroke='#2f8f3a', sw=3.5)
+    b += path(f'M{x + 9} {yb} V{yb - 50}', stroke=TAN_D, sw=2.2) + path(f'M{x + 3} {yb - 20} H{x + 9}', stroke=TAN_D, sw=1.8)
+    for ang, yy, w, h in [(-62, 16, 9, 20), (60, 24, 9, 20), (-48, 34, 9, 18), (50, 40, 8, 16), (0, 48, 8, 14)]:
+        b += leaf(x, yb - yy, w, h, ang, '#5ec24a', '#2f8f3a')
+    for tx, ty, r in [(x - 8, yb - 20, 5.5), (x + 7, yb - 30, 5), (x - 5, yb - 38, 4.2)]:
+        b += circ(tx, ty, r, RED, 2) + circ(tx - r * .35, ty - r * .35, r * .26, '#ffd3d8', 0) + path(f'M{tx - 2.5} {ty - r + 1} l2.5 -2 l2.5 2', stroke='#2f8f3a', sw=1.8)
+    b += circ(x + 4, yb - 46, 2.4, GOLD, 1.2) + circ(x - 4, yb - 44, 2, GOLD, 1)
+    return b
+
+
+def trigo(x, yb):
+    """Trigo: cuatro tallos con espigas de granos y barbas finas."""
+    b = ''
+    for k, dx in enumerate([-9, -3, 3, 9]):
+        top = yb - 42 - (k % 2) * 6
+        b += path(f'M{x + dx * .5} {yb} q{dx * .4} -16 {dx} {top - yb}', stroke='#b9a24a', sw=2.4)
+        for g in range(5):
+            gy = top + g * 5
+            b += f'<ellipse cx="{x + dx - 2.4}" cy="{gy}" rx="2" ry="3.2" transform="rotate(-24 {x + dx - 2.4} {gy})" fill="{GOLD}" stroke="{OUT}" stroke-width="1.2"/>'
+            b += f'<ellipse cx="{x + dx + 2.4}" cy="{gy + 2.4}" rx="2" ry="3.2" transform="rotate(24 {x + dx + 2.4} {gy + 2.4})" fill="#ffd96b" stroke="{OUT}" stroke-width="1.2"/>'
+        b += path(f'M{x + dx} {top - 3} v-9', stroke=TAN_D, sw=1.4)
+    b += leaf(x, yb, 6, 22, -50, '#7ed957', '#2f8f3a') + leaf(x, yb, 6, 22, 50, '#7ed957', '#2f8f3a')
+    return b
+
+
 def rack_plantas():
-    """Rack de cultivo tipo Veggie: estantes con tiras de luces LED, almohadillas con plantas y tanque de agua."""
+    """Rack de cultivo tipo Veggie: tres estantes con barras LED rojas, azules y verdes, almohadillas de semillas, riego y panel de control."""
     w, h = 250, 230
     b = rr(8, 6, 14, 218, 5, METAL_D, 3.5) + rr(228, 6, 14, 218, 5, METAL_D, 3.5) + rr(8, 4, 234, 12, 5, METAL, 3.5)
-    kinds = ['lechuga', 'tomate', 'trigo']
-    for i, kind in enumerate(kinds):
-        yb = 76 + i * 66
-        b += rr(20, yb - 62, 210, 9, 4, NAVY, 3) + ''.join(circ(34 + j * 18, yb - 57.5, 2.8, [RED, CYAN, GREEN][j % 3], 1) for j in range(11))
-        b += f'<path d="M30 {yb - 53} L22 {yb - 12} H228 L220 {yb - 53}Z" fill="#ee5fd6" opacity=".08"/>'
-        b += rr(20, yb - 12, 210, 18, 5, METAL) + rr(26, yb - 16, 198, 10, 4, '#7a4f2f', 3)
+    b += ''.join(circ(15, 24 + i * 34, 2.2, METAL_L, 1) + circ(235, 24 + i * 34, 2.2, METAL_L, 1) for i in range(6))
+    b += ''.join(path(f'M{26 + i * 9} 8 v4', stroke=METAL_D, sw=2) for i in range(8))                      # rejilla de ventilación
+    b += rr(190, 6, 28, 8, 3, NAVY, 2) + circ(198, 10, 2, GREEN, 0) + circ(206, 10, 2, GOLD, 0) + circ(213, 10, 2, RED, 0)
+    kinds = [lechuga, tomatera, trigo]
+    for i, grow in enumerate(kinds):
+        yb = 74 + i * 62
+        b += rr(20, yb - 60, 210, 10, 4, NAVY, 3)
+        b += ''.join(circ(32 + j * 15, yb - 55, 2.8, [RED, CYAN, RED, GREEN][j % 4], 1) for j in range(14))
+        b += rr(20, yb - 10, 210, 18, 5, METAL) + rr(20, yb + 2, 210, 5, 2, METAL_D, 0, 'none')
+        b += rr(26, yb - 16, 198, 10, 4, '#6b4630', 3) + ''.join(circ(32 + j * 11, yb - 11, 1, '#4a2f1f', 0) for j in range(17))
         for j in range(5):
-            x = 50 + j * 38
-            if kind == 'lechuga':
-                b += leaf(x, yb - 14, 14, 28, -35) + leaf(x, yb - 14, 14, 28, 35) + leaf(x, yb - 14, 13, 34, 0, '#9be86a')
-            elif kind == 'tomate':
-                b += path(f'M{x} {yb - 14} V{yb - 48}', stroke='#2f8f3a', sw=3.5) + leaf(x, yb - 30, 10, 16, -50) + leaf(x, yb - 36, 10, 16, 50)
-                b += circ(x - 6, yb - 24, 5, RED, 2) + circ(x + 6, yb - 30, 4.5, RED, 2)
-            else:
-                b += ''.join(path(f'M{x + (k - 1) * 6} {yb - 14} q{(k - 1) * 3} -18 {(k - 1) * 5} -34', stroke=TAN_D, sw=2.5) + circ(x + (k - 1) * 5, yb - 49, 2.8, GOLD, 1.2) for k in range(3))
-    b += rr(26, 196, 56, 26, 7, CYAN) + text(54, 214, 'AGUA', 10, NAVY) + pipe('M82 208 H100 V190', CYAN, 5)
-    b += gauge(204, 208, 12, 0.7, GREEN)
+            x = 52 + j * 36
+            b += rr(x - 15, yb - 20, 30, 9, 4, '#2b2f5e', 2.5) + circ(x, yb - 15.5, 2, '#d9c08a', 0)           # almohadilla con su hoyo de semilla
+            b += grow(x, yb - 17)
+        b += rr(26, yb + 8, 26, 9, 3, WHITE, 2) + circ(32, yb + 12.5, 2.2, [GREEN, RED, GOLD][i], 0) + path(f'M37 {yb + 12.5} h10', stroke=NAVY, sw=1.6)   # etiqueta
+        b += ''.join(path(f'M{70 + j * 44} {yb + 8} v5', stroke=CYAN, sw=2) + circ(70 + j * 44, yb + 16, 1.8, CYAN, 0) for j in range(4))             # goteo de riego
+    b += rr(22, 190, 206, 34, 9, METAL) + rr(26, 194, 62, 26, 7, CYAN) + rr(32, 198, 50, 12, 4, '#0e3a5d', 2) + rr(34, 203, 36, 5, 2, '#7be0ff', 0, 'none')
+    b += circ(76, 204, 1.6, WHITE, 0) + circ(73, 207, 1.2, WHITE, 0) + text(57, 217, 'AGUA', 8, NAVY)
+    b += rr(94, 196, 16, 22, 5, VIOLET, 2.5) + rr(97, 193, 10, 5, 2, METAL_L, 2) + rr(97, 204, 10, 7, 2, WHITE, 0, 'none')
+    b += pipe('M88 214 H94', CYAN, 3) + gauge(130, 207, 11, 0.7, GREEN)
+    b += screen(150, 197, 44, 24, NAVY, 5) + path('M156 214 q5 -12 8 -2 q4 -8 8 -2 t12 -6', stroke=GREEN, sw=2) + circ(205, 204, 4.5, GOLD, 2.5) + circ(217, 204, 4.5, TEAL, 2.5) + rr(200, 212, 22, 6, 3, NAVY, 2)
     return w, h, b
 
 

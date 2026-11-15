@@ -138,63 +138,177 @@ function drawRoverSmall(c: CanvasRenderingContext2D, x: number, groundY: number)
   c.restore();
 }
 
-// ------------------------------------------------------------------ cinturón
+// ------------------------------------------------------------------ cinturón: «carretera» en el vacío, vista desde detrás de la sonda
+const HZ = 150;                 // horizonte (punto de fuga)
+const VX = W / 2;
+const SHIP_SCREEN_Y = 408;
+/** Perspectiva: la profundidad de la sim (y de 0 a la sonda) pasa a escala 0..1+ y a posición de pantalla. */
+const depthOf = (y: number): number => Math.max(0.02, (y + 30) / (BELT_SHIP_Y + 30));
+const scaleOf = (y: number): number => Math.pow(depthOf(y), 1.7);
+const sxOf = (lane: number, q: number): number => VX + (LANE_X[lane] - VX) * 1.15 * q;
+const syOf = (q: number): number => HZ + (SHIP_SCREEN_Y - HZ) * q;
+const COMMAND_DELAY = 0.22;     // [MODELO] retardo de la orden «a control remoto» (la luz tarda horas en la realidad)
+
+function drawSpace(c: CanvasRenderingContext2D, t: number): void {
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#05041a'); g.addColorStop(0.5, '#0b0830'); g.addColorStop(1, '#150f45');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // estrellas que se abren desde el punto de fuga (sin suelo: solo ambiente)
+  for (let i = 0; i < 70; i++) {
+    const ph = (t * (0.08 + (i % 5) * 0.03) + i * 0.137) % 1;
+    const ang = i * 2.399;
+    const r = ph * ph * 330;
+    const x = VX + Math.cos(ang) * r, y = HZ + Math.sin(ang) * r * 0.9;
+    if (x < 0 || x > W || y < 0 || y > H) continue;
+    c.fillStyle = `rgba(228,227,242,${0.25 + ph * 0.75})`;
+    const sz = 1 + ph * 1.8;
+    c.fillRect(x, y, sz, sz);
+  }
+  // Saturno, lejos (dibujo): globo + anillo inclinado
+  const sx = 290, sy = 78, R = 26;
+  c.save(); c.translate(sx, sy); c.rotate(-0.35);
+  c.fillStyle = 'rgba(214,190,140,0.55)'; c.beginPath(); c.ellipse(0, 0, R * 1.9, R * 0.5, 0, Math.PI, 0); c.fill();   // anillo, mitad trasera
+  const sg = c.createRadialGradient(-8, -8, 4, 0, 0, R);
+  sg.addColorStop(0, '#f1dcab'); sg.addColorStop(1, '#b08a52');
+  c.fillStyle = sg; c.beginPath(); c.arc(0, 0, R, 0, 7); c.fill();
+  c.strokeStyle = 'rgba(120,90,50,0.35)'; c.lineWidth = 2;
+  for (const k of [-9, -2, 7]) { c.beginPath(); c.moveTo(-Math.sqrt(R * R - k * k) + 2, k); c.lineTo(Math.sqrt(R * R - k * k) - 2, k); c.stroke(); }
+  c.fillStyle = 'rgba(232,212,160,0.9)'; c.beginPath(); c.ellipse(0, 0, R * 1.9, R * 0.5, 0, 0, Math.PI); c.fill();           // anillo, mitad delantera
+  c.restore();
+  // cometa que cruza de vez en cuando
+  const cp = (t * 0.07) % 1;
+  if (cp < 0.35) {
+    const k = cp / 0.35, cx = -40 + k * (W + 80), cy = 40 + k * 90;
+    const tg = c.createLinearGradient(cx - 70, cy - 26, cx, cy);
+    tg.addColorStop(0, 'rgba(160,220,255,0)'); tg.addColorStop(1, 'rgba(200,240,255,0.9)');
+    c.strokeStyle = tg; c.lineWidth = 3; c.beginPath(); c.moveTo(cx - 70, cy - 26); c.lineTo(cx, cy); c.stroke();
+    c.fillStyle = '#eaf8ff'; c.beginPath(); c.arc(cx, cy, 3.5, 0, 7); c.fill();
+  }
+  // destello lejano (llamarada solar, [DIBUJO])
+  const fl = Math.max(0, Math.sin(t * 0.9) - 0.93) / 0.07;
+  if (fl > 0) { c.fillStyle = `rgba(255,236,170,${fl * 0.22})`; c.fillRect(0, 0, W, H); }
+}
+
+function drawLaneGuides(c: CanvasRenderingContext2D, t: number, lane: number): void {
+  // «carretera» de señal: tres haces que salen del punto de fuga y marcas que avanzan
+  for (let i = 0; i < 3; i++) {
+    const active = i === lane;
+    c.strokeStyle = active ? 'rgba(122,226,255,0.55)' : 'rgba(150,140,230,0.28)';
+    c.lineWidth = active ? 2.4 : 1.4;
+    c.beginPath(); c.moveTo(VX, HZ); c.lineTo(sxOf(i, 1.25), syOf(1.25)); c.stroke();
+  }
+  for (const b of [-0.5, 0.5]) {
+    c.strokeStyle = 'rgba(150,140,230,0.18)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(VX, HZ); c.lineTo(VX + (LANE_X[1] - VX) * 1.15 * 1.25 + b * 2 * (LANE_X[2] - VX) * 1.15 * 1.25 * 0.5 * 2, syOf(1.25)); c.stroke();
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let k = 0; k < 9; k++) {
+      const p = ((k / 9) + t * 0.55) % 1;
+      const q = Math.pow(p, 1.7);
+      if (q < 0.04) continue;
+      c.fillStyle = `rgba(190,200,255,${0.15 + q * 0.5})`;
+      const w = 2 + q * 7, h = 1 + q * 9;
+      c.fillRect(sxOf(i, q) - w / 2, syOf(q) - h / 2, w, h);
+    }
+  }
+}
+
+/** La sonda vista desde atrás (tipo New Horizons): plato grande, cuerpo dorado, RTG a un lado y propulsores. */
+function drawProbeBack(c: CanvasRenderingContext2D, x: number, y: number, tilt: number, t: number, s = 1): void {
+  c.save(); c.translate(x, y); c.rotate(tilt); c.scale(s, s);
+  c.lineWidth = 3; c.strokeStyle = INK; c.lineJoin = 'round';
+  c.fillStyle = '#b9b7cf'; c.fillRect(30, -4, 34, 12); c.strokeRect(30, -4, 34, 12);                       // RTG (brazo)
+  c.fillStyle = '#7c7a98'; for (let i = 0; i < 3; i++) c.fillRect(38 + i * 9, -4, 3, 12);
+  c.fillStyle = '#e8b83c'; c.beginPath(); c.moveTo(-22, 4); c.lineTo(-14, -16); c.lineTo(14, -16); c.lineTo(22, 4); c.lineTo(14, 22); c.lineTo(-14, 22); c.closePath(); c.fill(); c.stroke();  // cuerpo hexagonal
+  c.fillStyle = '#f6d36a'; c.fillRect(-10, -12, 20, 6);
+  const dg = c.createRadialGradient(0, -34, 4, 0, -30, 40);
+  dg.addColorStop(0, '#f4f2ff'); dg.addColorStop(1, '#a8a5c8');
+  c.fillStyle = dg; c.beginPath(); c.ellipse(0, -30, 40, 22, 0, 0, 7); c.fill(); c.stroke();                  // plato
+  c.fillStyle = '#6f6c8c'; c.beginPath(); c.ellipse(0, -30, 16, 8, 0, 0, 7); c.fill();
+  c.fillStyle = '#ff7a59'; c.beginPath(); c.arc(0, -30, 2.4 + Math.sin(t * 6) * 0.6, 0, 7); c.fill();         // luz de enlace
+  c.fillStyle = '#cfcce6'; c.fillRect(-4, -8, 8, 4);
+  c.restore();
+}
+
 export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number; calm?: boolean; onDone(r: BeltResult): void }): MiniGameHandle {
   const { c, el } = makeCanvas(root, t('Cinturón de asteroides: esquiva las rocas y recoge baterías, chips y algas'));
   const s: BeltState = createBelt(opts.seed, opts.hard);
+  const delay = opts.calm ? COMMAND_DELAY * 0.5 : COMMAND_DELAY;
+  const pending: { at: number; dir: -1 | 1 }[] = [];     // órdenes «en vuelo» hacia la sonda
+  let sentAt = -9;
+  const send = (dir: -1 | 1): void => { pending.push({ at: s.t + delay, dir }); sentAt = s.t; };
   const onKey = (e: KeyboardEvent): void => {
     const k = e.key.toLowerCase();
-    if (k === 'arrowleft' || k === 'a') { moveBelt(s, -1); e.preventDefault(); }
-    if (k === 'arrowright' || k === 'd') { moveBelt(s, 1); e.preventDefault(); }
+    if (k === 'arrowleft' || k === 'a') { send(-1); e.preventDefault(); }
+    if (k === 'arrowright' || k === 'd') { send(1); e.preventDefault(); }
   };
   const onPointer = (e: PointerEvent): void => {
     const r = el.getBoundingClientRect();
-    moveBelt(s, e.clientX - r.left < r.width / 2 ? -1 : 1);
+    send(e.clientX - r.left < r.width / 2 ? -1 : 1);
   };
   window.addEventListener('keydown', onKey);
   el.addEventListener('pointerdown', onPointer);
   let sx = LANE_X[s.lane];
   let lastDraw = performance.now();
   const shapes = new WeakMap<object, number[]>();
-  const shapeOf = (th: object, lane: number): number[] => {   // contorno irregular estable por roca
+  const shapeOf = (th: object, lane: number): number[] => {
     let v = shapes.get(th);
     if (!v) { v = Array.from({ length: 9 }, (_, i) => 0.78 + 0.3 * Math.abs(Math.sin((lane + 1.7) * (i + 2.3) * 12.9898))); shapes.set(th, v); }
     return v;
   };
   const draw = (): void => {
     const now = performance.now(); const dt = Math.min(0.05, (now - lastDraw) / 1000); lastDraw = now;
-    stars(c, s.t);
-    for (const th of s.things) {
-      const x = LANE_X[th.lane];
-      c.lineWidth = 3; c.strokeStyle = INK; c.lineJoin = 'round';
+    drawSpace(c, s.t);
+    drawLaneGuides(c, s.t, s.lane);
+    // objetos de lejos a cerca (la sim los da ordenados por aparición: primero los más lejanos)
+    const order = [...s.things].sort((a, b) => a.y - b.y);
+    for (const th of order) {
+      const q = scaleOf(th.y);
+      if (q < 0.03) continue;
+      const x = sxOf(th.lane, q), y = syOf(q), k = q * 1.05;
+      c.globalAlpha = Math.min(1, q * 3.5);
+      c.lineWidth = Math.max(1.5, 3 * q); c.strokeStyle = INK; c.lineJoin = 'round';
       if (th.kind === 'rock') {
         const sh = shapeOf(th, th.lane); const rot = th.y * 0.012 + th.lane;
         c.fillStyle = '#8d8aa8'; c.beginPath();
-        sh.forEach((k, i) => { const an = rot + (i / sh.length) * Math.PI * 2; const px = x + Math.cos(an) * 24 * k, py = th.y + Math.sin(an) * 22 * k; if (i) c.lineTo(px, py); else c.moveTo(px, py); });
+        sh.forEach((v, i) => { const an = rot + (i / sh.length) * Math.PI * 2; const px = x + Math.cos(an) * 26 * k * v, py = y + Math.sin(an) * 24 * k * v; if (i) c.lineTo(px, py); else c.moveTo(px, py); });
         c.closePath(); c.fill(); c.stroke();
-        c.fillStyle = '#6f6c8c'; c.beginPath(); c.arc(x + Math.cos(rot + 1) * 8, th.y + Math.sin(rot + 1) * 7, 5, 0, 7); c.fill();
-        c.fillStyle = '#a9a6c4'; c.beginPath(); c.arc(x + Math.cos(rot + 3.6) * 9, th.y + Math.sin(rot + 3.6) * 8, 3, 0, 7); c.fill();
+        c.fillStyle = '#6f6c8c'; c.beginPath(); c.arc(x + Math.cos(rot + 1) * 8 * k, y + Math.sin(rot + 1) * 7 * k, 5 * k, 0, 7); c.fill();
+        c.fillStyle = '#a9a6c4'; c.beginPath(); c.arc(x + Math.cos(rot + 3.6) * 9 * k, y + Math.sin(rot + 3.6) * 8 * k, 3 * k, 0, 7); c.fill();
+      } else {
+        const glow = c.createRadialGradient(x, y, 2, x, y, 30 * k);
+        glow.addColorStop(0, 'rgba(255,255,255,0.45)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+        c.fillStyle = glow; c.beginPath(); c.arc(x, y, 30 * k, 0, 7); c.fill();
+        if (th.kind === 'battery') { c.fillStyle = '#ffcb47'; c.fillRect(x - 11 * k, y - 14 * k, 22 * k, 28 * k); c.strokeRect(x - 11 * k, y - 14 * k, 22 * k, 28 * k); }
+        else if (th.kind === 'chip') { c.fillStyle = '#5ad6b2'; c.fillRect(x - 13 * k, y - 13 * k, 26 * k, 26 * k); c.strokeRect(x - 13 * k, y - 13 * k, 26 * k, 26 * k); }
+        else { c.fillStyle = '#7ed957'; c.beginPath(); c.arc(x, y, 13 * k, 0, 7); c.fill(); c.stroke(); }
       }
-      else if (th.kind === 'battery') { c.fillStyle = '#ffcb47'; c.fillRect(x - 11, th.y - 14, 22, 28); c.strokeRect(x - 11, th.y - 14, 22, 28); }
-      else if (th.kind === 'chip') { c.fillStyle = '#5ad6b2'; c.fillRect(x - 13, th.y - 13, 26, 26); c.strokeRect(x - 13, th.y - 13, 26, 26); }
-      else { c.fillStyle = '#7ed957'; c.beginPath(); c.arc(x, th.y, 13, 0, 7); c.fill(); c.stroke(); }
+      c.globalAlpha = 1;
     }
-    // la sonda se desliza entre carriles (amortiguado) e inclina un poco hacia donde va
+    // órdenes en vuelo: se aplican cuando «llega» la señal
+    while (pending.length && pending[0].at <= s.t) moveBelt(s, pending.shift()!.dir);
     const target = LANE_X[s.lane];
     const err = target - sx;
-    sx += err * (1 - Math.exp(-dt * 11));
-    if (Math.abs(err) > 7) {   // chorritos de gas frío del lado contrario
+    sx += err * (1 - Math.exp(-dt * 9));
+    if (Math.abs(err) > 7) {
       const side = err > 0 ? -1 : 1;
       c.fillStyle = '#e9d6ff';
-      for (let i = 0; i < 3; i++) { c.globalAlpha = 0.8 - i * 0.25; c.beginPath(); c.arc(sx + side * (22 + i * 7), BELT_SHIP_Y - 4 + (i % 2) * 3, 4 - i, 0, 7); c.fill(); }
+      for (let i = 0; i < 3; i++) { c.globalAlpha = 0.8 - i * 0.25; c.beginPath(); c.arc(sx + side * (28 + i * 7), SHIP_SCREEN_Y - 4 + (i % 2) * 3, 4 - i, 0, 7); c.fill(); }
       c.globalAlpha = 1;
     }
     c.globalAlpha = s.invuln > 0 && Math.floor(s.t * 10) % 2 ? 0.4 : 1;
-    drawProbe(c, sx, BELT_SHIP_Y + 4 + Math.sin(s.t * 3) * 1.5, { scale: 0.8, legs: 0, flame: 0.0, tilt: Math.max(-0.22, Math.min(0.22, err / 260)), t: s.t });
+    drawProbeBack(c, VX + (sx - VX) * 1.15, SHIP_SCREEN_Y + 2 + Math.sin(s.t * 3) * 1.5, Math.max(-0.22, Math.min(0.22, err / 260)), s.t, 0.85);
     c.globalAlpha = 1;
+    // HUD del control remoto
+    const sending = s.t - sentAt < delay + 0.12;
+    c.font = '700 11px Arial, Helvetica, sans-serif'; c.textAlign = 'left';
+    c.fillStyle = sending ? '#7ae2ff' : '#a9a6c4';
+    c.fillText(sending ? t('● orden en camino…') : t('○ enlace con la Tierra'), 14, 48);
     text(c, `${Math.max(0, Math.ceil(BELT_SECONDS - s.t))} s`, 14, 28);
     text(c, '♥'.repeat(s.hull) + '·'.repeat(3 - s.hull), W - 14, 28, 18, 'right');
     text(c, `▮ ${s.got.battery}  ▪ ${s.got.chip}  ● ${s.got.algae}`, W / 2, 28, 14, 'center');
+    c.font = '700 10px Arial, Helvetica, sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(200,200,230,0.8)';
+    c.fillText(t('En la vida real una orden tarda horas en llegar. Aquí: una fracción de segundo [MODELO]'), W / 2, H - 8);
   };
   const loop = runLoop((dt) => { stepBelt(s, dt * (opts.calm ? 0.8 : 1)); return beltDone(s); }, draw, () =>
     opts.onDone({ score: beltScore(s), batteries: s.got.battery, chips: s.got.chip, algae: s.got.algae, hull: s.hull }));

@@ -110,4 +110,7 @@ export const EN_CHILE: Record<string, string> = {
   'Informaste: sin indicio.': "You reported: no hint.",
   'Nunca decimos «hay vida»: decimos «indicio» o «sin indicio». Los orgánicos solos no prueban vida; se necesitan varias pruebas independientes.': "We never say “there is life”: we say “hint” or “no hint”. Organics alone do not prove life; several independent tests are needed.",
   'Circuito de ADN de papel': "Paper DNA circuit",
+  '● orden en camino…': "● command on its way…",
+  '○ enlace con la Tierra': "○ link with Earth",
+  'En la vida real una orden tarda horas en llegar. Aquí: una fracción de segundo [MODELO]': "In real life a command takes hours to arrive. Here: a fraction of a second [MODEL]",
 };

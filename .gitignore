@@ -6,6 +6,10 @@ juego/test-results/
 juego/playwright-report/
 juego/blob-report/
 
+# Capturas de la auditoría visual (antes/después), pesadas y regenerables
+ui-audit-before/
+ui-audit-after/
+
 # Sistema y editores
 .DS_Store
 *.log

@@ -7,7 +7,7 @@ import type { ActionId, Resources, RoomId, Zone } from './types';
  */
 
 /** Consumo pasivo por jornada: la estación gasta energía, oxígeno y comida. */
-export const PASSIVE_PER_DAY = { energy: -5, oxygen: -9, food: -7 } as const;
+export const PASSIVE_PER_DAY = { energy: -5, oxygen: -9, food: -12 } as const; // sin cosechar ni algas, la comida no alcanza para la semana
 
 /** Luz solar por jornada (1–3 día, 4 atardecer, 5–7 noche lunar). */
 export const LIGHT_BY_DAY = [1, 1, 1, 0.5, 0, 0, 0] as const;
@@ -16,7 +16,7 @@ export const LIGHT_BY_DAY = [1, 1, 1, 0.5, 0, 0, 0] as const;
 export const BACKGROUND_RADIATION_PER_DAY = 2;
 
 /** El reciclador renueva el oxígeno solo: genera esto por jornada mientras no tenga una fractura abierta. Con la fractura, el oxígeno solo baja. */
-export const OXYGEN_REGEN_PER_DAY = 14;
+export const OXYGEN_REGEN_PER_DAY = 10;
 
 /** Con una fractura abierta el aire se escapa: el oxígeno de la nave baja esto extra por jornada (además del consumo normal). */
 export const OXYGEN_LEAK_PER_DAY = -30;
@@ -63,6 +63,9 @@ export const SHELTER_FACTOR = 0.1;
 export const SHIELD_ENERGY_PER_SEC = 0.4;
 /** Sin energía el blindaje activo se apaga y solo quedan las paredes: pasa la mitad de la llamarada. */
 export const SHELTER_FACTOR_NO_ENERGY = 0.5;
+
+/** Recursos al empezar la jornada: la energía parte justa, así la reserva para la noche y las llamaradas hay que cuidarla. */
+export const START_RESOURCES = { energy: 60, oxygen: 70, food: 70, health: 100, radiation: 0 } as const;
 
 /** Zona de cada sala. Los pasillos de la nave son 'ship'; los caminos de afuera, 'surface' (ver `stationMap.ts`). */
 export const ROOM_ZONE: Record<RoomId, Zone> = {

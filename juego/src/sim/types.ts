@@ -87,7 +87,7 @@ export type SimEvent =
 
 export interface ActionCheck {
   ok: boolean;
-  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'leak' | 'night' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'ended';
+  reason?: 'busy' | 'cooldown' | 'noEnergy' | 'noFood' | 'noLink' | 'forecastOn' | 'evaDone' | 'doneToday' | 'clean' | 'ended';
 }
 
 export interface SimStats {
@@ -98,6 +98,7 @@ export interface SimStats {
   evas: number;
   antennaAligns: number;
   actions: number;
+  nightActions: number;     // acciones hechas durante la noche lunar (sin sol para los paneles)
   actionsBy: Partial<Record<ActionId, number>>;
   /** Acciones hechas con la investigación ya terminada: son las que cuentan para las tareas de la etapa 2. */
   stage2By: Partial<Record<ActionId, number>>;

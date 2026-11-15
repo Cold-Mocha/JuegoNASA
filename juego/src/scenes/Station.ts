@@ -13,7 +13,7 @@ import { MISSIONS, MISSION_DAYS, missionEvents, realDate, type Mission } from '.
 import { DIFFICULTIES, type Difficulty } from '../data/difficulties';
 import { CHARACTERS } from '../data/characters';
 import { ROOMS, ROOM_IDS, propPosition, roomProps, textureAsset, type RoomProp } from '../data/rooms';
-import { ACTION_TEXT, BLOCK_REASON, MACHINE_INFO, RESOURCE_TEXT } from '../data/actions';
+import { ACTION_TEXT, BLOCK_REASON, RESOURCE_TEXT } from '../data/actions';
 import { CONTROLS, POINTER_HINT } from '../data/controls';
 import { MICHI_ANCHOR, MICHI_ANIMS, michiKey, propKey, type MichiAnim } from '../data/preload';
 import { Simulation, type ActionDelta } from '../sim/simulation';
@@ -924,7 +924,6 @@ export class StationScene extends Phaser.Scene {
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
       .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
-      .on('read-info', (el) => this.openArchive(el.dataset.entry))
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
     this.disposers.push(bindSettings(this.ui, () => undefined));
@@ -1061,7 +1060,6 @@ export class StationScene extends Phaser.Scene {
     const m = this.focused ?? this.nearestMachine();
     if (!m) return;
     const ids = this.machineActions();
-    const info = MACHINE_INFO[m.prop.asset];
     const chips = (d: ActionDelta): string =>
       (Object.entries(d) as [keyof typeof RESOURCE_TEXT, number][])
         .filter(([, v]) => v)
@@ -1082,8 +1080,7 @@ export class StationScene extends Phaser.Scene {
     this.setHtml('[data-actions]', `
       <div class="hud__actions-head"><h2 class="mn-panel__title">${icon(ROOM_ICON[m.room])}${esc(machineName(m))}</h2>
       <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="Cerrar">${icon('close')}</button></div>
-      ${ids.length ? `<ul class="action-list">${items.join('')}</ul>` : info ? `<p class="body-sm action__why">${esc(info.body)}</p>
-      ${info.entry ? `<button class="mn-btn mn-btn--sm action__btn" data-action="read-info" data-entry="${esc(info.entry)}">${icon('book')}${esc(info.read ?? 'Leer')}</button>` : ''}` : ''}`);
+      <ul class="action-list">${items.join('')}</ul>`);
   }
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */

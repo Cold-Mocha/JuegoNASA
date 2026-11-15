@@ -2,7 +2,7 @@ import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_DRIFT_PER_DAY, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
   BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_WARNING_SEC,
   GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
-  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
+  NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, START_RESOURCES, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
 } from './rules';
 import { travelTime } from './graph';
@@ -50,7 +50,7 @@ export class Simulation {
   zone: Zone = 'ship';
   /** Oxígeno del traje (0–100). Solo baja en la superficie. */
   suit = 100;
-  res: Resources = { energy: 100, oxygen: 70, food: 70, health: 100, radiation: 0 };
+  res: Resources = { ...START_RESOURCES };
   comp: Components = { antenna: 1, dust: 0 };
   science = 0;
   /** El panel de pruebas se ensució con la última tormenta de polvo y todavía no se limpió. */
@@ -58,7 +58,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {}, stage2By: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, flareDose: 0, flareDoseOutside: 0, evas: 0, antennaAligns: 0, actions: 0, nightActions: 0, actionsBy: {}, stage2By: {} };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -281,6 +281,7 @@ export class Simulation {
     }
     if (this.stage2Unlocked) this.stats.stage2By[action] = (this.stats.stage2By[action] ?? 0) + 1; // antes de terminar la investigación no cuenta como aviso
     this.stats.actions++;
+    if (this.light === 0) this.stats.nightActions++;
     this.stats.actionsBy[action] = (this.stats.actionsBy[action] ?? 0) + 1;
 
     switch (action) {

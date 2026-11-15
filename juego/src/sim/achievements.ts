@@ -11,7 +11,7 @@ export const HEALTHY_HEALTH = 80;
 export function earnedAchievements(s: MissionSummary): AchievementId[] {
   const out: AchievementId[] = [];
   if (s.stats.shelteredFlares > 0) out.push('safe-shelter');
-  if (s.daysSurvived >= 5) out.push('lunar-night');
+  if (s.stats.nightActions > 0) out.push('lunar-night');
   if (s.stats.evas > 0) out.push('explorer');
   if (s.stats.antennaAligns > 0) out.push('strong-signal');
   if (s.won) out.push('mission-complete');

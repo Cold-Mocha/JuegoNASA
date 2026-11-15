@@ -19,8 +19,6 @@ export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = 
   cooldown: 'Espera un momento…',
   noEnergy: 'No hay energía suficiente.',
   noFood: 'No hay comida suficiente.',
-  leak: 'Hay una fractura: el aire se escapa. Repárala primero.',
-  night: 'Es de noche: los paneles no reciben luz.',
   noLink: 'La señal es débil: repara la antena primero.',
   forecastOn: 'Ya pediste el pronóstico: los avisos llegan antes mientras la señal sea buena.',
   evaDone: 'Ya saliste hoy. Vuelve mañana.',
@@ -38,7 +36,3 @@ export const RESOURCE_TEXT = {
   science: { label: 'Ciencia', short: 'Ciencia' },
 } as const;
 
-
-/** Máquinas sin acciones: información (y, si tienen, una ficha del Archivo para leer). */
-export const MACHINE_INFO: Record<string, { body: string; read?: string; entry?: string }> = {
-};

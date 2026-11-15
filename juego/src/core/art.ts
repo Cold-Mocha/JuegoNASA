@@ -7,7 +7,6 @@ import type { MissionId } from '../data/missions';
  * Reemplazar por ilustraciones finales manteniendo la misma API.
  */
 export function michiSvg(c: Character, visor: string): string {
-  const e = c.eyeScale ?? 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="${c.name}">
   <circle cx="80" cy="84" r="66" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5"/>
   ${c.antennae ? antennaeSvg(c) : ''}
@@ -19,19 +18,30 @@ export function michiSvg(c: Character, visor: string): string {
   <circle cx="80" cy="88" r="46" fill="${c.fur}" stroke="#0e0b33" stroke-width="4"/>
   ${c.spots ? spotsSvg(c.spots) : ''}
   <path d="M50 70 Q80 54 110 70" fill="none" stroke="${c.furDark}" stroke-width="6" stroke-linecap="round"/>
-  ${c.eyes
-    ? `<ellipse cx="58" cy="90" rx="11" ry="12.5" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/><ellipse cx="102" cy="90" rx="11" ry="12.5" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/>
-  <ellipse cx="58" cy="90" rx="3.8" ry="10.4" fill="#0e0b33"/><ellipse cx="102" cy="90" rx="3.8" ry="10.4" fill="#0e0b33"/>
-  <circle cx="62" cy="84" r="3" fill="#fff"/><circle cx="106" cy="84" r="3" fill="#fff"/><circle cx="55" cy="95" r="1.4" fill="#fff"/><circle cx="99" cy="95" r="1.4" fill="#fff"/>`
-    : `<ellipse cx="58" cy="90" rx="${8 * e}" ry="${11 * e}" fill="#0e0b33"/><ellipse cx="102" cy="90" rx="${8 * e}" ry="${11 * e}" fill="#0e0b33"/>
-  <circle cx="${58 + 3 * e}" cy="${90 - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${102 + 3 * e}" cy="${90 - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${58 - 2.6 * e}" cy="${90 + 4.4 * e}" r="${1.4 * e}" fill="#fff"/><circle cx="${102 - 2.6 * e}" cy="${90 + 4.4 * e}" r="${1.4 * e}" fill="#fff"/>`}
-  <ellipse cx="70" cy="106" rx="13" ry="10" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="90" cy="106" rx="13" ry="10" fill="${lighten(c.fur, 0.55)}"/>
-  <path d="M74 98 L86 98 L80 106 Z" fill="#ee5fd6" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M80 106 V111 M80 111 Q73 119 66 113 M80 111 Q87 119 94 113" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="70" cy="108" rx="13" ry="9" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="90" cy="108" rx="13" ry="9" fill="${lighten(c.fur, 0.55)}"/>
+  ${eyesSvg(c)}
+  <path d="M74 99 L86 99 L80 107 Z" fill="#ee5fd6" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M80 107 V112 M80 112 Q73 120 66 114 M80 112 Q87 120 94 114" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>
   <path d="M30 60 A60 60 0 0 1 130 60" fill="none" stroke="${visor}" stroke-width="6" stroke-linecap="round" opacity=".9"/>
 </svg>`;
 }
+
+/**
+ * Ojos grandes estilo anime, separados pero dentro de la cara (centro x 61 y 99). Van DESPUÉS del morro para que no los tape;
+ * los ojos más grandes (el marciano) suben un poco para no montarse sobre el morro.
+ */
+const eyesSvg = (c: Character): string => {
+  const e = c.eyeScale ?? 1;
+  const y = 90 - 5 * (e - 1);
+  if (c.eyes) {
+    return `<ellipse cx="61" cy="${y}" rx="10.5" ry="12" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/><ellipse cx="99" cy="${y}" rx="10.5" ry="12" fill="${c.eyes}" stroke="#0e0b33" stroke-width="3"/>
+  <ellipse cx="61" cy="${y}" rx="3.6" ry="10" fill="#0e0b33"/><ellipse cx="99" cy="${y}" rx="3.6" ry="10" fill="#0e0b33"/>
+  <circle cx="65" cy="${y - 6}" r="3" fill="#fff"/><circle cx="103" cy="${y - 6}" r="3" fill="#fff"/><circle cx="58" cy="${y + 5}" r="1.4" fill="#fff"/><circle cx="96" cy="${y + 5}" r="1.4" fill="#fff"/>`;
+  }
+  return `<ellipse cx="61" cy="${y}" rx="${8 * e}" ry="${10.5 * e}" fill="#0e0b33"/><ellipse cx="99" cy="${y}" rx="${8 * e}" ry="${10.5 * e}" fill="#0e0b33"/>
+  <circle cx="${61 + 3 * e}" cy="${y - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${99 + 3 * e}" cy="${y - 4 * e}" r="${2.9 * e}" fill="#fff"/><circle cx="${61 - 2.6 * e}" cy="${y + 4.4 * e}" r="${1.4 * e}" fill="#fff"/><circle cx="${99 - 2.6 * e}" cy="${y + 4.4 * e}" r="${1.4 * e}" fill="#fff"/>`;
+};
 
 /** Mezcla un color con blanco (a = 0..1): el morro es más claro que el pelaje. */
 const lighten = (hex: string, a: number): string => {
@@ -40,7 +50,7 @@ const lighten = (hex: string, a: number): string => {
 };
 
 /** Manchas de la cara del leopardo de las nieves (frente y mejillas). */
-const spotsSvg = (color: string): string => [[62, 62, 5, 3.4], [80, 58, 4.6, 3.6], [98, 62, 5, 3.4], [71, 70, 3.6, 2.6], [89, 70, 3.6, 2.6], [45, 90, 4, 3], [115, 90, 4, 3], [48, 102, 3.4, 2.8], [112, 102, 3.4, 2.8]]
+const spotsSvg = (color: string): string => [[62, 62, 5, 3.4], [80, 58, 4.6, 3.6], [98, 62, 5, 3.4], [71, 70, 3.6, 2.6], [89, 70, 3.6, 2.6], [40, 100, 4, 3], [120, 100, 4, 3], [46, 114, 3.4, 2.8], [114, 114, 3.4, 2.8]] // mejillas fuera de los ojos y dentro de la cara
   .map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${color}"/>`).join('');
 
 /** Carita de michi pequeña (marcador del mapa): orejas, cara y ojos con los colores del tripulante. */
@@ -50,12 +60,14 @@ export function michiFaceSvg(c: Character): string {
     ? `<path d="M14 9 Q13 4 10 2 M18 9 Q19 4 22 2" fill="none" stroke="#0e0b33" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="2.5" r="2" fill="${c.antennae}" stroke="#0e0b33" stroke-width="1.2"/><circle cx="22" cy="2.5" r="2" fill="${c.antennae}" stroke="#0e0b33" stroke-width="1.2"/>`
     : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">${antennae}
-  <path d="M5 13 L7 3 L14 9 Z M27 13 L25 3 L18 9 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
+  ${c.spots // los felinos con manchas (leopardo de las nieves, güiña) tienen orejas redondas, igual que en el retrato
+    ? `<circle cx="7.5" cy="8.5" r="4.2" fill="${c.fur}" stroke="#0e0b33" stroke-width="2"/><circle cx="24.5" cy="8.5" r="4.2" fill="${c.fur}" stroke="#0e0b33" stroke-width="2"/>`
+    : `<path d="M5 13 L7 3 L14 9 Z M27 13 L25 3 L18 9 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>`}
   <circle cx="16" cy="18" r="11" fill="${c.fur}" stroke="#0e0b33" stroke-width="2"/>
+  <ellipse cx="14" cy="23" rx="3.4" ry="2.4" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="18" cy="23" rx="3.4" ry="2.4" fill="${lighten(c.fur, 0.55)}"/>
   ${c.eyes
-    ? `<ellipse cx="10.4" cy="18" rx="3" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="21.6" cy="18" rx="3" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="10.4" cy="18" rx="1.1" ry="2.8" fill="#0e0b33"/><ellipse cx="21.6" cy="18" rx="1.1" ry="2.8" fill="#0e0b33"/>`
-    : `<ellipse cx="10.4" cy="18" rx="${2.2 * e}" ry="${3 * e}" fill="#0e0b33"/><ellipse cx="21.6" cy="18" rx="${2.2 * e}" ry="${3 * e}" fill="#0e0b33"/>`}
-  <ellipse cx="14" cy="22.4" rx="3.4" ry="2.6" fill="${lighten(c.fur, 0.55)}"/><ellipse cx="18" cy="22.4" rx="3.4" ry="2.6" fill="${lighten(c.fur, 0.55)}"/>
+    ? `<ellipse cx="11" cy="17.4" rx="2.8" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="21" cy="17.4" rx="2.8" ry="3.4" fill="${c.eyes}" stroke="#0e0b33" stroke-width="1"/><ellipse cx="11" cy="17.4" rx="1.1" ry="2.6" fill="#0e0b33"/><ellipse cx="21" cy="17.4" rx="1.1" ry="2.6" fill="#0e0b33"/>`
+    : `<ellipse cx="11" cy="${17.4 - 0.8 * (e - 1)}" rx="${2.1 * e}" ry="${2.8 * e}" fill="#0e0b33"/><ellipse cx="21" cy="${17.4 - 0.8 * (e - 1)}" rx="${2.1 * e}" ry="${2.8 * e}" fill="#0e0b33"/>`}
   <path d="M14.4 20.6 h3.2 l-1.6 2 z" fill="#ee5fd6"/>
   <path d="M16 22.6 v1.2 M16 23.8 q-1.5 1.7 -3 0.3 M16 23.8 q1.5 1.7 3 0.3" fill="none" stroke="#0e0b33" stroke-width="1" stroke-linecap="round"/></svg>`;
 }

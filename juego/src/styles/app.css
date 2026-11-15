@@ -1,6 +1,6 @@
 /* Layout de pantallas del juego. Usa solo tokens del design system Michinautas. */
 html, body { margin: 0; height: 100%; background: var(--space-900); overflow: hidden; }
-#game { width: 100vw; height: 100vh; }
+#game { width: 100vw; height: 100vh; height: 100dvh; } /* dvh: en el teléfono la barra del navegador no tapa el borde de abajo */
 button { font-family: inherit; }
 [hidden] { display: none !important; }
 
@@ -96,7 +96,15 @@ button { font-family: inherit; }
 .hud__alert--danger { border-color: var(--danger); color: var(--ink); box-shadow: 0 0 0 2px var(--danger); }
 .hud__alert--ok { border-color: var(--aurora-teal); }
 /* crédito de la fuente del clima solar: siempre a la vista, al pie */
-.hud__source { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); margin: 0; white-space: nowrap; font: 500 13px/16px var(--font-display); color: var(--ink-muted); text-shadow: 0 1px 0 var(--space-900); pointer-events: none; }
+.hud__source { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); margin: 0; white-space: nowrap; font: 500 15px/18px var(--font-display); color: var(--ink-muted); text-shadow: 0 1px 0 var(--space-900); pointer-events: none; }
+.hud__prompt { appearance: none; border: 0; font: inherit; color: inherit; cursor: pointer; }
+/* controles táctiles: pausa, mapa, salto e impulso, solo en pantallas que se tocan */
+.hud__touch { position: absolute; right: var(--space-4); bottom: var(--space-4); display: none; grid-template-columns: repeat(2, 56px); gap: var(--space-3); }
+@media (pointer: coarse) { .hud__touch { display: grid; } }
+.mini-full__exit { position: absolute; top: var(--space-4); right: var(--space-4); }
+/* teléfono en vertical: el juego es apaisado, se pide girarlo */
+.rotate-notice { display: none; position: fixed; inset: 0; z-index: 100; place-items: center; padding: var(--space-6); text-align: center; background: var(--space-900); color: var(--ink); font: 600 24px/32px var(--font-display); }
+@media (orientation: portrait) and (pointer: coarse) { .rotate-notice { display: grid; } }
 .hud__prompt { position: absolute; left: 50%; bottom: 230px; transform: translateX(-50%); padding: var(--space-2) var(--space-4); border-radius: var(--radius-pill);
   background: var(--space-900); border: 2px solid var(--star-gold); font: 600 18px/24px var(--font-display); color: var(--ink); }
 .hud__tip { position: absolute; left: var(--space-4); bottom: var(--space-4); width: 560px; grid-template-columns: 72px 1fr; padding: var(--space-4); }
@@ -119,14 +127,14 @@ button { font-family: inherit; }
 
 /* investigación (objetivo principal) bajo el reloj */
 .hud__tasks { padding: var(--space-3); display: grid; gap: 6px; }
-.hud__tasks-kicker { font: 600 13px/16px var(--font-display); color: var(--star-gold); }
+.hud__tasks-kicker { font: 600 15px/18px var(--font-display); color: var(--star-gold); }
 .hud__tasks-name { display: flex; align-items: center; gap: 6px; font: 700 18px/22px var(--font-display); color: var(--ink); }
 .hud__tasks-question { margin: 0 0 4px; font: 600 15px/19px var(--font-display); color: var(--ink); }
 .hud__tasks .mn-checklist { gap: 6px; }
 .hud__tasks .mn-check { grid-template-columns: 20px 1fr auto; gap: var(--space-2); padding: 6px var(--space-2); font-size: 14px; line-height: 18px; }
 .hud__tasks .mn-check__box { width: 20px; height: 20px; border-width: 2px; color: var(--ink-dark); }
 .hud__tasks .mn-check__box .mn-icon { width: 14px; height: 14px; }
-.hud__tasks .mn-check__meta { font: 600 13px/16px var(--font-display); font-variant-numeric: tabular-nums; }
+.hud__tasks .mn-check__meta { font: 600 15px/18px var(--font-display); font-variant-numeric: tabular-nums; }
 
 /* cuenta regresiva antes de una llamarada */
 .hud__countdown { position: absolute; left: 50%; top: 290px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: var(--space-2);
@@ -152,12 +160,12 @@ button { font-family: inherit; }
 /* estadísticas compactas arriba a la derecha */
 .hud__left { position: absolute; left: var(--space-4); top: var(--space-4); width: 300px; display: grid; gap: var(--space-2); }
 .hud__stats { padding: var(--space-3); display: grid; gap: 6px; }
-.hud__stats .mn-bar { grid-template-columns: 112px 1fr 38px; gap: var(--space-2); }
-.hud__stats .mn-bar__label { min-width: 0; font-size: 13px; line-height: 16px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
+.hud__stats .mn-bar { grid-template-columns: 124px 1fr 40px; gap: var(--space-2); }
+.hud__stats .mn-bar__label { min-width: 0; font-size: 15px; line-height: 18px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
 .hud__stats .mn-bar__label .mn-icon { width: 15px; height: 15px; vertical-align: 0; }
 .hud__stats .mn-bar__track { height: 10px; border-width: 1px; }
 .hud__stats .mn-bar__fill { background-image: none; }
-.hud__stats .mn-bar__value { min-width: 0; font: 600 13px/16px var(--font-display); font-variant-numeric: tabular-nums; }
+.hud__stats .mn-bar__value { min-width: 0; font: 600 15px/18px var(--font-display); font-variant-numeric: tabular-nums; }
 .hud__telemetry { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--space-600);
   font: 500 13px/16px var(--font-display); color: var(--ink-muted); }
 .hud__tele { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -254,7 +262,7 @@ button { font-family: inherit; }
 
 /* estado de los equipos: debajo de las stats */
 .hud__systems { padding: var(--space-3); display: grid; gap: 6px; }
-.hud__sys { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font: 500 13px/16px var(--font-display); }
+.hud__sys { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font: 500 15px/18px var(--font-display); }
 .hud__sys-label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .hud__sys-label .mn-icon { width: 15px; height: 15px; }
 .hud__sys-state { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--aurora-teal); }
@@ -263,12 +271,12 @@ button { font-family: inherit; }
 /* oxígeno del traje: aparece bajo el reloj al salir de la nave */
 .hud__suit { padding: var(--space-3); display: grid; gap: 4px; text-align: center; }
 .hud__suit .mn-bar { grid-template-columns: auto 1fr 40px; gap: var(--space-2); }
-.hud__suit .mn-bar__label { min-width: 0; font-size: 13px; line-height: 16px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
+.hud__suit .mn-bar__label { min-width: 0; font-size: 15px; line-height: 18px; letter-spacing: .02em; display: inline-flex; align-items: center; white-space: nowrap; }
 .hud__suit .mn-bar__label .mn-icon { width: 15px; height: 15px; vertical-align: 0; }
 .hud__suit .mn-bar__track { height: 12px; border-width: 1px; }
 .hud__suit .mn-bar__fill { background-image: none; }
 .hud__suit .mn-bar__value { min-width: 0; font: 700 14px/16px var(--font-display); font-variant-numeric: tabular-nums; }
-.hud__suit-note { font: 500 13px/16px var(--font-display); color: var(--ink-muted); }
+.hud__suit-note { font: 500 15px/18px var(--font-display); color: var(--ink-muted); }
 
 /* =================== Fluidez (Apple · Designing Fluid Interfaces, traducido a la web) ===================
    Springs críticamente amortiguados (--ease-spring), feedback al presionar, materiales translúcidos y
@@ -475,7 +483,7 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 
 /* Pestañas de tareas: la investigación y, cuando se termina, "Avisar a la Tierra" */
 .hud__tabs { display: flex; gap: 6px; }
-.hud__tab { appearance: none; flex: 1; border: 2px solid var(--line); border-radius: var(--radius-pill); background: transparent; color: var(--ink-muted); font: 600 13px/16px var(--font-display); padding: 5px 10px; cursor: pointer; }
+.hud__tab { appearance: none; flex: 1; border: 2px solid var(--line); border-radius: var(--radius-pill); background: transparent; color: var(--ink-muted); font: 600 15px/18px var(--font-display); padding: 5px 10px; cursor: pointer; }
 .hud__tab[hidden] { display: none; }
 .hud__tab.is-current { background: var(--star-gold); border-color: var(--star-gold); color: var(--ink-dark); }
 

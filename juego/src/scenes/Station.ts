@@ -527,7 +527,13 @@ export class StationScene extends Phaser.Scene {
     if (m) this.setText('[data-prompt-label]', `Usar: ${machineName(m)}`);
   }
 
-  // ---------- impulso
+  // ---------- salto e impulso
+  private jump(): void {
+    if (this.overlay !== 'none' || this.jumpT >= 0 || this.sim.ended) return;
+    this.jumpT = 0;
+    audio.play('jump');
+  }
+
   private tryDash(): void {
     if (this.overlay !== 'none' && this.overlay !== 'actions') return;
     if (this.sim.ended) return;
@@ -726,7 +732,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
-  /** Minijuego a pantalla completa: solo el juego y, los primeros segundos, una pista corta de qué hacer (se sale con Esc). Termina con un destello y una marca de listo. */
+  /** Minijuego a pantalla completa: solo el juego y, los primeros segundos, una pista corta de qué hacer (se sale con Esc o con el botón Salir). Termina con un destello y una marca de listo. */
   private openFullMini(cfg: { hint: string; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
@@ -736,6 +742,7 @@ export class StationScene extends Phaser.Scene {
         <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
         <p class="mini-full__hint" data-mini-hint>${esc(cfg.hint)}</p>
       </div>
+      <button class="mn-btn mn-btn--secondary mn-btn--sm mini-full__exit" data-action="close-actions">${icon('close')}Salir</button>
       ${cfg.outdoor ? `<div class="mini-suit" aria-label="Oxígeno del traje">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
     const hint = this.ui.q('[data-mini-hint]');
     this.time.delayedCall(MINI_HINT_MS, () => hint.isConnected && (hint.hidden = true));
@@ -901,7 +908,7 @@ export class StationScene extends Phaser.Scene {
         </div>
         <div class="hud__alert" data-alert role="status" aria-live="polite" hidden></div>
         <div class="hud__countdown" data-countdown hidden>${icon('radiation')}<span data-countdown-text></span></div>
-        <div class="hud__prompt" data-prompt hidden><span class="mn-key">E</span> <span data-prompt-label></span></div>
+        <button class="hud__prompt" data-prompt data-action="use" hidden><span class="mn-key">E</span> <span data-prompt-label></span></button>
         <div class="hud__tip mn-dialogue" data-tip hidden>
           <div class="mn-dialogue__portrait hud__tip-portrait">${michiSvg({ ...ch, id: 'miu', name: 'Comandante Nébula', fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined }, tokenCss('nebula-violet'))}</div>
           <div>
@@ -912,6 +919,12 @@ export class StationScene extends Phaser.Scene {
               <button class="mn-btn mn-btn--sm" data-action="tutorial-next">${icon('check')}Entendido</button>
             </div>
           </div>
+        </div>
+        <div class="hud__touch" aria-label="Controles táctiles">
+          <button class="mn-btn mn-btn--secondary mn-btn--icon" data-action="touch-pause" aria-label="Pausa">${icon('pause')}</button>
+          <button class="mn-btn mn-btn--secondary mn-btn--icon" data-action="touch-map" aria-label="Mapa">${icon('map')}</button>
+          <button class="mn-btn mn-btn--secondary mn-btn--icon" data-action="touch-jump" aria-label="Saltar">${icon('jump')}</button>
+          <button class="mn-btn mn-btn--secondary mn-btn--icon" data-action="touch-dash" aria-label="Impulso">${icon('dash')}</button>
         </div>
         <aside class="hud__actions mn-panel" data-actions hidden aria-label="Acciones de la sala"></aside>
         <p class="hud__source">${esc(sourceCredit(this.mission))}</p>
@@ -932,6 +945,11 @@ export class StationScene extends Phaser.Scene {
       .on('quit', () => fadeTo(this, SCENES.menu))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
+      .on('use', () => this.overlay === 'none' && this.nearestMachine() && this.openActions())
+      .on('touch-pause', () => this.overlay === 'none' && this.openPause())
+      .on('touch-map', () => this.toggleMap())
+      .on('touch-jump', () => this.jump())
+      .on('touch-dash', () => this.tryDash())
       .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
@@ -1268,9 +1286,8 @@ export class StationScene extends Phaser.Scene {
         else this.closeOverlay();
       } else if (key === 'm') this.toggleMap();
       else if (key === 'shift') this.tryDash();
-      else if (key === ' ' && this.overlay === 'none' && this.jumpT < 0) {
-        this.jumpT = 0;
-        audio.play('jump');
+      else if (key === ' ') {
+        this.jump();
         ev.preventDefault();
       } else if (key === 'e' && this.overlay === 'none') {
         if (this.nearestMachine()) this.openActions();

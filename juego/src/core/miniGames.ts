@@ -223,12 +223,12 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
 // ------------------------------------------------------------------ pedalear: seguir el ritmo con los dos pedales
 const PEDAL_BEATS = 14;
 const PEDAL_GAP = 640;      // ms entre notas
-const PEDAL_WINDOW = 240;   // ms de margen para acertar
+const PEDAL_WINDOW = 320;   // ms de margen para acertar (ancho: un niño de 7 años llega)
 const PEDAL_LEAD = 1100;    // ms antes de la primera nota
 const PEDAL_LINE = 330;     // altura (px) de la línea de pedaleo (las notas la cruzan al compás)
 const PEDAL_SPEED = 0.24;   // px por ms que caen las notas
 /** Hay que llenar MÁS que esta fracción de la barra para ganar energía. */
-export const PEDAL_PASS = 0.75;
+export const PEDAL_PASS = 0.5;
 
 /**
  * Bicicleta de energía (sin texto): caen notas por dos carriles, izquierdo y derecho; hay que tocar el pedal del mismo lado cuando
@@ -414,7 +414,7 @@ export function mountBiosignature(root: HTMLElement, cb: MiniCallbacks): MiniGam
 const ALGAE_SECONDS = 15;
 const ALGAE_NEEDED = 0.7;     // fracción del tiempo en rango que da el puntaje completo
 const ALGAE_HEAT_FROM_LIGHT = 0.3; // la luz calienta el tanque: subir la luz obliga a compensar la temperatura
-const ALGAE_GAUGES = [
+const ALL_ALGAE_GAUGES = [
   { label: 'Luz', color: '#ffcb47', icon: '<circle cx="24" cy="24" r="8" fill="#ffcb47" stroke="#0e0b33" stroke-width="3"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M10 38l4-4M34 14l4-4" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>' },
   { label: 'Nutrientes', color: '#4cc3f5', icon: '<path d="M24 6 C33 17 38 24 38 31 A14 14 0 0 1 10 31 C10 24 15 17 24 6Z" fill="#4cc3f5" stroke="#0e0b33" stroke-width="3" stroke-linejoin="round"/>' },
   { label: 'Temperatura', color: '#ff7a59', icon: '<rect x="19" y="6" width="10" height="26" rx="5" fill="#f5f5f2" stroke="#0e0b33" stroke-width="3"/><circle cx="24" cy="35" r="8" fill="#ff7a59" stroke="#0e0b33" stroke-width="3"/><rect x="22.5" y="18" width="3" height="16" fill="#ff7a59"/>' },
@@ -423,9 +423,10 @@ const ALGAE_GAUGES = [
 /**
  * Cultivo de algas (sin texto): tres indicadores verticales se desvían solos; mantener apretado el de cada columna lo sube, soltarlo lo deja caer.
  * Hay que tener las tres agujas dentro de su franja verde; la luz calienta el tanque, así que subirla obliga a compensar la temperatura.
- * Puntaje = fracción del tiempo con las tres en rango.
+ * Puntaje = fracción del tiempo con todas en rango. `count`: cuántas agujas hay (en Cadete solo luz y nutrientes, sin la temperatura).
  */
-export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
+export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, count: 2 | 3 = 3): MiniGameHandle {
+  const ALGAE_GAUGES = ALL_ALGAE_GAUGES.slice(0, count);
   const band = ALGAE_GAUGES.map(() => ({ center: 0.35 + Math.random() * 0.3, half: 0.12 }));
   const phase = ALGAE_GAUGES.map(() => Math.random() * 6.28);
   const pos = ALGAE_GAUGES.map(() => 0.5);
@@ -438,7 +439,7 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
       <circle cx="120" cy="110" r="7" fill="#7ed957"/><circle cx="210" cy="132" r="9" fill="#7ed957"/><circle cx="260" cy="96" r="6" fill="#5ad6b2"/><circle cx="160" cy="145" r="5" fill="#5ad6b2"/>
       <circle cx="105" cy="84" r="3.5" fill="#fff" opacity=".8"/><circle cx="240" cy="116" r="3" fill="#fff" opacity=".8"/><circle cx="182" cy="98" r="3" fill="#fff" opacity=".8"/>
       <rect x="120" y="4" width="140" height="14" rx="7" fill="#ee5fd6" stroke="#0e0b33" stroke-width="3"/></svg>
-    ${ALGAE_GAUGES.map((g, i) => `<button class="algae__gauge" data-gauge="${i}" style="left:${28 + i * 112}px;--c:${g.color}" aria-label="${g.label}">
+    ${ALGAE_GAUGES.map((g, i) => `<button class="algae__gauge" data-gauge="${i}" style="left:${28 + (3 - count) * 56 + i * 112}px;--c:${g.color}" aria-label="${g.label}">
       <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">${g.icon}</svg>
       <span class="algae__track"><i class="algae__band" style="bottom:${(band[i].center - band[i].half) * 100}%;height:${band[i].half * 200}%"></i><i class="algae__needle" data-needle></i></span></button>`).join('')}</div>`;
   const bar = root.querySelector<HTMLElement>('[data-time]')!;

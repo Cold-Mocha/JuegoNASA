@@ -773,9 +773,9 @@ export class StationScene extends Phaser.Scene {
     this.openFullMini({ hint: 'Limpia el panel y gíralo hacia el Sol', mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
   }
 
-  /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja. */
+  /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja (en Cadete, sin la temperatura). */
   private openAlgaeGame(): void {
-    this.openFullMini({ hint: 'Mantén apretado para subir la aguja', mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
+    this.openFullMini({ hint: 'Mantén apretado para subir la aguja', mount: (root, cb) => mountAlgae(root, cb, this.difficulty.id === 'cadete' ? 2 : 3), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
   }
 
   private openSealGame(): void {
@@ -803,7 +803,7 @@ export class StationScene extends Phaser.Scene {
       hint: 'Toca el pedal cuando llegue la nota',
       mount: (root, cb) => mountPedal(root, cb),
       finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
-      failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : `No pedaleaste lo suficiente: hay que llenar más del ${PEDAL_PASS * 100} % de la barra.`),
+      failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : 'No pedaleaste lo suficiente: hay que pasar la marca de la barra.'),
     });
   }
 

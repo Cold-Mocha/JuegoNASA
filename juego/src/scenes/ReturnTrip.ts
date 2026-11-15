@@ -9,13 +9,17 @@ import { audio } from '../core/audio';
 const MOON = new Phaser.Math.Vector2(190, 170);
 const EARTH = new Phaser.Math.Vector2(930, 640);
 const EARTH_R = 230;
-const TRIP_MS = 4600;
-const FLIP_AT = 1500;   // cuándo empieza la voltereta
-const FLIP_MS = 1150;
+const TRIP_MS = 10500;
+const TURN_AT = 1800;    // giro lento de media vuelta para quedar cola hacia adelante (como antes de frenar para volver)
+const TURN_MS = 2600;
+const BURN_AT = 4500;    // encendido de frenado (sin aire: solo motor), de 1,3 s
+const BURN_MS = 1300;
+const TURN_BACK_AT = 5900;  // media vuelta de regreso y nariz arriba para entrar a la atmósfera
 
 /**
- * Viaje de regreso a la Tierra (sin textos): la nave sale de la Luna, hace una voltereta a mitad de camino,
- * se pone de cara a la Tierra y entra a la atmósfera. Después sigue el informe.
+ * Viaje de regreso a la Tierra (sin textos): el orbitador sale de la Luna, gira despacio de cola, enciende el motor para frenar,
+ * vuelve a girar de cara a la Tierra y entra a la atmósfera. Después sigue el informe. Se puede saltar con un toque o con Esc.
+ * [DIBUJO] orbitador de diseño propio, distinto del cohete del despegue.
  */
 export class ReturnTripScene extends Phaser.Scene {
   constructor() {
@@ -32,15 +36,18 @@ export class ReturnTripScene extends Phaser.Scene {
     if (!this.textures.exists('spark')) {
       this.make.graphics({}, false).fillStyle(0xffffff, 1).fillCircle(8, 8, 8).generateTexture('spark', 16, 16).destroy();
     }
-    const rocket = this.add.image(MOON.x + 70, MOON.y + 30, 'rocket').setScale(0.4).setDepth(10);
+    this.ensureOrbiter();
+    const rocket = this.add.image(MOON.x + 70, MOON.y + 30, 'orbiter').setScale(0.62).setDepth(10);
     const glow = this.add.circle(0, 0, 60, tokenColor('solar-coral'), 0).setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
+    let flame: Phaser.GameObjects.Particles.ParticleEmitter | undefined;
     if (!state.settings.ultraLight) {
-      const flame = this.add.particles(0, 0, 'spark', {
+      flame = this.add.particles(0, 0, 'spark', {
         speed: { min: 30, max: 70 }, scale: { start: 0.8, end: 0 }, lifespan: 500, frequency: 24,
         tint: [tokenColor('star-gold'), tokenColor('solar-coral'), 0xffffff], blendMode: Phaser.BlendModes.ADD,
         angle: { min: 0, max: 360 },
       }).setDepth(9);
       flame.startFollow(rocket, 0, 0);
+      flame.stop();
     }
     audio.play('thrust');
 
@@ -50,7 +57,7 @@ export class ReturnTripScene extends Phaser.Scene {
     const ctrl = new Phaser.Math.Vector2(620, 80);
     const curve = new Phaser.Curves.QuadraticBezier(start, ctrl, end);
     const p = new Phaser.Math.Vector2();
-    const flip = { v: 0 };
+    const flip = { v: 0 }; // 0→1: media vuelta (cola adelante); 1→2: media vuelta de regreso
     const trip = { t: 0 };
     this.tweens.add({
       targets: trip, t: 1, duration: calm ? 1400 : TRIP_MS, ease: 'Sine.inOut',
@@ -59,8 +66,8 @@ export class ReturnTripScene extends Phaser.Scene {
         const ahead = curve.getPoint(Math.min(1, trip.t + 0.02));
         rocket.setPosition(p.x, p.y);
         // la nariz mira hacia donde va (el dibujo apunta hacia arriba) + la voltereta
-        rocket.setRotation(Math.atan2(ahead.y - p.y, ahead.x - p.x) + Math.PI / 2 + flip.v * Math.PI * 2);
-        rocket.setScale(0.4 - trip.t * 0.14);
+        rocket.setRotation(Math.atan2(ahead.y - p.y, ahead.x - p.x) + Math.PI / 2 + flip.v * Math.PI);
+        rocket.setScale(0.62 - trip.t * 0.26);
         const heat = Phaser.Math.Clamp((trip.t - 0.78) / 0.22, 0, 1); // entrada a la atmósfera: brilla y se calienta
         glow.setPosition(p.x, p.y).setAlpha(heat * 0.8).setScale(1 + heat * 1.4);
       },
@@ -70,11 +77,31 @@ export class ReturnTripScene extends Phaser.Scene {
       },
     });
     if (!calm) {
-      // voltereta: una vuelta completa sobre sí misma, con un pequeño salto de escala
-      this.tweens.add({ targets: flip, v: 1, duration: FLIP_MS, delay: FLIP_AT, ease: 'Sine.inOut', onStart: () => audio.play('jump') });
-      this.tweens.add({ targets: rocket, scaleX: '+=0.06', scaleY: '+=0.06', duration: FLIP_MS / 2, delay: FLIP_AT, yoyo: true, ease: 'Sine.inOut' });
-      this.time.delayedCall(TRIP_MS * 0.78, () => this.cameras.main.shake(900, 0.004));
+      // maniobra de desorbitado, despacio: media vuelta, encendido de frenado, media vuelta de regreso
+      this.tweens.add({ targets: flip, v: 1, duration: TURN_MS, delay: TURN_AT, ease: 'Sine.inOut' });
+      this.tweens.add({ targets: flip, v: 2, duration: TURN_MS, delay: TURN_BACK_AT, ease: 'Sine.inOut' });
+      this.time.delayedCall(BURN_AT, () => { audio.play('thrust'); flame?.start(); });
+      this.time.delayedCall(BURN_AT + BURN_MS, () => flame?.stop());
+      this.time.delayedCall(TRIP_MS * 0.8, () => { flame?.start(); this.cameras.main.shake(1200, 0.003); });
     }
+    // saltar el viaje con un toque o Esc
+    const skip = (): void => { this.tweens.killAll(); fadeTo(this, SCENES.report, 300); };
+    this.time.delayedCall(1500, () => { this.input.once('pointerdown', skip); this.input.keyboard?.once('keydown-ESC', skip); });
+  }
+
+  /** [DIBUJO] Orbitador visto desde arriba (diseño propio, sin logos): ala delta, morro negro y deriva. */
+  private ensureOrbiter(): void {
+    if (this.textures.exists('orbiter')) return;
+    const g = this.make.graphics({}, false);
+    const ink = 0x0e0b33;
+    g.fillStyle(0xe9e8f2, 1).lineStyle(6, ink, 1);
+    g.fillTriangle(100, 70, 10, 190, 190, 190).strokeTriangle(100, 70, 10, 190, 190, 190);       // ala delta
+    g.fillRoundedRect(78, 20, 44, 176, 20).strokeRoundedRect(78, 20, 44, 176, 20);               // fuselaje
+    g.fillStyle(ink, 1).fillTriangle(100, 12, 80, 52, 120, 52);                                   // morro con losetas negras
+    g.fillStyle(0x4cc3f5, 1).fillRoundedRect(90, 52, 20, 12, 4);                                  // ventanas
+    g.fillStyle(0x6f6c8c, 1).fillRect(86, 192, 8, 10).fillRect(106, 192, 8, 10);                  // motores
+    g.generateTexture('orbiter', 200, 210);
+    g.destroy();
   }
 
   private drawMoon(): void {

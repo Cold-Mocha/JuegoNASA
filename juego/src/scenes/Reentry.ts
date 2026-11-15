@@ -7,9 +7,10 @@ import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { icon, type IconName } from '../core/icons';
 import { chapterFor } from '../data/chapters';
-import { mountBurn, mountGlide, mountInspect, mountReentry, type PhaseDone } from '../core/casaGames';
+import { mountBurn, mountGlide, mountInspect, type PhaseDone } from '../core/casaGames';
+import { mountEntryGame } from '../core/reentryGame';
 import type { MiniGameHandle } from '../core/miniGames';
-import { casaScore, casaStars, heatMultiplier, type CasaResult } from '../sim/entry';
+import { casaScore, casaStars, type CasaResult } from '../sim/entry';
 import { t } from '../core/i18n';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
@@ -45,7 +46,7 @@ export class ReentryScene extends Phaser.Scene {
       audio.unlock();
       const k = ev.key.toLowerCase();
       if (k === 'escape') return this.exit();
-      if (k.startsWith('arrow')) {
+      if (k.startsWith('arrow') && this.handle?.nudge) {
         this.handle?.nudge?.(k === 'arrowright' ? 1 : k === 'arrowleft' ? -1 : 0, k === 'arrowdown' ? 1 : k === 'arrowup' ? -1 : 0);
         ev.preventDefault();
       }
@@ -73,17 +74,35 @@ export class ReentryScene extends Phaser.Scene {
     root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}</div>`;
     audio.play(i === 2 ? 'alarm' : 'radio');
     this.timer = this.time.delayedCall(i === 0 ? 1100 : 800, () => {
-      root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
-      const stage = this.ui.q('[data-stage]');
-      const done = (apply: (r: Parameters<PhaseDone>[0]) => void): PhaseDone => (r) => {
-        apply(r);
+      const advance = (): void => {
         audio.play('achievement');
         root.querySelector('.mini-full')?.classList.add('is-done');
         this.timer = this.time.delayedCall(700, () => (i === 3 ? this.finish() : this.startPhase(i + 1)));
       };
+      if (i === 2) {
+        // Reingreso del orbitador: modelo físico con alabeo, calor, g y apagón de comunicaciones (ver sim/reentry.ts)
+        root.innerHTML = '<div class="casa__entry" data-stage></div>';
+        const g = mountEntryGame(this.ui.q('[data-stage]'), {
+          level: state.loadout?.difficulty === 'comandante' ? 'engineer' : 'explorer',
+          lang: state.settings.lang,
+          damage: this.unfound,
+          inspected: this.unfound === 0,
+          calm: state.calm,
+          onDone: (r) => {
+            this.res.corridor = r.quality;
+            this.res.heatMax = Math.round((1 - r.heatMargin) * 100); // calor acumulado 0–100
+            g.destroy();
+            this.timer = this.time.delayedCall(300, () => this.startPhase(3));
+          },
+        });
+        this.handle = { destroy: () => g.destroy() };
+        return;
+      }
+      root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
+      const stage = this.ui.q('[data-stage]');
+      const done = (apply: (r: Parameters<PhaseDone>[0]) => void): PhaseDone => (r) => { apply(r); advance(); };
       if (i === 0) this.handle = mountInspect(stage, DAMAGED_TILES, done((r) => { this.res.inspected = r.score; this.unfound = r.unfound ?? 0; }));
       else if (i === 1) this.handle = mountBurn(stage, done((r) => void (this.res.burn = r.score)));
-      else if (i === 2) this.handle = mountReentry(stage, heatMultiplier(this.unfound), done((r) => { this.res.corridor = r.score; this.res.heatMax = r.heatMax ?? 0; }));
       else this.handle = mountGlide(stage, done((r) => void (this.res.glide = r.score)));
     });
   }

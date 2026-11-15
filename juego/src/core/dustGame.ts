@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /**
  * Minijuego de limpiar los paneles: dos paneles solares con su pata de abajo, cubiertos de polvo, y un cepillo.
  * Se limpia a mano: arrastrando el ratón o el dedo, o con las flechas del teclado. Al sacar casi todo el polvo, termina.
@@ -134,7 +136,7 @@ function dustPixels(ctx: CanvasRenderingContext2D): number {
 export function mountDustGame(root: HTMLElement, opts: Options): DustGame {
   root.innerHTML = `<div class="dust" style="width:${W}px;height:${H}px">
     <canvas class="dust__panel" width="${W}" height="${H}"></canvas>
-    <canvas class="dust__dirt" width="${W}" height="${H}" aria-label="Polvo sobre el panel solar" role="img"></canvas>
+    <canvas class="dust__dirt" width="${W}" height="${H}" aria-label="${t('mini.dust')}" role="img"></canvas>
     <div class="dust__brush is-demo" aria-hidden="true">${BRUSH_SVG}</div></div>`;
   const wrap = root.firstElementChild as HTMLElement;
   const [panel, dirt] = [...wrap.querySelectorAll('canvas')] as HTMLCanvasElement[];

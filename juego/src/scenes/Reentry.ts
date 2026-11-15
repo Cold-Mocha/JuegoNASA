@@ -9,6 +9,7 @@ import { icon, type IconName } from '../core/icons';
 import { mountBurn, mountGlide, mountInspect, mountReentry, type PhaseDone } from '../core/casaGames';
 import type { MiniGameHandle } from '../core/miniGames';
 import { casaScore, casaStars, heatMultiplier, type CasaResult } from '../sim/entry';
+import { t } from '../core/i18n';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
@@ -16,7 +17,6 @@ const PHASE_ICON: IconName[] = ['radar', 'rocket', 'sun', 'map'];
 const DAMAGED_TILES = 4;
 /** El planeo es la única fase con una línea de texto: la pista real donde termina (ver la ficha «mataveri» del Archivo). */
 const GLIDE_PHASE = 3;
-const GLIDE_CAPTION = 'Pista de Mataveri, Rapa Nui: la NASA la alargó en 1987 para emergencias del transbordador.';
 const GLIDE_INTRO_MS = 4500;
 
 /**
@@ -71,7 +71,7 @@ export class ReentryScene extends Phaser.Scene {
     this.stop();
     if (i === 0) this.unfound = 0;
     const root = this.ui.q('[data-casa]');
-    root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}${i === GLIDE_PHASE ? `<p class="casa__caption">${GLIDE_CAPTION}</p>` : ''}</div>`;
+    root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}${i === GLIDE_PHASE ? `<p class="casa__caption">${t('casa.glide')}</p>` : ''}</div>`;
     audio.play(i === 2 ? 'alarm' : 'radio');
     this.timer = this.time.delayedCall(i === GLIDE_PHASE ? GLIDE_INTRO_MS : i === 0 ? 1100 : 800, () => {
       root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
@@ -101,8 +101,8 @@ export class ReentryScene extends Phaser.Scene {
       <div class="mn-stars">${STAR.repeat(stars)}${STAR_OFF.repeat(3 - stars)}</div>
       <p class="casa__score">${score}</p>
       <div class="casa__buttons">
-        <button class="mn-btn" data-action="retry" aria-label="Reintentar">${icon('retry')}</button>
-        <button class="mn-btn mn-btn--secondary" data-action="home" aria-label="Menú">${icon('home')}</button>
+        <button class="mn-btn" data-action="retry" aria-label="${t('common.retry')}">${icon('retry')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="home" aria-label="${t('common.menu')}">${icon('home')}</button>
       </div></div>`;
   }
 }

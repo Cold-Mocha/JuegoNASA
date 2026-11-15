@@ -7,8 +7,9 @@ import { STORY } from '../data/story';
 import { michiSvg } from '../core/art';
 import { tokenCss } from '../core/theme';
 import { icon } from '../core/icons';
+import { t } from '../core/i18n';
 
-const COMMANDER = { id: 'miu' as const, name: 'Comandante Nébula', role: '', trait: '', fur: '#f5f5f2', furDark: '#c4c2e0', accent: 'nebula-violet' };
+const COMMANDER = { id: 'miu' as const, name: '', fur: '#f5f5f2', furDark: '#c4c2e0', accent: 'nebula-violet' };
 
 /** Historia introductoria: láminas de imagen + texto con efecto máquina de escribir. */
 export class StoryScene extends Phaser.Scene {
@@ -32,14 +33,14 @@ export class StoryScene extends Phaser.Scene {
     this.image = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'story-0');
 
     this.ui = new UiLayer(this, /* html */ `
-      <button class="mn-btn mn-btn--secondary mn-btn--sm story__skip" data-action="skip">${icon('skip')}Saltar</button>
+      <button class="mn-btn mn-btn--secondary mn-btn--sm story__skip" data-action="skip">${icon('skip')}${t('common.skip')}</button>
       <div class="story__bottom">
         <div class="mn-dialogue story__dialogue" data-action="advance" role="button" tabindex="0" aria-live="polite">
           <div class="mn-dialogue__portrait story__portrait" data-portrait></div>
           <div>
             <p class="mn-dialogue__name" data-name></p>
             <p class="mn-dialogue__text" data-text></p>
-            <div class="mn-dialogue__hint">Continuar <span class="mn-key">Espacio</span></div>
+            <div class="mn-dialogue__hint">${t('pause.resume')} <span class="mn-key">${t('key.space')}</span></div>
           </div>
         </div>
         <div class="story__meta"><span class="story__credit" data-credit></span><span class="story__dots" data-dots></span></div>
@@ -63,15 +64,15 @@ export class StoryScene extends Phaser.Scene {
     }
 
     const name = this.ui.q('[data-name]');
-    name.textContent = slide.speaker ?? '';
-    name.hidden = !slide.speaker;
+    name.textContent = slide.commander ? t('commander.name') : '';
+    name.hidden = !slide.commander;
     const portrait = this.ui.q('[data-portrait]');
-    portrait.hidden = !slide.speaker;
-    if (slide.speaker && !portrait.innerHTML) portrait.innerHTML = michiSvg(COMMANDER, tokenCss('nebula-violet'));
-    this.ui.q('.story__dialogue').classList.toggle('is-narration', !slide.speaker);
-    this.ui.q('[data-credit]').textContent = slide.credit ? `Fuente: ${slide.credit}` : '';
+    portrait.hidden = !slide.commander;
+    if (slide.commander && !portrait.innerHTML) portrait.innerHTML = michiSvg({ ...COMMANDER, name: t('commander.name') }, tokenCss('nebula-violet'));
+    this.ui.q('.story__dialogue').classList.toggle('is-narration', !slide.commander);
+    this.ui.q('[data-credit]').textContent = slide.credit ? `${t('common.source')} ${slide.credit}` : '';
     this.ui.q('[data-dots]').innerHTML = STORY.map((_, k) => `<i class="${k === i ? 'is-on' : ''}"></i>`).join('');
-    this.type(slide.text);
+    this.type(t(slide.text));
   }
 
   /** Escribe el texto letra a letra; un toque lo completa. */

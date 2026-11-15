@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeScore } from '../../src/sim/score';
 import { earnedAchievements } from '../../src/sim/achievements';
 import type { MissionSummary } from '../../src/sim/simulation';
-import { ACHIEVEMENTS } from '../../src/data/achievements';
+import { ACHIEVEMENT_IDS } from '../../src/data/achievements';
 
 const base: MissionSummary = {
   won: true, cause: null, daysSurvived: 5, days: 7, science: 6, tasksDone: 3, tasksTotal: 3,
@@ -36,7 +36,7 @@ describe('puntaje y estrellas', () => {
 
 describe('logros científicos', () => {
   it('una jornada perfecta los entrega todos menos el de lectura', () => {
-    expect(earnedAchievements(base).sort()).toEqual(Object.keys(ACHIEVEMENTS).filter((k) => k !== 'reader').sort());
+    expect(earnedAchievements(base).sort()).toEqual(ACHIEVEMENT_IDS.filter((k) => k !== 'reader').sort());
   });
 
   it('una partida sin acciones no entrega logros', () => {

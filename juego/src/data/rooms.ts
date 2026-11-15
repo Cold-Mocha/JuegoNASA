@@ -2,6 +2,7 @@ import type { ActionId, RoomId } from '../sim/types';
 import type { MissionId } from './missions';
 import { ROOM_RECTS, type Point } from '../sim/stationMap';
 import { WORLD_SCALE } from '../sim/rules';
+import { t, type TKey } from '../core/i18n';
 
 /**
  * Salas de la Estación Central sobre el plano continuo (`sim/stationMap.ts`).
@@ -18,19 +19,18 @@ export interface RoomProp {
   x: number;
   y: number;
   actions?: ActionId[];
-  /** Nombre que se muestra al usarla (por defecto, el de la sala). */
-  name?: string;
+  /** Clave del nombre que se muestra al usarla (por defecto, el de la sala). */
+  nameKey?: TKey;
   /** Si está, el objeto solo aparece en estas investigaciones (los demás están siempre). */
   missions?: MissionId[];
 }
 
 export interface Room {
   id: RoomId;
-  name: string;
   props: RoomProp[];
 }
 
-const machine = (asset: string, x: number, y: number, actions: ActionId[], name?: string): RoomProp => ({ asset, kind: 'interactive', x, y, actions, name });
+const machine = (asset: string, x: number, y: number, actions: ActionId[], nameKey?: TKey): RoomProp => ({ asset, kind: 'interactive', x, y, actions, nameKey });
 const deco = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'deco', x, y });
 /** Adorno colgado en la pared del fondo: no estorba al caminar ni proyecta sombra en el piso. */
 const wall = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'wall', x, y });
@@ -44,56 +44,58 @@ const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ..
  */
 export const ROOMS: Record<RoomId, Room> = {
   soporte: {
-    id: 'soporte', name: 'Soporte vital',
+    id: 'soporte',
     props: [deco('reciclador-aire', 445, 78), // normalmente decorativo; cuando se rompe lo reemplaza 'reciclador-roto' (interactivo)
       deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
       deco('planta', 45, 255), deco('cajas', 480, 350)],
   },
   puente: {
-    id: 'puente', name: 'Puente',
+    id: 'puente',
     props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
-      machine('bicicleta-estatica', 445, 120, ['pedal'], 'Bicicleta de energía'),
+      machine('bicicleta-estatica', 445, 120, ['pedal'], 'machine.bike'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   enfermeria: {
-    id: 'enfermeria', name: 'Enfermería',
+    id: 'enfermeria',
     props: [machine('camilla-medica', 450, 66, ['heal']),
       deco('casillero', 62, 62), wall('extintor', 165, 12),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   comunicaciones: {
-    id: 'comunicaciones', name: 'Comunicaciones',
-    props: [machine('consola-antena', 355, 72, ['repairAntenna', 'forecast'], 'Antena de la Tierra'),
+    id: 'comunicaciones',
+    props: [machine('consola-antena', 355, 72, ['repairAntenna', 'forecast'], 'machine.antenna'),
       deco('casillero', 62, 62), wall('extintor', 140, 12),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 400, 350)],
   },
   esclusa: {
-    id: 'esclusa', name: 'Esclusa',
+    id: 'esclusa',
     props: [deco('casillero-trajes', 80, 66), deco('casillero-trajes', 370, 66), wall('extintor', 300, 12),
       deco('planta', 45, 235), deco('cajas', 400, 350)],
   },
   exterior: {
-    id: 'exterior', name: 'Superficie lunar',
+    id: 'exterior',
     props: [deco('panel-solar', 760, 250), deco('panel-solar', 1260, 250), deco('panel-solar', 1600, 250),
-      machine('estacion-limpieza', 1600, 480, ['cleanDust'], 'Limpieza de polvo'),
+      machine('estacion-limpieza', 1600, 480, ['cleanDust'], 'machine.dustStation'),
       deco('roca', 160, 150), deco('roca', 900, 470), deco('roca', 1900, 420),
       // objetos de cada investigación
-      only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'Taladro de hielo')),
-      only('paneles-solares', machine('panel-solar', 440, 260, ['cleanTestPanel'], 'Panel de pruebas'))],
+      only('hielo-lunar', machine('roca-hielo', 430, 300, ['eva'], 'machine.drill')),
+      only('paneles-solares', machine('panel-solar', 440, 260, ['cleanTestPanel'], 'machine.testPanel'))],
   },
   invernadero: {
-    id: 'invernadero', name: 'Invernadero',
+    id: 'invernadero',
     props: [wall('extintor', 255, 12),
       // arriba a la derecha el rack de plantas (la cosecha está en todas las jornadas)
-      machine('rack-plantas', 620, 100, ['harvest'], 'Rack de plantas'),
+      machine('rack-plantas', 620, 100, ['harvest'], 'machine.plantRack'),
       // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
-      only('huerto-lunar', machine('tanque-algas', 115, 90, ['growLights'], 'Cultivo de algas')),
+      only('huerto-lunar', machine('tanque-algas', 115, 90, ['growLights'], 'machine.algae')),
       only('huerto-lunar', deco('bandeja-cultivo', 250, 350)), only('huerto-lunar', deco('bandeja-cultivo', 470, 350)),
       only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250))],
   },
 };
 
 export const ROOM_IDS = Object.keys(ROOMS) as RoomId[];
+
+export const roomName = (id: RoomId): string => t(`room.${id}`);
 
 /** Objetos de una sala para la investigación elegida: los fijos y los propios de esa investigación. */
 export const roomProps = (room: RoomId, mission: MissionId): RoomProp[] =>

@@ -6,8 +6,7 @@ import { drawStarfield } from '../core/starfield';
 import { UiLayer } from '../core/ui';
 import { fadeTo, fadeIn } from '../core/fade';
 import { settingsHtml, bindSettings, langButtonsHtml } from '../core/settingsPanel';
-import { ACHIEVEMENTS } from '../data/achievements';
-import type { AchievementId } from '../sim/achievements';
+import { ACHIEVEMENT_IDS, achievementText, achievementTitle } from '../data/achievements';
 import { icon } from '../core/icons';
 import { ACHIEVEMENT_ICON } from '../core/iconMap';
 import { t } from '../core/i18n';
@@ -57,11 +56,11 @@ export class MainMenuScene extends Phaser.Scene {
       .on('settings', () => openModal(settingsHtml()))
       .on('achievements', () => {
         const owned = state.progress.achievements;
-        const items = (Object.keys(ACHIEVEMENTS) as AchievementId[])
+        const items = ACHIEVEMENT_IDS
           .map((id) => `<li class="achievement ${owned.includes(id) ? 'is-earned' : ''}"><span class="achievement__medal" aria-hidden="true">${owned.includes(id) ? icon(ACHIEVEMENT_ICON[id]) : '?'}</span>
-            <span><strong>${ACHIEVEMENTS[id].title}</strong><small>${ACHIEVEMENTS[id].text}</small></span></li>`)
+            <span><strong>${achievementTitle(id)}</strong><small>${achievementText(id)}</small></span></li>`)
           .join('');
-        openModal(`<h2 class="mn-panel__title">${t('menu.achievements.title', { n: owned.length, total: Object.keys(ACHIEVEMENTS).length })}</h2>
+        openModal(`<h2 class="mn-panel__title">${t('menu.achievements.title', { n: owned.length, total: ACHIEVEMENT_IDS.length })}</h2>
           <ul class="achievement-list">${items}</ul>
           <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${t('common.close')}</button></div>`);
       })

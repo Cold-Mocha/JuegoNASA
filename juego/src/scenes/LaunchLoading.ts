@@ -6,16 +6,17 @@ import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { UiLayer } from '../core/ui';
 import { icon } from '../core/icons';
+import { dateLocale, t, t as tr } from '../core/i18n'; // `tr`: donde `t` es el tiempo de la animación
 import { queueStationAssets } from '../data/preload';
 import { addSvgTexture, michiSvg } from '../core/art';
 import { MAP_RASTER, MAP_TEXTURE, stationSvg } from '../core/stationArt';
 import { addDrawnProps, drawnPropsReady } from '../core/propArt';
 import { MAP_W, MAP_H } from '../sim/stationMap';
-import { LAYERS, CISLUNAR } from '../data/atmosphere';
-import { CHARACTERS, type Character } from '../data/characters';
+import { LAYERS, CISLUNAR, layerLine } from '../data/atmosphere';
+import { CHARACTERS, characterRole, type Character } from '../data/characters';
 import {
-  ASCENT_MS, COUNTDOWN_FROM, COUNTDOWN_START_MS, IGNITION_MS, LAUNCH_SCRIPT, LAYER_LINE_AT, LIFTOFF_MS,
-  altitudeKm, fillName, type LaunchLine, type Speaker,
+  ASCENT_MS, COUNTDOWN_FROM, COUNTDOWN_START_MS, IGNITION_MS, LAYER_LINE_AT, LIFTOFF_MS,
+  altitudeKm, fillName, launchScript, type LaunchLine, type Speaker,
 } from '../data/launch';
 import { CROWD_KEYS, ensureBangTexture, ensureCrowdTextures, ensureGullTextures, ensureSoftTextures } from '../core/launchArt';
 
@@ -153,7 +154,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.buildRocket();
     this.buildEffects();
     this.buildUi();
-    this.queue = LAUNCH_SCRIPT.map((l) => ({ ...l }));
+    this.queue = launchScript();
 
     this.startLoading(loadout);
     this.bindSkip();
@@ -348,7 +349,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     const banner = this.add.graphics().setDepth(11);
     banner.lineStyle(4, 0x5a5880, 1).lineBetween(222, 520, 222, 690).lineBetween(656, 520, 656, 690);
     banner.fillStyle(0xffcb47, 1).lineStyle(3.5, INK, 1).fillRoundedRect(210, 516, 458, 58, 10).strokeRoundedRect(210, 516, 458, 58, 10);
-    this.add.text(439, 546, '¡BUEN VIAJE, MICHINAUTAS!', { fontFamily: FONT_DISPLAY, fontSize: '34px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(11).setResolution(2);
+    this.add.text(439, 546, t('launch.banner'), { fontFamily: FONT_DISPLAY, fontSize: '34px', fontStyle: '700', color: '#0e0b33' }).setOrigin(0.5).setDepth(11).setResolution(2);
 
     for (const row of rows) {
       for (let i = 0; i < row.n; i++) {
@@ -358,7 +359,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
     // carteles en alto, sostenidos por el público: blancos, letra grande y sin solaparse entre sí
     const signs = this.add.graphics().setDepth(12.9);
-    const boards: Array<[number, number, string]> = [[318, 184, `¡VAMOS, ${this.crew.name.toUpperCase()}!`], [522, 212, 'RUMBO A LA LUNA']];
+    const boards: Array<[number, number, string]> = [[318, 184, t('launch.sign.go', { name: this.crew.name.toUpperCase() })], [522, 212, t('launch.sign.moon')]];
     boards.forEach(([x, w, text]) => {
       signs.lineStyle(3, 0x5a5880, 1).lineBetween(x, 650, x, 674);
       signs.fillStyle(0xf5f5f2, 1).lineStyle(3, INK, 1).fillRoundedRect(x - w / 2, 596, w, 38, 8).strokeRoundedRect(x - w / 2, 596, w, 38, 8);
@@ -382,7 +383,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     const live = this.add.graphics().setDepth(13);
     live.fillStyle(0xff4d5e, 1).lineStyle(2.4, INK, 1).fillRoundedRect(640, 622, 86, 24, 8).strokeRoundedRect(640, 622, 86, 24, 8);
     const dot = this.add.circle(654, 634, 5, 0xffffff).setDepth(13);
-    this.add.text(692, 634, 'EN VIVO', { fontFamily: FONT_MONO, fontSize: '14px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5).setDepth(13).setResolution(2);
+    this.add.text(692, 634, t('launch.live'), { fontFamily: FONT_MONO, fontSize: '14px', fontStyle: '700', color: '#ffffff' }).setOrigin(0.5).setDepth(13).setResolution(2);
     if (!this.calm) this.tweens.add({ targets: dot, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
 
     // valla de seguridad al frente
@@ -500,16 +501,16 @@ export class LaunchLoadingScene extends Phaser.Scene {
     // retratos: Control (Comandante Nébula) a la izquierda y el tripulante elegido a la derecha
     this.portraitControl = this.fixed(this.add.image(78, 81, `michi-${this.crew.id}`)).setScale(0.25).setVisible(false);
     this.portraitCrew = this.fixed(this.add.image(690, 81, `michi-${this.crew.id}`)).setScale(0.25).setAlpha(0.4);
-    const nebula: Character = { ...CHARACTERS[0], name: 'Comandante Nébula', fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined };
+    const nebula: Character = { ...CHARACTERS[0], name: t('commander.name'), fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined };
     void addSvgTexture(this.textures, 'michi-nebula', michiSvg(nebula, tokenCss('nebula-violet')), 160, 160).then(() => {
       if (this.sys.isActive()) this.portraitControl.setTexture('michi-nebula').setVisible(true).setAlpha(0.4);
     });
 
     this.speakerName = this.fixed(this.add.text(140, 32, '', { fontFamily: FONT_DISPLAY, fontSize: '18px', fontStyle: '700', color: tokenCss('comet-cyan') }));
-    this.fixed(this.add.text(610, 36, '● Enlace directo', { fontFamily: FONT_MONO, fontSize: '12px', color: tokenCss('comet-cyan') }).setOrigin(1, 0));
+    this.fixed(this.add.text(610, 36, t('launch.link'), { fontFamily: FONT_MONO, fontSize: '12px', color: tokenCss('comet-cyan') }).setOrigin(1, 0));
     this.speakerText = this.fixed(this.add.text(140, 62, '', { fontFamily: FONT_DISPLAY, fontSize: '22px', color: tokenCss('ink'), wordWrap: { width: 470 }, lineSpacing: 4 }));
 
-    this.panelLabel = this.fixed(this.add.text(1151, 38, 'Despegue', { fontFamily: FONT_MONO, fontSize: '13px', color: tokenCss('ink-muted') }).setOrigin(0.5));
+    this.panelLabel = this.fixed(this.add.text(1151, 38, t('launch.panel.liftoff'), { fontFamily: FONT_MONO, fontSize: '13px', color: tokenCss('ink-muted') }).setOrigin(0.5));
     this.panelValue = this.fixed(this.add.text(1151, 76, `T-${COUNTDOWN_FROM}`, { fontFamily: FONT_MONO, fontSize: '46px', fontStyle: '700', color: tokenCss('ink-muted') }).setOrigin(0.5));
   }
 
@@ -571,7 +572,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     const layers = [...LAYERS, CISLUNAR];
     while (this.layerShown < layers.length && this.lifted && a >= LAYER_LINE_AT[this.layerShown]) {
       const layer = layers[this.layerShown++];
-      this.queue.push({ at: t, who: 'control', text: `${layer.name}: ${layer.fact}` });
+      this.queue.push({ at: t, who: 'control', text: layerLine(layer.id) });
     }
 
     if (!this.lineDone) {
@@ -597,7 +598,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.lineDone = false;
     this.speakerText.setText('');
     const control = who === 'control';
-    this.speakerName.setText(control ? 'Comandante Nébula · Control de misión' : `${this.crew.name} · ${this.crew.role}`)
+    this.speakerName.setText(control ? `${t('commander.name')} · ${t('launch.control')}` : `${this.crew.name} · ${characterRole(this.crew.id)}`)
       .setColor(control ? tokenCss('comet-cyan') : tokenCss(this.crew.accent));
     this.portraitControl.setAlpha(control ? 1 : 0.4);
     this.portraitCrew.setAlpha(control ? 0.4 : 1);
@@ -635,11 +636,11 @@ export class LaunchLoadingScene extends Phaser.Scene {
     }
     if (this.lastCount !== -2) {
       this.lastCount = -2;
-      this.panelLabel.setText('Altitud');
+      this.panelLabel.setText(tr('launch.panel.altitude'));
       this.panelValue.setColor(tokenCss('star-gold')).setFontSize(32);
     }
     const km = altitudeKm(this.ascent(t));
-    this.panelValue.setText(`${Math.round(km).toLocaleString('es-CL')} km`);
+    this.panelValue.setText(`${Math.round(km).toLocaleString(dateLocale())} km`);
   }
 
   /** Fracción de la subida, 0–1. */
@@ -789,7 +790,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   /** El despegue se puede saltar con clic, Espacio, Esc o el botón (igual al de la historia). Si la carga no terminó, se espera a que termine. */
   private bindSkip(): void {
-    const ui = new UiLayer(this, `<button class="mn-btn mn-btn--secondary mn-btn--sm story__skip launch__skip" data-action="skip">${icon('skip')}Saltar</button>`, 'screen screen--clear');
+    const ui = new UiLayer(this, `<button class="mn-btn mn-btn--secondary mn-btn--sm story__skip launch__skip" data-action="skip">${icon('skip')}${t('common.skip')}</button>`, 'screen screen--clear');
     const request = (): void => void (this.skip = true);
     ui.on('skip', request);
     this.input.on('pointerdown', request);

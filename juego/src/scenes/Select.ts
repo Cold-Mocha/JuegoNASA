@@ -6,12 +6,13 @@ import { drawStarfield } from '../core/starfield';
 import { UiLayer, esc } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
 import { michiSvg, missionArtSvg } from '../core/art';
-import { MISSIONS, archiveFor, type MissionId } from '../data/missions';
-import { CHARACTERS, type CharacterId } from '../data/characters';
-import { DIFFICULTIES, type DifficultyId } from '../data/difficulties';
+import { MISSIONS, archiveFor, missionText, type MissionId } from '../data/missions';
+import { CHARACTERS, characterRole, characterTrait, type CharacterId } from '../data/characters';
+import { DIFFICULTIES, difficultyDescription, difficultyName, type DifficultyId } from '../data/difficulties';
 import { icon } from '../core/icons';
 import { DIFFICULTY_ICON } from '../core/iconMap';
 import { MICHI_ANIMS, type MichiAnim } from '../data/preload';
+import { t } from '../core/i18n';
 
 interface Option { id: string; title: string; subtitle: string; body: string; art: string; chips?: string[]; }
 interface Step { key: 'mission' | 'character' | 'difficulty'; label: string; options: Option[]; }
@@ -56,32 +57,32 @@ export class SelectScene extends Phaser.Scene {
     };
     this.steps = [
       {
-        key: 'character', label: 'Tripulante',
+        key: 'character', label: t('select.step.character'),
         options: CHARACTERS.map((c) => ({
-          id: c.id, title: c.name, subtitle: c.role, body: c.trait, art: michiSvg(c, tokenCss(c.accent)),
+          id: c.id, title: c.name, subtitle: characterRole(c.id), body: characterTrait(c.id), art: michiSvg(c, tokenCss(c.accent)),
         })),
       },
       {
-        key: 'mission', label: 'Jornada científica',
+        key: 'mission', label: t('select.step.mission'),
         options: [...MISSIONS.map((m) => {
           const best = state.progress.best[m.id];
           const flares = archiveFor(m).flares.length;
           return {
-            id: m.id, title: m.name, subtitle: m.question, body: m.brief,
+            id: m.id, title: missionText(m.id, 'name'), subtitle: missionText(m.id, 'question'), body: missionText(m.id, 'brief'),
             art: missionArtSvg(m.id, tokenCss(m.accent)),
-            chips: [`${m.tasks.length} tareas`, `Nuevo: ${m.newObject}`, `${flares} llamarada${flares === 1 ? '' : 's'} real${flares === 1 ? '' : 'es'}`, ...(best ? ['★'.repeat(best.stars)] : [])],
+            chips: [t('select.tasks', { n: m.tasks.length }), t('select.new', { name: missionText(m.id, 'newObject') }), t(flares === 1 ? 'select.flares.one' : 'select.flares.many', { n: flares }), ...(best ? ['★'.repeat(best.stars)] : [])],
           };
         }),
           ...(casaUnlocked() ? [{
-            id: 'casa', title: 'Casa', subtitle: 'Vuelve a la Tierra', body: 'Gira, frena, reingresa y planea.',
-            art: CASA_ART, chips: ['4 fases', ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
+            id: 'casa', title: t('casa.name'), subtitle: t('casa.subtitle'), body: t('casa.body'),
+            art: CASA_ART, chips: [t('casa.phases'), ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
           }] : []),
         ],
       },
       {
-        key: 'difficulty', label: 'Dificultad',
+        key: 'difficulty', label: t('select.step.difficulty'),
         options: DIFFICULTIES.map((d) => ({
-          id: d.id, title: d.name, subtitle: '', body: d.description, // las estrellas ya dicen el nivel
+          id: d.id, title: difficultyName(d.id), subtitle: '', body: difficultyDescription(d.id), // las estrellas ya dicen el nivel
           art: `<div class="option__icon">${icon(DIFFICULTY_ICON[d.id])}</div><div class="mn-stars">${STAR.repeat(d.stars)}${STAR_OFF.repeat(3 - d.stars)}</div>`,
         })),
       },
@@ -94,8 +95,8 @@ export class SelectScene extends Phaser.Scene {
         <ol class="stepper" data-stepper></ol>
         <div class="select__grid" role="radiogroup" data-grid></div>
         <div class="select__footer">
-          <button class="mn-btn mn-btn--secondary" data-action="back">Atrás</button>
-          <button class="mn-btn" data-action="next" data-next>Siguiente</button>
+          <button class="mn-btn mn-btn--secondary" data-action="back">${t('select.back')}</button>
+          <button class="mn-btn" data-action="next" data-next>${t('select.next')}</button>
         </div>
       </div>`);
 
@@ -144,8 +145,8 @@ export class SelectScene extends Phaser.Scene {
           </span>
         </button>`).join('');
       grid.innerHTML = `<div class="roster">${cards}</div>
-        <aside class="preview mn-panel" aria-label="Vista previa del tripulante">
-          <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="Tu michi astronauta"></div></div>
+        <aside class="preview mn-panel" aria-label="${t('select.preview')}">
+          <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="${t('select.sprite')}"></div></div>
         </aside>`;
       this.startPreview((this.picks.character as CharacterId | null) ?? CHARACTERS[0].id);
     } else {
@@ -161,7 +162,7 @@ export class SelectScene extends Phaser.Scene {
         .join('');
     }
     const next = this.ui.q<HTMLButtonElement>('[data-next]');
-    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}¡Despegar!` : 'Siguiente';
+    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}${t('select.launch')}` : t('select.next');
     this.syncNext();
     this.ui.focusFirst(this.picks[step.key] ? `.option[data-id="${this.picks[step.key]}"]` : '.option');
   }

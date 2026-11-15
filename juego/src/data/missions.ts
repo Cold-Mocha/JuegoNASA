@@ -2,6 +2,7 @@ import { DONKI_ARCHIVE, type ArchivedWeek } from './donki-archive';
 import { mapFlaresToDays } from '../sim/flares';
 import { ACTIONS } from '../sim/rules';
 import type { ActionId, RoomId, SolarEvent, TaskGoal } from '../sim/types';
+import { dateLocale, t } from '../core/i18n';
 
 /**
  * Jornadas científicas: cada una es una INVESTIGACIÓN con una lista de tareas. Al cumplirlas todas, la tripulación
@@ -12,65 +13,67 @@ import type { ActionId, RoomId, SolarEvent, TaskGoal } from '../sim/types';
  */
 export type MissionId = 'huerto-lunar' | 'paneles-solares' | 'hielo-lunar';
 
-/** Tarea con su texto para el jugador. */
-export type ResearchTask = TaskGoal & { label: string };
+export type TaskId =
+  | 'huerto-luces' | 'huerto-cosecha' | 'huerto-polvo' | 'huerto-datos'
+  | 'paneles-prueba' | 'paneles-polvo' | 'paneles-cosecha' | 'paneles-datos'
+  | 'hielo-muestras' | 'hielo-polvo' | 'hielo-cosecha' | 'hielo-datos';
+
+/** Tarea de una investigación; su texto para el jugador está en los diccionarios (`taskLabel`). */
+export type ResearchTask = TaskGoal & { id: TaskId };
 
 export interface Mission {
   id: MissionId;
-  name: string;
-  question: string;      // la pregunta que responde la investigación
-  brief: string;         // qué hay que hacer (texto para niños)
-  tagline: string;       // semana real del Sol que se vive de fondo
   level: 1 | 2 | 3;
   accent: string;        // token de color del design system
   archiveId: string;
   tasks: ResearchTask[];
-  newObject: string;     // objeto interactivo que solo aparece con esta jornada
   /** Paso del tutorial que lleva al objeto propio de la jornada. `handsOn`: se exige usarlo; si no, solo se explica (p. ej. el panel de pruebas necesita una tormenta de polvo). */
-  tutorial: { asset: string; action: ActionId; text: string; handsOn: boolean };
+  tutorial: { asset: string; action: ActionId; handsOn: boolean };
 }
 
 /** Plazo de cada jornada científica (días lunares comprimidos). */
 export const MISSION_DAYS = 7;
 
-const act = (id: string, action: ActionId, count: number, label: string, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, label, stage });
+const act = (id: TaskId, action: ActionId, count: number, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, stage });
+
+/**
+ * Textos de una jornada: nombre, pregunta que responde, qué hay que hacer (para niños), semana real del Sol que se vive de fondo,
+ * objeto que solo aparece con ella y el paso del tutorial que lleva a ese objeto.
+ */
+export type MissionField = 'name' | 'question' | 'brief' | 'tagline' | 'newObject' | 'tutorial';
+export const missionText = (id: MissionId, field: MissionField): string => t(`mission.${id}.${field}`);
+export const taskLabel = (task: ResearchTask): string => t(`task.${task.id}`);
 
 /** Tres jornadas: la primera con el Sol tranquilo y las otras dos con semanas reales de llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
 export const MISSIONS: Mission[] = [
   {
-    id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Cultivo de algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
-    tutorial: { asset: 'tanque-algas', action: 'growLights', handsOn: true, text: 'Tu investigación: ve al Cultivo de algas, en el invernadero, y úsalo. Es un minijuego: mantén luz, nutrientes y temperatura en la franja verde.' },
-    question: '¿Pueden las algas darnos aire y comida en la Luna?',
-    brief: 'Cultiva algas con luz. El Sol está tranquilo.',
+    id: 'huerto-lunar', level: 1, accent: 'aurora-teal', archiveId: 'quiet-2019',
+    tutorial: { asset: 'tanque-algas', action: 'growLights', handsOn: true },
     tasks: [
-      act('huerto-luces', 'growLights', 3, 'Encender las luces de las algas 3 días'),
-      act('huerto-cosecha', 'harvest', 1, 'Cosechar las plantas'),
-      act('huerto-polvo', 'cleanDust', 1, 'Limpiar los paneles solares'),
-      act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      act('huerto-luces', 'growLights', 3),
+      act('huerto-cosecha', 'harvest', 1),
+      act('huerto-polvo', 'cleanDust', 1),
+      act('huerto-datos', 'repairAntenna', 1, 2),
     ],
   },
   {
-    id: 'paneles-solares', name: 'Energía del Sol', level: 2, newObject: 'Panel de pruebas', accent: 'star-gold', archiveId: 'may-2024', tagline: 'Sol de mayo de 2024',
-    tutorial: { asset: 'panel-solar', action: 'cleanTestPanel', handsOn: false, text: 'Tu investigación: el Panel de pruebas, afuera. Cuando una tormenta de polvo lo ensucie, límpialo y oriéntalo al Sol para medir su energía.' },
-    question: '¿Cuánta energía da el Sol en la Luna, y qué la reduce?',
-    brief: 'Mide los paneles en la semana de tormentas solares que llevó auroras al sur de Chile.',
+    id: 'paneles-solares', level: 2, accent: 'star-gold', archiveId: 'may-2024',
+    tutorial: { asset: 'panel-solar', action: 'cleanTestPanel', handsOn: false },
     tasks: [
-      act('paneles-prueba', 'cleanTestPanel', 3, 'Limpiar el panel de pruebas 3 días'),
-      act('paneles-polvo', 'cleanDust', 1, 'Limpiar los paneles de la estación'),
-      act('paneles-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
-      act('paneles-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      act('paneles-prueba', 'cleanTestPanel', 3),
+      act('paneles-polvo', 'cleanDust', 1),
+      act('paneles-cosecha', 'harvest', 1),
+      act('paneles-datos', 'repairAntenna', 1, 2),
     ],
   },
   {
-    id: 'hielo-lunar', name: 'Hielo en la Luna', level: 3, newObject: 'Taladro de hielo', accent: 'comet-cyan', archiveId: 'oct-2024', tagline: 'Sol de octubre de 2024',
-    tutorial: { asset: 'roca-hielo', action: 'eva', handsOn: true, text: 'Tu investigación: ve al Taladro de hielo, afuera, y úsalo. Es un minijuego: empareja cada pico del espectro con su huella.' },
-    question: '¿Hay agua congelada cerca de la estación?',
-    brief: 'Busca hielo en la roca de afuera.',
+    id: 'hielo-lunar', level: 3, accent: 'comet-cyan', archiveId: 'oct-2024',
+    tutorial: { asset: 'roca-hielo', action: 'eva', handsOn: true },
     tasks: [
-      act('hielo-muestras', 'eva', 2, 'Recoger muestras de hielo 2 días'),
-      act('hielo-polvo', 'cleanDust', 1, 'Limpiar los paneles antes de salir'),
-      act('hielo-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
-      act('hielo-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      act('hielo-muestras', 'eva', 2),
+      act('hielo-polvo', 'cleanDust', 1),
+      act('hielo-cosecha', 'harvest', 1),
+      act('hielo-datos', 'repairAntenna', 1, 2),
     ],
   },
 ];
@@ -93,11 +96,11 @@ export const missionEvents = (m: Mission): SolarEvent[] => {
 export function realDate(m: Mission, day: number): string {
   const d = new Date(`${archiveFor(m).startDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + day - 1);
-  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 /** Quién registró las llamaradas de la jornada: DONKI solo si la semana ya se contrastó con su API. */
 export const sourceName = (m: Mission): string => (archiveFor(m).verifiedAgainstDonki ? 'NASA DONKI' : 'NASA / NOAA');
 
 /** Texto de crédito honesto: dice si el dato es archivado y si ya se verificó contra DONKI. */
-export const sourceCredit = (m: Mission): string => `Clima solar real: ${sourceName(m)}, archivo histórico (no en vivo)`;
+export const sourceCredit = (m: Mission): string => t('source.credit', { source: sourceName(m) });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DONKI_ARCHIVE } from '../../src/data/donki-archive';
-import { MISSIONS, MISSION_DAYS, archiveFor, missionEvents, realDate, sourceCredit, taskRoom } from '../../src/data/missions';
-import { ENTRIES, entryForRoom } from '../../src/data/encyclopedia';
+import { MISSIONS, MISSION_DAYS, archiveFor, missionEvents, missionText, realDate, sourceCredit, taskLabel, taskRoom } from '../../src/data/missions';
+import { ENTRIES, entryForRoom, entryText } from '../../src/data/encyclopedia';
 import { DIFFICULTIES } from '../../src/data/difficulties';
 import { ROOM_IDS } from '../../src/data/rooms';
 import { parseFlareClass } from '../../src/sim/flares';
@@ -48,11 +48,11 @@ describe('jornadas científicas', () => {
     const ids = MISSIONS.flatMap((m) => m.tasks.map((t) => t.id));
     expect(new Set(ids).size).toBe(ids.length);
     for (const m of MISSIONS) {
-      expect(m.question.endsWith('?'), m.id).toBe(true);
+      expect(missionText(m.id, 'question').endsWith('?'), m.id).toBe(true);
       expect(m.tasks.length, m.id).toBeGreaterThanOrEqual(3);
       expect(m.tasks.length, m.id).toBeLessThanOrEqual(5);
       for (const t of m.tasks) {
-        expect(t.label.length, t.id).toBeLessThanOrEqual(48);
+        expect(taskLabel(t).length, t.id).toBeLessThanOrEqual(48);
         expect(t.count, t.id).toBeGreaterThan(0);
       }
     }
@@ -80,8 +80,8 @@ describe('Archivo Científico', () => {
 
   it('textos breves (legibles para 7–12 años)', () => {
     for (const e of ENTRIES) {
-      expect(e.text.length, e.id).toBeLessThanOrEqual(260);
-      expect(e.fact.length, e.id).toBeLessThanOrEqual(90);
+      expect(entryText(e.id, 'text').length, e.id).toBeLessThanOrEqual(260);
+      expect(entryText(e.id, 'fact').length, e.id).toBeLessThanOrEqual(90);
     }
   });
 

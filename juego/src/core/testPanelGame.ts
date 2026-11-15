@@ -1,5 +1,6 @@
 import { mountDustGame } from './dustGame';
 import type { MiniCallbacks, MiniGameHandle } from './miniGames';
+import { t } from './i18n';
 
 /**
  * Panel de pruebas (Energía del Sol), sin texto, en dos pasos:
@@ -36,12 +37,12 @@ export function mountTestPanel(root: HTMLElement, cb: MiniCallbacks): MiniGameHa
     const sx = PIVOT.x + SUN_R * Math.sin((sunAngle * Math.PI) / 180);
     const sy = PIVOT.y - SUN_R * Math.cos((sunAngle * Math.PI) / 180);
     root.innerHTML = `<div class="aim" style="width:${W}px;height:${H}px">
-      <div class="aim__time" role="progressbar" aria-label="Tiempo" aria-valuemin="0" aria-valuemax="${AIM_SECONDS}"><i data-time></i></div>
+      <div class="aim__time" role="progressbar" aria-label="${t('mini.time')}" aria-valuemin="0" aria-valuemax="${AIM_SECONDS}"><i data-time></i></div>
       <div class="aim__sun" style="left:${sx - 32}px;top:${sy - 32}px">${SUN_SVG}</div>
       <div class="aim__panel" data-panel style="left:${PIVOT.x - 80}px;top:${PIVOT.y - 100}px">${PANEL_SVG}</div>
-      <div class="aim__meter" role="meter" aria-label="Potencia" aria-valuemin="0" aria-valuemax="100"><i data-power></i></div>
-      <button class="aim__btn aim__btn--l" data-dir="-1" aria-label="Girar a la izquierda"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="#0e0b33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="aim__btn aim__btn--r" data-dir="1" aria-label="Girar a la derecha"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#0e0b33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+      <div class="aim__meter" role="meter" aria-label="${t('mini.power')}" aria-valuemin="0" aria-valuemax="100"><i data-power></i></div>
+      <button class="aim__btn aim__btn--l" data-dir="-1" aria-label="${t('mini.turnLeft')}"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="#0e0b33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="aim__btn aim__btn--r" data-dir="1" aria-label="${t('mini.turnRight')}"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#0e0b33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     const stage = root.firstElementChild as HTMLElement;
     const panel = stage.querySelector<HTMLElement>('[data-panel]')!;
     const power = stage.querySelector<HTMLElement>('[data-power]')!;

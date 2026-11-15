@@ -1,3 +1,5 @@
+import { t } from '../core/i18n';
+
 /**
  * Guion y línea de tiempo del despegue (pantalla de carga). Todos los tiempos en ms desde que abre la escena.
  * Los instantes del conteo regresivo se derivan de LIFTOFF_MS: T-n = LIFTOFF_MS - n·1000.
@@ -17,15 +19,15 @@ export interface LaunchLine {
   text: string;      // `{name}` se reemplaza por el nombre del tripulante elegido
 }
 
-/** Comunicación directa entre el Control de misión (torre) y el tripulante elegido. */
-export const LAUNCH_SCRIPT: LaunchLine[] = [
-  { at: 600, who: 'control', text: 'Control de misión a {name}: ¿me recibes?' },
-  { at: 3000, who: 'crew', text: 'Fuerte y claro, Control. ¡Listos para despegar!' },
-  { at: 5300, who: 'control', text: 'Comandos de vuelo verificados: navegación, motores y presión en verde.' },
-  { at: 8300, who: 'control', text: 'Sensores: los satélites están en órbita y nos envían datos. ¡Encendiendo motores!' },
-  { at: 11_200, who: 'crew', text: 'Siento cómo vibra todo. ¡Motores al máximo!' },
-  { at: 13_000, who: 'control', text: '¡Todo listo! Que la Luna te reciba, {name}.' },
-  { at: 15_100, who: 'control', text: '¡Despegue! Subimos con calma, {name}.' },
+/** Comunicación directa entre el Control de misión (torre) y el tripulante elegido; `{name}` es el nombre del tripulante (ver `fillName`). */
+export const launchScript = (): LaunchLine[] => [
+  { at: 600, who: 'control', text: t('launch.line.1') },
+  { at: 3000, who: 'crew', text: t('launch.line.2') },
+  { at: 5300, who: 'control', text: t('launch.line.3') },
+  { at: 8300, who: 'control', text: t('launch.line.4') },
+  { at: 11_200, who: 'crew', text: t('launch.line.5') },
+  { at: 13_000, who: 'control', text: t('launch.line.6') },
+  { at: 15_100, who: 'control', text: t('launch.line.7') },
 ];
 
 /**

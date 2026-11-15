@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /**
  * Minijuego de sellar una fractura: una placa del casco con una grieta zigzag por la que se escapa el aire.
  * Se sigue la grieta con el sellador (arrastrando el ratón o el dedo, o con las flechas del teclado) hasta cubrirla entera.
@@ -89,7 +91,7 @@ export function mountSealGame(root: HTMLElement, opts: Options): SealGame {
   root.innerHTML = `<div class="seal" style="width:${W}px;height:${H}px">
     <canvas class="seal__plate" width="${W}" height="${H}"></canvas>
     <div class="seal__air"></div>
-    <canvas class="seal__bead" width="${W}" height="${H}" aria-label="Fractura en el casco" role="img"></canvas>
+    <canvas class="seal__bead" width="${W}" height="${H}" aria-label="${t('mini.crack')}" role="img"></canvas>
     <div class="seal__tool" aria-hidden="true">${TOOL_SVG}</div></div>`;
   const wrap = root.firstElementChild as HTMLElement;
   const [plate, bead] = [...wrap.querySelectorAll('canvas')] as HTMLCanvasElement[];

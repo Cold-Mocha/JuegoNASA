@@ -5,6 +5,7 @@ import type { DifficultyId } from '../data/difficulties';
 import type { MissionSummary } from '../sim/simulation';
 import type { ScoreResult } from '../sim/score';
 import type { AchievementId } from '../sim/achievements';
+import { SETTINGS_KEY, detectLang, isLang, setLang, type Lang } from './i18n';
 
 /**
  * Estado global mínimo.
@@ -19,6 +20,7 @@ export interface Settings {
   musicVolume: number; // 0–1
   sfxVolume: number;   // 0–1
   showFps: boolean;
+  lang: Lang; // idioma de la interfaz (es | en)
 }
 
 export interface Loadout {
@@ -44,7 +46,6 @@ export interface LastResult {
   newBest: boolean;
 }
 
-const SETTINGS_KEY = 'michinautas:settings:v1';
 const PROGRESS_KEY = 'michinautas:progress:v1';
 
 /** Equipos modestos (≤ 2 núcleos o ≤ 2 GB) arrancan en modo Ultra Ligero. */
@@ -61,6 +62,7 @@ const defaults: Settings = {
   musicVolume: 0.4,
   sfxVolume: 0.7,
   showFps: false,
+  lang: detectLang(),
 };
 
 const emptyProgress: Progress = { best: {}, achievements: [], readEntries: [], tutorialDone: false };
@@ -92,6 +94,7 @@ class GameState {
 
   saveSettings(patch: Partial<Settings>): void {
     this.settings = { ...this.settings, ...patch };
+    if (patch.lang) setLang(this.settings.lang);
     safeWrite(SETTINGS_KEY, this.settings);
   }
 
@@ -127,3 +130,5 @@ class GameState {
 }
 
 export const state = new GameState();
+if (!isLang(state.settings.lang)) state.settings.lang = detectLang(); // dato guardado corrupto o de una versión anterior
+setLang(state.settings.lang);

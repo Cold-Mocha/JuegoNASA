@@ -2,6 +2,7 @@ import { DONKI_ARCHIVE, type ArchivedWeek } from './donki-archive';
 import { mapFlaresToDays } from '../sim/flares';
 import { ACTIONS } from '../sim/rules';
 import type { ActionId, RoomId, SolarEvent, TaskGoal } from '../sim/types';
+import { getLang, localize, t } from '../core/i18n';
 
 /**
  * Jornadas científicas: cada una es una INVESTIGACIÓN con una lista de tareas. Al cumplirlas todas, la tripulación
@@ -36,7 +37,7 @@ export const MISSION_DAYS = 7;
 const act = (id: string, action: ActionId, count: number, label: string, stage?: 1 | 2): ResearchTask => ({ id, kind: 'action', action, count, label, stage });
 
 /** Tres jornadas: las dos primeras con el Sol tranquilo y la tercera con llamaradas. Cada una trae su objeto propio en el mapa (ver data/rooms.ts). */
-export const MISSIONS: Mission[] = [
+export const MISSIONS: Mission[] = localize([
   {
     id: 'huerto-lunar', name: 'Huerto lunar', level: 1, newObject: 'Cultivo de algas', accent: 'aurora-teal', archiveId: 'quiet-2019', tagline: 'Sol de diciembre de 2019',
     tutorial: { asset: 'tanque-algas', action: 'growLights', handsOn: true, text: 'Tu investigación: ve al Cultivo de algas, en el invernadero, y úsalo. Es un minijuego: mantén luz, nutrientes y temperatura en la franja verde.' },
@@ -47,6 +48,7 @@ export const MISSIONS: Mission[] = [
       act('huerto-cosecha', 'harvest', 1, 'Cosechar el invernadero'),
       act('huerto-polvo', 'cleanDust', 1, 'Limpiar los paneles solares'),
       act('huerto-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      { id: 'huerto-sonda', kind: 'probe', count: 1, label: 'Llamar a la sonda y recoger las rocas lunares', stage: 2 },
     ],
   },
   {
@@ -59,6 +61,7 @@ export const MISSIONS: Mission[] = [
       act('paneles-polvo', 'cleanDust', 1, 'Limpiar los paneles de la estación'),
       act('paneles-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
       act('paneles-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      { id: 'paneles-sonda', kind: 'probe', count: 1, label: 'Llamar a la sonda y recoger las rocas lunares', stage: 2 },
     ],
   },
   {
@@ -71,12 +74,13 @@ export const MISSIONS: Mission[] = [
       act('hielo-polvo', 'cleanDust', 1, 'Limpiar los paneles antes de salir'),
       act('hielo-cosecha', 'harvest', 1, 'Cosechar para tener comida'),
       act('hielo-datos', 'repairAntenna', 1, 'Reparar la antena y avisar a la Tierra', 2),
+      { id: 'hielo-sonda', kind: 'probe', count: 1, label: 'Llamar a la sonda y recoger las rocas lunares', stage: 2 },
     ],
   },
-];
+]);
 
 /** Sala donde se avanza una tarea (para guiar al jugador). */
-export const taskRoom = (t: TaskGoal): RoomId => (t.kind === 'action' ? ACTIONS[t.action].room : t.kind === 'shelter' ? 'esclusa' : 'exterior');
+export const taskRoom = (t: TaskGoal): RoomId => (t.kind === 'action' ? ACTIONS[t.action].room : t.kind === 'shelter' ? 'esclusa' : t.kind === 'probe' ? 'comunicaciones' : 'exterior');
 
 export const archiveFor = (m: Mission): ArchivedWeek => {
   const week = DONKI_ARCHIVE.find((w) => w.id === m.archiveId);
@@ -93,9 +97,9 @@ export const missionEvents = (m: Mission): SolarEvent[] => {
 export function realDate(m: Mission, day: number): string {
   const d = new Date(`${archiveFor(m).startDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + day - 1);
-  return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  return d.toLocaleDateString(getLang() === 'en' ? 'en-US' : 'es-CL', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 /** Texto de crédito honesto: dice si el dato es archivado y si ya se verificó contra DONKI. */
 export const sourceCredit = (m: Mission): string =>
-  archiveFor(m).verifiedAgainstDonki ? 'FUENTE: NASA DONKI, archivo histórico (no en vivo)' : 'FUENTE: NASA / NOAA, archivo histórico (no en vivo)';
+  t(archiveFor(m).verifiedAgainstDonki ? 'FUENTE: NASA DONKI, archivo histórico (no en vivo)' : 'FUENTE: NASA / NOAA, archivo histórico (no en vivo)');

@@ -599,3 +599,11 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .aim__btn { position: absolute; bottom: 14px; width: 84px; height: 56px; border-radius: var(--radius-md); border: 3px solid var(--ink-dark); background: var(--lunar-200, #c4c2e0); display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 0 var(--ink-dark); }
 .aim__btn--l { left: 40px; } .aim__btn--r { right: 40px; }
 .aim__btn:active { transform: translateY(3px); box-shadow: none; }
+
+/* Selector de idioma (Español | English) */
+.lang-switch { display: flex; gap: 8px; }
+.menu__lang { position: absolute; top: 20px; right: 28px; z-index: 2; }
+
+.story__meta .caption-mono { max-width: 82%; line-height: 1.35; }
+.report__chapter { display: grid; gap: var(--space-2); padding: var(--space-3); border: 2px dashed var(--ink-muted); border-radius: 12px; justify-items: start; }
+.casa__chapter { display: grid; gap: var(--space-2); max-width: 560px; padding: var(--space-3); border: 2px dashed var(--ink-muted); border-radius: 12px; justify-items: start; }

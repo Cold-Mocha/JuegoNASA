@@ -14,7 +14,10 @@ Requiere: pip install playwright pillow && playwright install chromium
 import json, os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image, ImageFilter
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:      # sin Playwright: rasteriza con cairosvg (pip install cairosvg); el resultado es casi idéntico
+    sync_playwright = None
 import michi_papel as M
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'personajes', 'michi-papel')
@@ -42,7 +45,9 @@ def main():
     shutil.rmtree(OUT, ignore_errors=True)
     # CHROMIUM=/ruta/al/navegador reutiliza un Chromium ya instalado (p. ej. el de los tests del juego)
     launch = {'executable_path': os.environ['CHROMIUM']} if os.environ.get('CHROMIUM') else {}
-    with sync_playwright() as p:
+    if sync_playwright is not None and os.environ.get('RENDERER') != 'cairosvg':
+        ctx = sync_playwright()
+        p = ctx.__enter__()
         b = p.chromium.launch(**launch)
         pg = b.new_page(viewport={'width': F2, 'height': F2})
 
@@ -50,7 +55,13 @@ def main():
             pg.set_content(f'<body style="margin:0;background:transparent">{svg}</body>')
             pg.locator('svg').screenshot(path='/tmp/_michi.png', omit_background=True)
             return Image.open('/tmp/_michi.png').convert('RGBA')
+    else:
+        import cairosvg, io
+        b = ctx = None
 
+        def raw(svg):
+            return Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode('utf-8'), output_width=F2, output_height=F2))).convert('RGBA')
+    if True:
         base = M.VARIANTS['miu']
         # 1) capas separadas
         for tag, hel in HELMETS.items():
@@ -101,7 +112,9 @@ def main():
             'animaciones': meta, 'variantes': list(M.VARIANTS), 'cascos': list(HELMETS),
             'ruta': 'spritesheets/<variante>/<casco|sin-casco>/michi-<variante>-<casco>-<anim>[@2x].png',
         }, ensure_ascii=False, indent=2))
-        b.close()
+        if b is not None:
+            b.close()
+            ctx.__exit__(None, None, None)
     n = sum(len(fs) for _, _, fs in os.walk(OUT))
     print('archivos:', n, '→', OUT)
 

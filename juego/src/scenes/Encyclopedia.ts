@@ -10,6 +10,7 @@ import { DONKI_ARCHIVE } from '../data/donki-archive';
 import { READER_GOAL } from '../sim/achievements';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { icon } from '../core/icons';
+import { t } from '../core/i18n';
 import { CATEGORY_ICON } from '../core/iconMap';
 
 interface ArchiveData { from?: string; entry?: string; }
@@ -32,15 +33,15 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.ui = new UiLayer(this, /* html */ `
       <div class="archive">
         <header class="archive__head">
-          <div><h1 class="display-lg archive__title">Archivo científico</h1>
-          <p class="body archive__subtitle">¿Sabías qué? Los datos reales detrás del juego. Leídas: <span data-read></span>/${ENTRIES.length}</p></div>
-          <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}Volver</button>
+          <div><h1 class="display-lg archive__title">${t('Archivo científico')}</h1>
+          <p class="body archive__subtitle">${t('¿Sabías qué? Los datos reales detrás del juego. Leídas:')} <span data-read></span>/${ENTRIES.length}</p></div>
+          <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}${t('Volver')}</button>
         </header>
         <div class="archive__body">
           <ul class="archive__list" data-list></ul>
           <article class="mn-panel archive__detail" data-detail aria-live="polite"></article>
         </div>
-        <p class="caption-mono archive__note">Clima espacial: ${DONKI_ARCHIVE.length} semanas reales guardadas en el juego (archivo histórico, no en vivo).</p>
+        <p class="caption-mono archive__note">${t('Clima espacial: {n} semanas reales guardadas en el juego (archivo histórico, no en vivo).', { n: DONKI_ARCHIVE.length })}</p>
       </div>`);
 
     this.ui
@@ -67,8 +68,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       <h2 class="mn-panel__title archive__detail-title">${esc(e.title)}</h2>
       <p class="mn-telemetry__value archive__fact">${esc(e.fact)}</p>
       <p class="mn-panel__body">${esc(e.text)}</p>
-      <p class="archive__ingame"><strong>En el juego:</strong> ${esc(e.inGame)}</p>
-      <p class="caption-mono archive__source">FUENTE: <a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.source)}</a></p>`;
+      <p class="archive__ingame"><strong>${t('En el juego:')}</strong> ${esc(e.inGame)}</p>
+      <p class="caption-mono archive__source">${t('FUENTE')}: <a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.source)}</a></p>`;
     this.ui.el.querySelectorAll<HTMLElement>('.archive__item').forEach((b) => b.setAttribute('aria-current', String(b.dataset.id === e.id)));
     const before = state.progress.readEntries.length;
     const count = state.markRead(e.id);
@@ -76,7 +77,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     if (count !== before) this.ui.el.querySelector(`.archive__item[data-id="${e.id}"]`)?.classList.add('is-read');
     if (count >= READER_GOAL && state.unlock(['reader']).length) {
       audio.play('achievement');
-      this.ui.q('.archive__note').textContent = `¡Logro desbloqueado: ${ACHIEVEMENTS.reader.title}!`;
+      this.ui.q('.archive__note').textContent = t('¡Logro desbloqueado: {title}!', { title: ACHIEVEMENTS.reader.title });
     }
   }
 
@@ -86,6 +87,6 @@ export class EncyclopediaScene extends Phaser.Scene {
       this.scene.stop();
       return;
     }
-    fadeTo(this, SCENES.menu);
+    fadeTo(this, this.from === SCENES.report ? SCENES.report : SCENES.menu);
   }
 }

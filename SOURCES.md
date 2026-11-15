@@ -72,3 +72,28 @@ Los sprites de `herramientas/props_detallados.py` se inspiran en equipo real; so
 - **Tamaños y avisos de clima espacial:** Miteva et al. y Buzulukova y Tsurutani (tiempos de llamaradas, partículas y eyecciones de masa coronal; caso Carrington ~17 h 40 min) **[REAL]**; no se muestran en pantalla todavía.
 - **Biofirmas:** los orgánicos solos no prueban vida; se necesitan varias pruebas independientes **[MODELO]**.
 - **Opportunity (2018):** la tormenta de polvo bloqueó la luz solar; no afirmar que "cubrió los paneles" **[verificar]**.
+
+## Capa «Laboratorio Chile» (fichas de `category: 'chile'` en `src/data/encyclopedia.ts`)
+Solo fuentes oficiales; el juego no nombra instituciones. Verificar con `npm run check:sources` (requiere red).
+- **Acuerdos Artemis:** NASA, «NASA Welcomes Chile as Newest Artemis Accords Signatory» (25 oct 2024, país n.º 47). https://www.nasa.gov/news-release/nasa-welcomes-chile-as-newest-artemis-accords-signatory **[REAL]**
+- **Seguimiento de satélites (Minitrack, Santiago):** NASA, historia de las redes de comunicación con misiones. https://www.nasa.gov/communicating-with-missions/history-of-the-networks/ **[REAL]**
+- **Telescopio Cosmológico de Atacama (ACT):** NASA LAMBDA. https://lambda.gsfc.nasa.gov/product/act/ **[REAL]**
+- **ARADS (róver en Atacama):** NASA. https://www.nasa.gov/?p=427586 **[REAL]**
+- **Ayuda tras el terremoto de 1960:** U.S. Department of State, Office of the Historian (FRUS 1958–60, vol. V). https://history.state.gov/historicaldocuments/frus1958-60v05mSupp/ch_d37 **[REAL]**
+- **Alianza para el Progreso (1961):** U.S. Department of State, Office of the Historian. https://history.state.gov/milestones/1969-1976/allende **[verificar]**: la página trata los años de Allende y el golpe, no es apta para niños; la página `.../1961-1968/alliance-for-progress` no menciona a Chile ni a Kennedy. Buscar una fuente oficial más adecuada.
+- **Cerro Tololo:** NOIRLab, línea de tiempo. https://noirlab.edu/public/about/timeline **[REAL]**
+- **Mensajes de la Dra. Almendra:** personaje ficticio **[RECREACIÓN]**.
+- **Contenedor chileno en la ISS / base lunar:** el contenedor real está en órbita baja; la base lunar es ficción (se dice en pantalla).
+
+## Fase C: «ADN de papel» y biofirmas (fichas `synthetic-biology-light`, `biosignature`, `radiation-microbe`)
+Todas las URLs son de dominios NASA (consultadas el 15 nov 2026). Correr `npm run check:sources` (requiere red) antes de publicar.
+- **Biología sintética (diseñar un microbio para una función):** NASA, Space Synthetic Biology (SynBio), Ames. https://www.nasa.gov/space-synthetic-biology-synbio/ — BioNutrients: levadura de panadería modificada para producir betacaroteno y zeaxantina a pedido; lanzada a la ISS en abril de 2019. **[REAL]**
+  - Apoyo: NASA, «What is BioNutrients?» https://www.nasa.gov/general/what-is-bionutrients/ (levadura que forma esporas: forma dormida muy estable y tolerante a la radiación). **[REAL]**
+  - Apoyo: NASA Ames, Synthetic Biology. https://www.nasa.gov/ames/space-biosciences/bioengineering-branch/synthetic-biology/ (Space Algae: la radiación y la microgravedad aumentan las mutaciones en microalgas; en Space Algae-1 hubo ~50 % más de polimorfismos de ADN que en el control en tierra). **[REAL]**
+  - Apoyo: NTRS 20240001989, «Synthetic Biology to Support Human Exploration of Deep Space». https://ntrs.nasa.gov/citations/20240001989 (LEIA llevaría levadura al polo sur lunar para medir radiación). **[REAL]**
+- **Biofirma:** NASA Science, «What is a Potential Biosignature?». https://science.nasa.gov/resource/what-is-a-potential-biosignature/ — una biofirma posible necesita más datos antes de concluir. **[REAL]**
+  - Apoyo: NASA Astrobiology, «What is a biosignature?». https://astrobiology.nasa.gov/education/alp/what-is-a-biosignature/ (evidencia de vida pasada o presente que no puede formarse sin vida). **[REAL]**
+  - Apoyo: NASA/JPL, «NASA Asks: Will We Know Life When We See It?». https://www.jpl.nasa.gov/news/nasa-asks-will-we-know-life-when-we-see-it/ (ver o no ver una sola biofirma no basta; importa el contexto). **[REAL]**
+- **Microbio resistente a la radiación:** NASA Astrobiology, «Life in the Extreme: Radiation». https://astrobiology.nasa.gov/news/life-in-the-extreme-radiation/ — *Deinococcus radiodurans* sobrevive dosis ~500 veces mayores que las humanas; guarda copias de su ADN y lo repara. **[REAL]**
+  - Apoyo: NTRS 20120016257 (5 kGy de radiación ionizante). https://ntrs.nasa.gov/citations/20120016257 **[REAL]**
+- **Reglas del juego (costos 10/15/15 %, «solo cuando detecta» 40 %, pruebas de biofirma):** diseño propio **[MODELO]**; los porcentajes no son mediciones. Las piezas protectoras están *inspiradas* en microbios extremos; las algas del huerto no son esos microbios.

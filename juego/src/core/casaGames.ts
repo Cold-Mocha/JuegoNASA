@@ -7,6 +7,7 @@ import {
   glideScore, glideStep, initialReentry, spinAngle, stepReentry,
 } from '../sim/entry';
 import type { MiniGameHandle } from './miniGames';
+import { t as tr } from './i18n';
 
 export const CASA_W = 380;
 export const CASA_H = 500;
@@ -27,7 +28,7 @@ export function mountInspect(root: HTMLElement, damaged: number, cb: PhaseDone):
     <div class="insp__time"><i data-time></i></div>
     <div class="insp__ship" data-ship>${SHIP}</div>
     <div class="insp__window" data-window><div class="insp__belly">${Array.from({ length: total }, (_, i) =>
-      `<button class="insp__tile ${cracks.has(i) ? 'is-crack' : ''}" data-i="${i}" aria-label="Loseta"></button>`).join('')}</div></div>
+      `<button class="insp__tile ${cracks.has(i) ? 'is-crack' : ''}" data-i="${i}" aria-label="${tr('Loseta')}"></button>`).join('')}</div></div>
     <div class="insp__flash" data-flash></div></div>`;
   const ship = root.querySelector<HTMLElement>('[data-ship]')!;
   const win = root.querySelector<HTMLElement>('[data-window]')!;
@@ -206,8 +207,8 @@ export function mountReentry(root: HTMLElement, heatMult: number, cb: PhaseDone)
 export function mountGlide(root: HTMLElement, cb: PhaseDone): MiniGameHandle {
   root.innerHTML = `<div class="casa-stage glide" style="width:${CASA_W}px;height:${CASA_H}px">
     <canvas width="${CASA_W}" height="${CASA_H}" data-canvas></canvas>
-    <button class="glide__btn glide__btn--up" data-dir="-1" aria-label="Subir la nariz">▲</button>
-    <button class="glide__btn glide__btn--down" data-dir="1" aria-label="Bajar la nariz">▼</button></div>`;
+    <button class="glide__btn glide__btn--up" data-dir="-1" aria-label="${tr('Subir la nariz')}">▲</button>
+    <button class="glide__btn glide__btn--down" data-dir="1" aria-label="${tr('Bajar la nariz')}">▼</button></div>`;
   const ctx = root.querySelector<HTMLCanvasElement>('[data-canvas]')!.getContext('2d')!;
   let t = 0;
   let alt = 1;

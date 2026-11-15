@@ -48,7 +48,7 @@ La escena `Station` solo traduce entrada → `sim.act()/travel()` y dibuja el es
 | 4 | QA (E2E) | Al cambiar de sala se destruía el sprite del michi (`removeAll(true)`) → error y sala sin actualizar | El michi y su sombra se sacan del contenedor antes de limpiar |
 | 5 | QA (E2E) | Volver del Archivo podía dejar la estación pausada | Orden `resume` → `stop` |
 | 6 | QA (E2E) | El canvas WebGL no se puede leer con `drawImage` | La verificación analiza una captura real |
-| 7 | QA (edad) | Textos en femenino ("¡Bienvenida!", "Exploradora") aunque se puede elegir a Tomás | Forma neutra en tutorial y logros |
+| 7 | QA (edad) | Textos en femenino ("¡Bienvenida!", "Exploradora") aunque se puede elegir a Leo | Forma neutra en tutorial y logros |
 | 8 | Científico | La API DONKI devolvió 429 y el espejo CCMC no respondió | Archivo curado desde NASA/NOAA marcado `verifiedAgainstDonki: false` y texto "NASA / NOAA · no en vivo"; script `npm run data:donki` para verificar |
 | 9 | Científico | 3 URLs candidatas rotas (ESA, blog NASA, DOI) | Reemplazadas por URLs que responden 200 |
 | 10 | Dev | Checkbox de contraste siempre marcado (el tema es un string) | Comparación explícita |

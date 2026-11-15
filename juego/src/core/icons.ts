@@ -45,6 +45,7 @@ const PATHS = {
   galaxy: '<circle cx="12" cy="12" r="2"/><path d="M12 4c5 0 8 3.5 8 7s-4 4-6.5 2.5M12 20c-5 0-8-3.5-8-7s4-4 6.5-2.5"/>',
   medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5L6 3h4l2 4.5L14 3h4l-2.5 7.5"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4.5h12.5l-2.5 4 2.5 4H5"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

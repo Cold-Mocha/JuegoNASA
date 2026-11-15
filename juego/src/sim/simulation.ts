@@ -33,7 +33,7 @@ const RESOURCE_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health'
 
 /** Avance de una tarea (0..count) según lo hecho: sirve en la partida y en el informe final. */
 export function taskProgress(t: TaskGoal, stats: SimStats, science: number): number {
-  const n = t.kind === 'action' ? stats.actionsBy[t.action] ?? 0 : t.kind === 'science' ? science : stats.shelteredFlares;
+  const n = t.kind === 'action' ? stats.actionsBy[t.action] ?? 0 : t.kind === 'science' ? science : t.kind === 'probe' ? stats.probe : stats.shelteredFlares;
   return Math.min(t.count, n);
 }
 
@@ -58,7 +58,7 @@ export class Simulation {
   private lastStormDay = 0;
   ended: 'won' | 'lost' | null = null;
   cause: DeathCause | null = null;
-  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {} };
+  readonly stats: SimStats = { shelteredFlares: 0, unshieldedFlares: 0, evas: 0, antennaAligns: 0, actions: 0, actionsBy: {}, probe: 0, dna: 0, probeScore: 0, probeRocks: 0, probeCargo: 0 };
 
   private readonly rnd: () => number;
   private events: SimEvent[] = [];
@@ -129,6 +129,21 @@ export class Simulation {
   /** La acción pertenece a una tarea de la etapa 2 que todavía no está disponible. */
   private stageLocked(action: ActionId): boolean {
     return !this.stage2Unlocked && this.tasks.some((t) => t.stage === 2 && t.kind === 'action' && t.action === action);
+  }
+
+  /** ¿Están hechas todas las tareas menos la sonda? Entonces Comunicaciones muestra «Llamar a la sonda». */
+  otherTasksDone(): boolean {
+    return this.tasks.some((t) => t.kind === 'probe') && this.tasks.filter((t) => t.kind !== 'probe').every((t) => this.taskProgress(t) >= t.count);
+  }
+
+  /** La entrega de la sonda se completó: `score` (0–1) solo cuenta para la nota; nunca se pierde. */
+  completeProbe(score: number, rocks = 0, cargo = 0): void {
+    if (this.ended || !this.otherTasksDone() || this.stats.probe) return;
+    this.stats.probe = 1;
+    this.stats.probeScore = Math.min(1, Math.max(0, score));
+    this.stats.probeRocks = rocks;
+    this.stats.probeCargo = cargo;
+    this.checkTasks();
   }
 
   get tasksDone(): number {

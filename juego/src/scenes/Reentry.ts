@@ -2,13 +2,15 @@ import Phaser from 'phaser';
 import { SCENES } from '../core/config';
 import { state } from '../core/state';
 import { drawStarfield } from '../core/starfield';
-import { UiLayer } from '../core/ui';
+import { UiLayer, esc } from '../core/ui';
 import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { icon, type IconName } from '../core/icons';
+import { chapterFor } from '../data/chapters';
 import { mountBurn, mountGlide, mountInspect, mountReentry, type PhaseDone } from '../core/casaGames';
 import type { MiniGameHandle } from '../core/miniGames';
 import { casaScore, casaStars, heatMultiplier, type CasaResult } from '../sim/entry';
+import { t } from '../core/i18n';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
@@ -36,7 +38,8 @@ export class ReentryScene extends Phaser.Scene {
     this.res = { inspected: 1, burn: 0, corridor: 0, heatMax: 0, glide: 0 };
     this.unfound = 0;
     this.ui = new UiLayer(this, '<div class="casa" data-casa></div>');
-    this.ui.on('retry', () => this.startPhase(0)).on('home', () => this.exit());
+    this.ui.on('retry', () => this.startPhase(0)).on('home', () => this.exit())
+      .on('chapter', (el) => { this.stop(); fadeTo(this, SCENES.archive, 300, { from: SCENES.reentry, entry: el.dataset.entry }); });
     const kb = this.input.keyboard!;
     kb.on('keydown', (ev: KeyboardEvent) => {
       audio.unlock();
@@ -96,9 +99,20 @@ export class ReentryScene extends Phaser.Scene {
     this.ui.q('[data-casa]').innerHTML = `<div class="casa__result">
       <div class="mn-stars">${STAR.repeat(stars)}${STAR_OFF.repeat(3 - stars)}</div>
       <p class="casa__score">${score}</p>
+      ${casaChapter()}
       <div class="casa__buttons">
-        <button class="mn-btn" data-action="retry" aria-label="Reintentar">${icon('retry')}</button>
-        <button class="mn-btn mn-btn--secondary" data-action="home" aria-label="Menú">${icon('home')}</button>
+        <button class="mn-btn" data-action="retry" aria-label="${t('Reintentar')}">${icon('retry')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="home" aria-label="${t('Menú')}">${icon('home')}</button>
       </div></div>`;
   }
+}
+
+/** Capítulo final de la historia: mensaje de la Tierra (recreación) y su ficha real. */
+function casaChapter(): string {
+  const c = chapterFor('casa');
+  if (!c) return '';
+  return `<div class="casa__chapter"><span class="mn-chip mn-chip--science">${t('Capítulo {n}', { n: c.number })} · ${esc(c.title)}</span>
+    <p class="caption-mono">${t('Mensaje de la Tierra (RECREACIÓN: personaje ficticio)')}</p>
+    <p class="mn-panel__body"><strong>${esc(c.from)}:</strong> ${esc(c.message)}</p>
+    <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="chapter" data-entry="${esc(c.entry)}">${icon('book')}${t('Leer la ficha real')}</button></div>`;
 }

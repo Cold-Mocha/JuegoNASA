@@ -7,7 +7,7 @@ import { ROOM_IDS } from '../../src/data/rooms';
 import { parseFlareClass } from '../../src/sim/flares';
 
 /** Auditoría científica automática: datos bien formados y fuentes solo oficiales. */
-const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|noaa\.gov|caltech\.edu|dlr\.de)\//;
+const OFFICIAL = /^https:\/\/([a-z0-9-]+\.)*(nasa\.gov|esa\.int|noaa\.gov|caltech\.edu|dlr\.de|state\.gov|noirlab\.edu)\//;
 
 describe('archivo DONKI', () => {
   it('cada semana tiene 7 días, fuente oficial y llamaradas válidas dentro de la semana', () => {

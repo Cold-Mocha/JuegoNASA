@@ -1,11 +1,12 @@
 import type { RoomId } from '../sim/types';
+import { localize } from '../core/i18n';
 
 /**
  * Archivo Científico / ¿Sabías qué?: datos reales detrás de cada mecánica.
  * Regla: cada ficha cita una fuente oficial verificable (NASA, ESA, NOAA o artículo científico).
  * Las URLs se auditan con `npm run check:sources` (ver SOURCES.md).
  */
-export type EntryCategory = 'luna' | 'sol' | 'vida' | 'misiones' | 'universo';
+export type EntryCategory = 'luna' | 'sol' | 'vida' | 'misiones' | 'universo' | 'chile';
 
 export interface Entry {
   id: string;
@@ -19,15 +20,16 @@ export interface Entry {
   room?: RoomId;       // sala donde aparece como "¿Sabías qué?"
 }
 
-export const CATEGORIES: Record<EntryCategory, string> = {
+export const CATEGORIES: Record<EntryCategory, string> = localize({
   luna: 'La Luna',
   sol: 'El Sol',
   vida: 'Vivir en el espacio',
   misiones: 'Misiones reales',
   universo: 'Más allá',
-};
+  chile: 'Chile y EE. UU.',
+});
 
-export const ENTRIES: Entry[] = [
+export const ENTRIES: Entry[] = localize([
   {
     id: 'moon-gravity', category: 'luna', title: 'Gravedad lunar',
     fact: '1,62 m/s² (la Tierra: 9,81 m/s²)',
@@ -203,7 +205,78 @@ export const ENTRIES: Entry[] = [
     inGame: 'Archivo: más allá de la Luna.',
     source: 'NASA Exoplanet Archive', url: 'https://exoplanetarchive.ipac.caltech.edu/',
   },
-];
+  // ---- Chile y EE. UU. (hechos reales de cooperación; cada ficha cita su fuente oficial) ----
+  {
+    id: 'chile-artemis', category: 'chile', title: 'Chile y los Acuerdos Artemis',
+    fact: 'Chile firmó el 25 de octubre de 2024: país n.º 47',
+    text: 'Los Acuerdos Artemis son principios para que los países cooperen al explorar el espacio de forma segura y responsable, compartiendo datos científicos. Chile los firmó en la sede de la NASA, en Washington.',
+    inGame: 'La Estación Central es ficticia, pero Artemis y estos acuerdos son reales.',
+    source: 'NASA, Chile signs the Artemis Accords', url: 'https://www.nasa.gov/news-release/nasa-welcomes-chile-as-newest-artemis-accords-signatory',
+  },
+  {
+    id: 'chile-seguimiento', category: 'chile', title: 'Una antena en Chile para seguir satélites',
+    fact: 'Red Minitrack: 10 estaciones, de Santiago a Grand Turk',
+    text: 'Al comenzar la era espacial, EE. UU. armó una red de antenas para seguir satélites, y una de sus estaciones estaba en Santiago de Chile. En 1958 la NASA heredó esa red.',
+    inGame: 'Como la antena de Comunicaciones: hablar con el espacio necesita estaciones en la Tierra.',
+    source: 'NASA, History of the Networks', url: 'https://www.nasa.gov/communicating-with-missions/history-of-the-networks/',
+  },
+  {
+    id: 'chile-act', category: 'chile', title: 'Un telescopio del desierto, con datos para todos',
+    fact: 'Telescopio de 6 m en Cerro Toco; sus mapas son públicos',
+    text: 'El Telescopio Cosmológico de Atacama observó el cielo hasta 2022 desde el norte de Chile. Sus mapas del fondo cósmico de microondas están abiertos en LAMBDA, el archivo de la NASA.',
+    inGame: 'Medir, anotar y compartir los datos: como tus tareas de investigación.',
+    source: 'NASA LAMBDA, Atacama Cosmology Telescope', url: 'https://lambda.gsfc.nasa.gov/product/act/',
+  },
+  {
+    id: 'chile-arads', category: 'chile', title: 'ARADS: un róver que busca vida en el desierto',
+    fact: 'Atacama: de los lugares más parecidos a Marte',
+    text: 'La NASA probó en el desierto de Atacama un róver que perfora el suelo y analiza las muestras con instrumentos que buscan vida. Estudian los pocos microbios que sobreviven allí para saber dónde buscar en Marte.',
+    inGame: 'Como tus muestras de hielo y tu huerto: la ciencia empieza con muestras.',
+    source: 'NASA, Atacama Rover Astrobiology Drilling Studies', url: 'https://www.nasa.gov/?p=427586',
+  },
+  {
+    id: 'chile-1960', category: 'chile', title: 'Ayuda por aire tras el terremoto de 1960',
+    fact: '2 hospitales de campaña y 10 helicópteros',
+    text: 'Después del terremoto de mayo de 1960, EE. UU. envió por aire dos hospitales de campaña, diez helicópteros, carpas, frazadas y medicinas para llegar a lugares aislados.',
+    inGame: 'Cuidar a la tripulación: en la Enfermería también se cuida a las personas.',
+    source: 'U.S. Department of State, Office of the Historian (FRUS 1958–1960)', url: 'https://history.state.gov/historicaldocuments/frus1958-60v05mSupp/ch_d37',
+  },
+  {
+    id: 'chile-alianza', category: 'chile', title: 'La Alianza para el Progreso (1961)',
+    fact: 'Programa de EE. UU. para América Latina; Chile recibió mucha ayuda',
+    text: 'En 1961 el presidente Kennedy lanzó la Alianza para el Progreso, que llevó inversión a infraestructura, educación y gobiernos de América Latina. Chile fue uno de los países que más ayuda recibió.',
+    inGame: 'Parte de la historia de cooperación entre Chile y EE. UU.',
+    source: 'U.S. Department of State, Office of the Historian (Chile y la Alianza)', url: 'https://history.state.gov/milestones/1969-1976/allende',
+  },
+  {
+    id: 'chile-tololo', category: 'chile', title: 'Cerro Tololo: un observatorio en los Andes',
+    fact: 'Elegido en 1962; inaugurado en noviembre de 1967',
+    text: 'Astrónomos de EE. UU. y Chile eligieron Cerro Tololo para mirar el cielo del sur. El Observatorio Interamericano se inauguró en 1967 y sigue siendo uno de los grandes observatorios de Chile.',
+    inGame: 'Mirar el cielo desde lo alto: igual que desde tu base en la Luna.',
+    source: 'NSF NOIRLab, Timeline', url: 'https://noirlab.edu/public/about/timeline',
+  },
+  {
+    id: 'synthetic-biology-light', category: 'vida', title: 'Microbios diseñados para una función',
+    fact: 'La NASA prueba en la ISS levadura que fabrica nutrientes',
+    text: 'Desde 2019, la NASA prueba en la Estación Espacial levadura de panadería modificada para producir nutrientes a pedido. Diseñar un microbio para una función se llama biología sintética.',
+    inGame: 'En el Taller de ADN de papel cada pieza le cuesta energía al alga: ese costo es un modelo del juego.',
+    source: 'NASA, Space Synthetic Biology (SynBio)', url: 'https://www.nasa.gov/space-synthetic-biology-synbio/',
+  },
+  {
+    id: 'biosignature', category: 'vida', title: 'Biofirma: una señal posible de vida',
+    fact: 'Una biofirma posible necesita más datos antes de concluir',
+    text: 'Una biofirma posible es una sustancia o estructura que podría venir de la vida, pero hace falta más estudio antes de decir si hay vida o no. Por eso se usan varias pruebas.',
+    inGame: 'En Biofirmas haces tres pruebas antes de informar un indicio.',
+    source: 'NASA, What is a Potential Biosignature?', url: 'https://science.nasa.gov/resource/what-is-a-potential-biosignature/',
+  },
+  {
+    id: 'radiation-microbe', category: 'vida', title: 'Un microbio que aguanta la radiación',
+    fact: 'Deinococcus radiodurans resiste 500 veces la dosis de un humano',
+    text: 'La bacteria Deinococcus radiodurans guarda varias copias de su ADN y lo repara muy bien, así resiste radiación extrema. Los astrobiólogos la estudian para saber qué vida podría aguantar en Marte.',
+    inGame: 'Las piezas protectoras del ADN de papel se inspiran en microbios así; las algas del huerto no son ese microbio.',
+    source: 'NASA Astrobiology, Life in the Extreme: Radiation', url: 'https://astrobiology.nasa.gov/news/life-in-the-extreme-radiation/',
+  },
+]);
 
 /** Ficha "¿Sabías qué?" de una sala (la primera que la mencione). */
 export const entryForRoom = (room: RoomId): Entry | undefined => ENTRIES.find((e) => e.room === room);

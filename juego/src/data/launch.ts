@@ -1,3 +1,4 @@
+import { localize } from '../core/i18n';
 /**
  * Guion y línea de tiempo del despegue (pantalla de carga). Todos los tiempos en ms desde que abre la escena.
  * Los instantes del conteo regresivo se derivan de LIFTOFF_MS: T-n = LIFTOFF_MS - n·1000.
@@ -18,7 +19,7 @@ export interface LaunchLine {
 }
 
 /** Comunicación directa entre el Control de misión (torre) y el tripulante elegido. */
-export const LAUNCH_SCRIPT: LaunchLine[] = [
+export const LAUNCH_SCRIPT: LaunchLine[] = localize([
   { at: 600, who: 'control', text: 'Control de misión a {name}: ¿me recibes?' },
   { at: 3000, who: 'crew', text: 'Fuerte y claro, Control. ¡Listos para despegar!' },
   { at: 5300, who: 'control', text: 'Comandos de vuelo verificados: navegación, motores y presión en verde.' },
@@ -26,7 +27,7 @@ export const LAUNCH_SCRIPT: LaunchLine[] = [
   { at: 11_200, who: 'crew', text: 'Siento cómo vibra todo. ¡Motores al máximo!' },
   { at: 13_000, who: 'control', text: '¡Todo listo! Que la Luna te reciba, {name}.' },
   { at: 15_100, who: 'control', text: '¡Despegue! Subimos con calma, {name}.' },
-];
+]);
 
 /**
  * Subida: cada capa de la atmósfera (LAYERS + CISLUNAR) anuncia su dato cuando la nave llega a su fracción de ASCENT_MS.

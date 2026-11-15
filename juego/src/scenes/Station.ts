@@ -36,7 +36,12 @@ import { mountTestPanel } from '../core/testPanelGame';
 import {
   mountAlgae, mountAntennaGame, mountBiosignature, mountHarvestGame, mountHealGame, mountNoisyMessage, mountPedal, PEDAL_PASS, type MiniCallbacks, type MiniGameHandle,
 } from '../core/miniGames';
+import { mountBelt, mountDelivery, mountRover, type BeltResult, type RoverResult } from '../core/finaleGames';
+import { finaleScore } from '../sim/finale';
+import { mountBiofirmas, mountDnaWorkshop } from '../core/dnaGame';
+import { dnaYield } from '../sim/dna';
 import { ACTION_ICON, RESOURCE_ICON, ROOM_ICON, taskIcon } from '../core/iconMap';
+import { t } from '../core/i18n';
 
 const PROP_TEXTURE_SCALE = 1.25; // los PNG de props se exportan a 1,25× del tamaño 1x
 const PROP_SIZE = 0.95;          // tamaño en el mapa respecto del dibujo 1x (un casillero mide ~1,6 michis de alto)
@@ -103,6 +108,8 @@ export class StationScene extends Phaser.Scene {
   private miniGame?: DustGame | SealGame | MiniGameHandle;
   /** El minijuego se juega afuera (superficie): el reloj no se detiene y el traje sigue gastando oxígeno. */
   private miniOutdoor = false;
+  /** Nota del circuito de ADN de papel de esta jornada (se diseña una vez; -1 = todavía no). */
+  private dnaScore = -1;
   private breachProp?: Machine;
   private recycler?: { sprite: Phaser.GameObjects.Image; at: Point };
   private pulses = new Map<Machine, Phaser.Tweens.Tween>();
@@ -140,7 +147,7 @@ export class StationScene extends Phaser.Scene {
     });
     Object.assign(this, { pos: roomCenter(START_ROOM), face: 1, jumpT: -1, helmet: false, anim: 'idle', oneShot: false, here: START_ROOM, zone: 'ship',
       focused: null, route: [], openOnArrival: false, dash: createDash(), dashDir: { x: 1, y: 0 }, ghostTimer: 0,
-      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, miniOutdoor: false, pulses: new Map(), taskTab: 1 });
+      overlay: 'none', hudTimer: 0, tutorialIndex: -1, ending: false, breachProp: undefined, recycler: undefined, miniGame: undefined, miniOutdoor: false, dnaScore: -1, pulses: new Map(), taskTab: 1 });
     this.flags = { moved: false, opened: false, map: false, archive: false };
     this.hudCache.clear();
     this.machines = [];
@@ -210,8 +217,9 @@ export class StationScene extends Phaser.Scene {
         at = { x: Phaser.Math.Clamp(at.x, r.x + half, r.x + r.w - half), y: at.y };
         img.setX(at.x);
         if (p.asset === 'reciclador-aire') this.recycler = { sprite: img, at };
-        if (p.kind === 'wall') {
+        if (p.kind === 'wall' || p.kind === 'poster') {
           img.setDepth(at.y - 500); // colgado de la pared: siempre detrás del michi
+          if (p.kind === 'poster') this.addMachine(room, p, img, at); // se puede leer, pero no es obstáculo
           continue;
         }
         this.obstacles.push({ x: at.x, y: at.y, r: OBSTACLE_R[p.kind] });
@@ -260,14 +268,14 @@ export class StationScene extends Phaser.Scene {
     const needs = new Map<string, string[]>(); // máquina (asset) → motivos
     const add = (asset: string, label: string): void => void needs.set(asset, [...(needs.get(asset) ?? []), label]);
     for (const key of this.sim.criticals) if (key !== 'radiation') add(GUIDE_ASSET[key], RESOURCE_TEXT[key].label);
-    if (this.sim.breach) add(BREACH_GUIDE, 'Fractura');
+    if (this.sim.breach) add(BREACH_GUIDE, t('Fractura'));
     const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
-    if (guide) add(guide, 'Tutorial');
+    if (guide) add(guide, t('Tutorial'));
     const incoming = this.sim.incomingFlare;
     const outside = !this.sim.sheltered;
-    if (outside && this.sim.flareActive) add(DOOR_ASSET, 'Llamarada');
-    else if (outside && incoming) add(DOOR_ASSET, `Llamarada en ${Math.ceil(incoming.inSec)} s`);
-    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'Oxígeno');
+    if (outside && this.sim.flareActive) add(DOOR_ASSET, t('Llamarada'));
+    else if (outside && incoming) add(DOOR_ASSET, t('Llamarada en {s} s', { s: Math.ceil(incoming.inSec) }));
+    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, t('Oxígeno'));
     for (const asset of needs.keys()) if (this.guideTarget(asset)?.room === this.here) needs.delete(asset); // ya estás ahí
     if (this.sim.ended || PAUSING.has(this.overlay)) needs.clear();
 
@@ -524,7 +532,7 @@ export class StationScene extends Phaser.Scene {
     }
     const prompt = this.ui.q('[data-prompt]');
     prompt.hidden = !m || this.overlay !== 'none';
-    if (m) this.setText('[data-prompt-label]', `Usar: ${machineName(m)}`);
+    if (m) this.setText('[data-prompt-label]', t(m.prop.kind === 'poster' ? 'Leer: {name}' : 'Usar: {name}', { name: machineName(m) }));
   }
 
   // ---------- impulso
@@ -558,26 +566,26 @@ export class StationScene extends Phaser.Scene {
     switch (ev.type) {
       case 'dayStart': {
         audio.play('day');
-        const light = ev.light >= 1 ? 'Día lunar' : ev.light > 0 ? 'Atardecer: los paneles rinden la mitad' : 'Noche lunar: los paneles no producen';
-        this.alert(`Día ${ev.day}, ${realDate(this.mission, ev.day)}. ${light}`, 'info');
-        if (ev.light === 0 && ev.day === 5) this.tip('Empieza la noche lunar. Ahorra energía: los paneles no sirven hasta que vuelva el sol.');
+        const light = ev.light >= 1 ? t('Día lunar') : ev.light > 0 ? t('Atardecer: los paneles rinden la mitad') : t('Noche lunar: los paneles no producen');
+        this.alert(t('Día {day}, {date}. {light}', { day: ev.day, date: realDate(this.mission, ev.day), light }), 'info');
+        if (ev.light === 0 && ev.day === 5) this.tip(t('Empieza la noche lunar. Ahorra energía: los paneles no sirven hasta que vuelva el sol.'));
         break;
       }
       case 'flareWarning': {
         audio.play('radio');
-        const where = this.sim.sheltered ? 'Estás dentro de la nave: a salvo.' : '¡Vuelve a la nave!';
-        this.alert(`⚠ Llamarada ${flareName(ev.event.classType)} en ${Math.ceil(ev.inSec)} s. ${where}`, 'danger');
-        if (!this.sim.sheltered) this.tip(ev.forecasted ? 'El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.' : '¡Corre a la nave! Si pides el pronóstico en el Puente, el aviso llega mucho antes.');
+        const where = this.sim.sheltered ? t('Estás dentro de la nave: a salvo.') : t('¡Vuelve a la nave!');
+        this.alert(t('⚠ Llamarada {class} en {s} s. {where}', { class: flareName(ev.event.classType), s: Math.ceil(ev.inSec), where }), 'danger');
+        if (!this.sim.sheltered) this.tip(ev.forecasted ? t('El pronóstico te dio tiempo: vuelve a la nave por la Esclusa.') : t('¡Corre a la nave! Si pides el pronóstico en el Puente, el aviso llega mucho antes.'));
         break;
       }
       case 'flareStart': {
         const sev = severity(ev.event.classType);
-        this.alert(`¡Llamarada ${flareName(ev.event.classType)}! Pasó de verdad el ${realDate(this.mission, ev.event.day)} a las ${ev.event.peakTime.slice(11, 16)} UTC${this.sim.sheltered ? '. Estás protegido dentro de la nave.' : '. ¡Vuelve a la nave!'}`, 'danger');
+        this.alert(t(this.sim.sheltered ? '¡Llamarada {class}! Pasó de verdad el {date} a las {time} UTC. Estás protegido dentro de la nave.' : '¡Llamarada {class}! Pasó de verdad el {date} a las {time} UTC. ¡Vuelve a la nave!', { class: flareName(ev.event.classType), date: realDate(this.mission, ev.event.day), time: ev.event.peakTime.slice(11, 16) }), 'danger');
         audio.play('alarm');
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
         this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);
         if (!state.calm) this.tweens.add({ targets: this.flareTint, alpha: 0.06, duration: 800, yoyo: true, repeat: Math.floor(FLARE_DURATION_SEC / 1.6) });
-        if (!this.sim.sheltered) this.tip(ev.forecasted ? '¡La llamarada del pronóstico! Entra a la nave lo antes posible.' : 'Una llamarada sin aviso. Con el pronóstico del Puente habrías tenido tiempo de volver a la nave.');
+        if (!this.sim.sheltered) this.tip(ev.forecasted ? t('¡La llamarada del pronóstico! Entra a la nave lo antes posible.') : t('Una llamarada sin aviso. Con el pronóstico del Puente habrías tenido tiempo de volver a la nave.'));
         break;
       }
       case 'flareEnd':
@@ -593,7 +601,7 @@ export class StationScene extends Phaser.Scene {
         this.showDelta(ev.delta);
         this.playAnim('use', true);
         audio.play(ACTIONS_DELAYED.has(ev.action) ? 'radio' : 'confirm');
-        if (ACTIONS_DELAYED.has(ev.action)) this.alert('Mensaje enviado. La Tierra está lejos: la respuesta tarda casi 3 segundos, aunque viaja a la velocidad de la luz.', 'info');
+        if (ACTIONS_DELAYED.has(ev.action)) this.alert(t('Mensaje enviado. La Tierra está lejos: la respuesta tarda casi 3 segundos, aunque viaja a la velocidad de la luz.'), 'info');
         break;
       case 'actionResolved':
         audio.play('radio');
@@ -602,7 +610,7 @@ export class StationScene extends Phaser.Scene {
         audio.play('achievement');
         this.taskTab = 2;
         this.renderTasks();
-        this.alert('¡Investigación lista! Ahora avisa a la Tierra: repara la antena.', 'ok');
+        this.alert(t('¡Investigación lista! Ahora avisa a la Tierra: repara la antena.'), 'ok');
         break;
       case 'taskDone': {
         audio.play('achievement'); // sin cartel: el avance se ve en la lista de tareas
@@ -612,21 +620,21 @@ export class StationScene extends Phaser.Scene {
       case 'critical': {
         audio.play('error');
         const advice: Record<keyof Resources, string> = {
-          energy: 'Queda poca energía. Sal a mover los paneles solares mientras haya sol.',
-          oxygen: 'Queda poco O₂. Ve al reciclador de CO₂ en Soporte vital.',
-          food: 'Queda poca comida. Prepárala en la cocina de Soporte vital.',
-          health: 'Tu salud está baja. Ve a la Enfermería y cúrate.',
-          radiation: 'Tienes mucha radiación. Quédate dentro de la nave todo lo que puedas.',
+          energy: t('Queda poca energía. Sal a mover los paneles solares mientras haya sol.'),
+          oxygen: t('Queda poco O₂. Ve al reciclador de CO₂ en Soporte vital.'),
+          food: t('Queda poca comida. Prepárala en la cocina de Soporte vital.'),
+          health: t('Tu salud está baja. Ve a la Enfermería y cúrate.'),
+          radiation: t('Tienes mucha radiación. Quédate dentro de la nave todo lo que puedas.'),
         };
-        this.alert(`⚠ ${RESOURCE_TEXT[ev.resource].label} en estado crítico`, 'danger');
+        this.alert(t('⚠ {resource} en estado crítico', { resource: RESOURCE_TEXT[ev.resource].label }), 'danger');
         this.tip(advice[ev.resource]);
         break;
       }
       case 'breachOpened':
         audio.play('alarm');
         this.spawnBreach(ev.room);
-        this.alert(`⚠ ¡Se rompió el reciclador de oxígeno! Se escapa el aire: el oxígeno de la nave baja hasta que lo repares.`, 'danger');
-        this.tip(`Ve a ${ROOMS[ev.room].name}, al reciclador roto, y sella la grieta con el sellador.`);
+        this.alert(t('⚠ ¡Se rompió el reciclador de oxígeno! Se escapa el aire: el oxígeno de la nave baja hasta que lo repares.'), 'danger');
+        this.tip(t('Ve a {room}, al reciclador roto, y sella la grieta con el sellador.', { room: ROOMS[ev.room].name }));
         break;
       case 'breachRepaired':
         this.removeBreach();
@@ -634,27 +642,27 @@ export class StationScene extends Phaser.Scene {
         break;
       case 'dustStorm':
         audio.play('error');
-        this.alert('⚠ ¡Tormenta de polvo! El polvo lunar cubrió los paneles solares.', 'danger');
-        this.tip('Sal a la superficie y limpia los paneles con el cepillo antes de que la energía baje.');
+        this.alert(t('⚠ ¡Tormenta de polvo! El polvo lunar cubrió los paneles solares.'), 'danger');
+        this.tip(t('Sal a la superficie y limpia los paneles con el cepillo antes de que la energía baje.'));
         break;
       case 'panelsFailing':
         audio.play('error');
-        this.alert('⚠ Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.', 'danger');
-        this.tip('Sal a la superficie y limpia el polvo de los paneles para que la energía vuelva a renovarse.');
+        this.alert(t('⚠ Los paneles solares fallan: están llenos de polvo y la energía empezó a bajar.'), 'danger');
+        this.tip(t('Sal a la superficie y limpia el polvo de los paneles para que la energía vuelva a renovarse.'));
         break;
       case 'panelsRestored':
         audio.play('confirm');
         break;
       case 'suitLow':
         audio.play('error');
-        this.alert('⚠ Queda poco oxígeno en el traje. Vuelve a la nave o entra al invernadero.', 'danger');
+        this.alert(t('⚠ Queda poco oxígeno en el traje. Vuelve a la nave o entra al invernadero.'), 'danger');
         break;
       case 'suitEmpty':
         audio.play('hurt');
         if (this.overlay === 'minigame') this.closeOverlay(); // se acabó el oxígeno limpiando: se cancela, sin costo ni efecto
         this.rescue();
-        this.alert(`Se acabó el oxígeno del traje: la tripulación te rescató (−${ev.oxygenLost} O₂ de la estación).`, 'danger');
-        this.tip('Afuera el traje dura poco. Mira la barra de oxígeno y vuelve antes de que se vacíe.');
+        this.alert(t('Se acabó el oxígeno del traje: la tripulación te rescató (−{n} O₂ de la estación).', { n: ev.oxygenLost }), 'danger');
+        this.tip(t('Afuera el traje dura poco. Mira la barra de oxígeno y vuelve antes de que se vacíe.'));
         break;
       case 'gameOver':
       case 'missionComplete':
@@ -719,11 +727,11 @@ export class StationScene extends Phaser.Scene {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
-      <div class="mini-full" aria-label="Minijuego">
+      <div class="mini-full" aria-label="${t('Minijuego')}">
         <div class="mini-full__stage" data-dust-root></div>
         <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
       </div>
-      ${cfg.outdoor ? `<div class="mini-suit" aria-label="Oxígeno del traje">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
+      ${cfg.outdoor ? `<div class="mini-suit" aria-label="${t('Oxígeno del traje')}">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
     this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
       onProgress: () => undefined,
       onDone: (result) => {
@@ -779,9 +787,37 @@ export class StationScene extends Phaser.Scene {
     else message();
   }
 
+  /**
+   * Fase E, la sonda: contacto → cinturón → entrega → rover lunar. Nunca se pierde: si sale mal baja la nota y la historia sigue.
+   * `score = 0,2 × contacto + 0,3 × cinturón + 0,5 × luna`; al terminar la tarea `probe` se gana la jornada.
+   */
+  private runFinale(): void {
+    const hard = this.difficulty.id === 'comandante';
+    const seed = this.mission.id.length * 977 + this.sim.day;
+    let belt: BeltResult = { score: 0, batteries: 0, chips: 0, algae: 0, hull: 3 };
+    const moon = (): void => this.openFullMini({
+      mount: (root, cb) => mountRover(root, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r: RoverResult) => {
+        this.sim.completeProbe(finaleScore(1, belt.score, r.score), r.rocks, belt.algae);
+        cb.onDone(r.score);
+      } }),
+      finish: () => undefined,
+    });
+    const delivery = (): void => this.openFullMini({ mount: (root, cb) => mountDelivery(root, () => cb.onDone()), finish: () => undefined, next: moon });
+    const beltGame = (): void => this.openFullMini({
+      mount: (root, cb) => mountBelt(root, { hard, seed, calm: state.calm, onDone: (r) => { belt = r; cb.onDone(r.score); } }),
+      finish: () => undefined, next: delivery,
+    });
+    this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: beltGame }); // contacto
+  }
+
   /** Taladro de hielo: emparejar los picos del espectro; la ciencia ganada escala con la calidad. Se juega afuera: el traje sigue gastando. */
   private openBiosignatureGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => void this.sim.act('eva', quality(r ?? 1)), outdoor: true });
+    let spectrum = 1;
+    const tests = (): void => this.openFullMini({
+      mount: (root, cb) => mountBiofirmas(root, { hard: this.difficulty.id === 'comandante', seed: this.sim.day * 31 + 7, onDone: (score) => cb.onDone(score) }),
+      finish: (r) => void this.sim.act('eva', quality(((r ?? 1) + spectrum) / 2)), outdoor: true,
+    });
+    this.openFullMini({ mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => { spectrum = r ?? 1; }, outdoor: true, next: tests });
   }
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
@@ -789,7 +825,7 @@ export class StationScene extends Phaser.Scene {
     this.openFullMini({
       mount: (root, cb) => mountPedal(root, cb),
       finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
-      failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : `No pedaleaste lo suficiente: hay que llenar más del ${PEDAL_PASS * 100} % de la barra.`),
+      failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : t('No pedaleaste lo suficiente: hay que llenar más del {n} % de la barra.', { n: PEDAL_PASS * 100 })),
     });
   }
 
@@ -799,7 +835,16 @@ export class StationScene extends Phaser.Scene {
   }
 
   private openHarvestGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHarvestGame(root, cb), finish: (result) => void this.sim.act('harvest', quality(result ?? 1)) });
+    const harvest = (): void => this.openFullMini({
+      mount: (root, cb) => mountHarvestGame(root, cb),
+      finish: (result) => void this.sim.act('harvest', quality(result ?? 1) * dnaYield(Math.max(0, this.dnaScore))),
+    });
+    if (this.dnaScore >= 0) { harvest(); return; }
+    // Fase C: antes de cosechar se diseña el circuito de «ADN de papel» de la jornada (una vez); cuesta energía al alga y rinde según el ajuste
+    this.openFullMini({
+      mount: (root, cb) => mountDnaWorkshop(root, { mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => { this.dnaScore = score; this.sim.stats.dna = Math.max(this.sim.stats.dna, score); cb.onDone(score); } }),
+      finish: () => undefined, next: harvest,
+    });
   }
 
   /** La fractura sale del reciclador de oxígeno: el reciclador de la sala se cambia por su versión rota, que es lo que hay que reparar. */
@@ -807,7 +852,7 @@ export class StationScene extends Phaser.Scene {
     const rec = this.recycler;
     if (!rec || room !== 'soporte' || this.breachProp) return;
     const k = PROP_SIZE / PROP_TEXTURE_SCALE;
-    const prop: RoomProp = { asset: 'reciclador-roto', kind: 'interactive', x: 0, y: 0, actions: ['repair'], name: 'Reciclador de oxígeno roto' };
+    const prop: RoomProp = { asset: 'reciclador-roto', kind: 'interactive', x: 0, y: 0, actions: ['repair'], name: t('Reciclador de oxígeno roto') };
     rec.sprite.setVisible(false);
     const sprite = this.add.image(rec.at.x, rec.at.y + PROP_PAPER_MARGIN * k, propKey('reciclador-roto')).setOrigin(0.5, 1).setScale(k).setDepth(rec.at.y);
     const m: Machine = { room, at: rec.at, sprite, prop };
@@ -858,25 +903,25 @@ export class StationScene extends Phaser.Scene {
         </div>
         <div class="hud__guides" data-guides aria-live="polite"></div>
         <div class="hud__left">
-          <section class="hud__stats mn-panel" aria-label="Estado de la misión">
+          <section class="hud__stats mn-panel" aria-label="${t('Estado de la misión')}">
             ${bar('energy', 'mn-bar--energy')}${bar('food', 'mn-bar--hunger')}${bar('health', 'mn-bar--health')}${bar('radiation', 'mn-bar--radiation')}
           </section>
-          <section class="hud__suit mn-panel" data-suit hidden aria-label="Oxígeno">
-            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="Oxígeno" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
-              <span class="mn-bar__label">${icon('helmet')}Oxígeno</span>
+          <section class="hud__suit mn-panel" data-suit hidden aria-label="${t('Oxígeno')}">
+            <div class="mn-bar mn-bar--oxygen" role="progressbar" aria-label="${t('Oxígeno')}" aria-valuemin="0" aria-valuemax="100" data-suit-bar>
+              <span class="mn-bar__label">${icon('helmet')}${t('Oxígeno')}</span>
               <div class="mn-bar__track"><div class="mn-bar__fill" data-fill></div></div>
               <span class="mn-bar__value" data-value></span>
             </div>
           </section>
-          <section class="hud__systems mn-panel" aria-label="Estado de los equipos">
-            ${system('oxygen', 'oxygen', 'Aire de la nave')}${system('panels', 'panel', 'Paneles solares')}${system('radio', 'antenna', 'Radio')}
+          <section class="hud__systems mn-panel" aria-label="${t('Estado de los equipos')}">
+            ${system('oxygen', 'oxygen', t('Aire de la nave'))}${system('panels', 'panel', t('Paneles solares'))}${system('radio', 'antenna', t('Radio'))}
           </section>
         </div>
         <div class="hud__top-right">
-          <section class="hud__tasks mn-panel" aria-label="Investigación">
+          <section class="hud__tasks mn-panel" aria-label="${t('Investigación')}">
             <span class="hud__tasks-name">${esc(this.mission.name)}</span>
-            <div class="hud__tabs" role="tablist" aria-label="Tareas">
-              <button class="hud__tab" role="tab" data-action="tasks-tab" data-tab="2" data-tab2 hidden>Avisar a la Tierra</button>
+            <div class="hud__tabs" role="tablist" aria-label="${t('Tareas')}">
+              <button class="hud__tab" role="tab" data-action="tasks-tab" data-tab="2" data-tab2 hidden>${t('Avisar a la Tierra')}</button>
             </div>
             <ul class="mn-checklist" data-tasks></ul>
           </section>
@@ -886,17 +931,17 @@ export class StationScene extends Phaser.Scene {
         <div class="hud__countdown" data-countdown hidden>${icon('radiation')}<span data-countdown-text></span></div>
         <div class="hud__prompt" data-prompt hidden><span class="mn-key">E</span> <span data-prompt-label></span></div>
         <div class="hud__tip mn-dialogue" data-tip hidden>
-          <div class="mn-dialogue__portrait hud__tip-portrait">${michiSvg({ ...ch, id: 'miu', name: 'Comandante Nébula', fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined }, tokenCss('nebula-violet'))}</div>
+          <div class="mn-dialogue__portrait hud__tip-portrait">${michiSvg({ ...ch, id: 'miu', name: t('Comandante Nébula'), fur: '#f5f5f2', furDark: '#c4c2e0', antennae: undefined, eyeScale: undefined }, tokenCss('nebula-violet'))}</div>
           <div>
-            <p class="mn-dialogue__name">Comandante Nébula</p>
+            <p class="mn-dialogue__name">${t('Comandante Nébula')}</p>
             <p class="mn-dialogue__text" data-tip-text></p>
             <div class="hud__tip-actions" data-tip-actions hidden>
-              <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="tutorial-skip">${icon('skip')}Saltar tutorial</button>
-              <button class="mn-btn mn-btn--sm" data-action="tutorial-next">${icon('check')}Entendido</button>
+              <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="tutorial-skip">${icon('skip')}${t('Saltar tutorial')}</button>
+              <button class="mn-btn mn-btn--sm" data-action="tutorial-next">${icon('check')}${t('Entendido')}</button>
             </div>
           </div>
         </div>
-        <aside class="hud__actions mn-panel" data-actions hidden aria-label="Acciones de la sala"></aside>
+        <aside class="hud__actions mn-panel" data-actions hidden aria-label="${t('Acciones de la sala')}"></aside>
       </div>
       <div class="modal" data-overlay hidden></div>`, 'screen screen--clear');
 
@@ -916,6 +961,7 @@ export class StationScene extends Phaser.Scene {
       .on('close-actions', () => this.closeOverlay())
       .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"
       .on('read-info', (el) => this.openArchive(el.dataset.entry))
+      .on('call-probe', () => this.runFinale())
       .on('tutorial-next', () => this.nextTutorial(true))
       .on('tutorial-skip', () => this.endTutorial());
     this.disposers.push(bindSettings(this.ui, () => undefined));
@@ -934,8 +980,8 @@ export class StationScene extends Phaser.Scene {
       (el.querySelector('[data-value]') as HTMLElement).textContent = key === 'radiation' ? `${v}%` : String(v);
       el.classList.toggle('is-critical', key === 'radiation' ? v >= 80 : v <= 20);
     }
-    this.setText('[data-day]', `Día ${s.day}/${s.config.days}`);
-    this.setText('[data-light]', s.light >= 1 ? '☀ Día' : s.light > 0 ? '◐ Atardecer' : '☾ Noche');
+    this.setText('[data-day]', t('Día {day}/{days}', { day: s.day, days: s.config.days }));
+    this.setText('[data-light]', s.light >= 1 ? t('☀ Día') : s.light > 0 ? t('◐ Atardecer') : t('☾ Noche'));
     (this.ui.q('[data-daybar]') as HTMLElement).style.width = `${Math.round(s.dayProgress * 100)}%`;
     this.renderSuit();
     this.renderSystems();
@@ -944,7 +990,7 @@ export class StationScene extends Phaser.Scene {
     const countdown = this.ui.q('[data-countdown]');
     countdown.hidden = !incoming;
     if (incoming) {
-      this.setText('[data-countdown-text]', `Llamarada ${flareName(incoming.event.classType)} en ${Math.ceil(incoming.inSec)} s`);
+      this.setText('[data-countdown-text]', t('Llamarada {class} en {s} s', { class: flareName(incoming.event.classType), s: Math.ceil(incoming.inSec) }));
       countdown.classList.toggle('is-safe', s.sheltered);
     }
     this.renderTasks();
@@ -963,9 +1009,9 @@ export class StationScene extends Phaser.Scene {
     const s = this.sim;
     const night = s.light === 0;
     const rows: Record<string, { text: string; bad: boolean }> = {
-      oxygen: s.breach ? { text: 'Fuga', bad: true } : { text: `${Math.round(s.res.oxygen)}%`, bad: s.res.oxygen <= 20 },
-      panels: { text: night ? 'Sin sol' : `${Math.round(s.panelEfficiency * 100)}%`, bad: !s.panelsOk },
-      radio: { text: s.radioOk ? 'Señal buena' : 'Señal débil', bad: !s.radioOk },
+      oxygen: s.breach ? { text: t('Fuga'), bad: true } : { text: `${Math.round(s.res.oxygen)}%`, bad: s.res.oxygen <= 20 },
+      panels: { text: night ? t('Sin sol') : `${Math.round(s.panelEfficiency * 100)}%`, bad: !s.panelsOk },
+      radio: { text: s.radioOk ? t('Señal buena') : t('Señal débil'), bad: !s.radioOk },
     };
     for (const [key, row] of Object.entries(rows)) {
       const id = `sys-${key}`;
@@ -1060,21 +1106,22 @@ export class StationScene extends Phaser.Scene {
           const good = k === 'radiation' ? v < 0 : v > 0;
           return `<span class="delta ${good ? 'delta--good' : 'delta--bad'}">${v > 0 ? '+' : '−'}${Math.abs(Math.round(v))} ${RESOURCE_TEXT[k].short}</span>`;
         })
-        .join('') || '<span class="delta">Sin costo directo</span>';
+        .join('') || `<span class="delta">${t('Sin costo directo')}</span>`;
     const items = ids.map((id, i) => {
       const check = this.sim.canAct(id);
       const pending = this.sim.isPending(id);
       return `<li class="action">
         <button class="mn-btn mn-btn--sm action__btn" data-action="act" data-id="${id}" ${check.ok ? '' : 'disabled'}><span class="mn-key">${i + 1}</span>${icon(ACTION_ICON[id])}${ACTION_TEXT[id].label}</button>
         <div class="action__deltas">${chips(this.sim.preview(id))}</div>
-        <p class="body-sm action__why">${pending ? 'Esperando respuesta de la Tierra…' : check.ok ? ACTION_TEXT[id].why : BLOCK_REASON[check.reason!]}</p>
+        <p class="body-sm action__why">${pending ? t('Esperando respuesta de la Tierra…') : check.ok ? ACTION_TEXT[id].why : BLOCK_REASON[check.reason!]}</p>
       </li>`;
     });
     this.setHtml('[data-actions]', `
       <div class="hud__actions-head"><h2 class="mn-panel__title">${icon(ROOM_ICON[m.room])}${esc(machineName(m))}</h2>
-      <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="Cerrar">${icon('close')}</button></div>
+      <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="close-actions" aria-label="${t('Cerrar')}">${icon('close')}</button></div>
       ${ids.length ? `<ul class="action-list">${items.join('')}</ul>` : info ? `<p class="body-sm action__why">${esc(info.body)}</p>
-      ${info.entry ? `<button class="mn-btn mn-btn--sm action__btn" data-action="read-info" data-entry="${esc(info.entry)}">${icon('book')}${esc(info.read ?? 'Leer')}</button>` : ''}` : ''}`);
+      ${info.entry ? `<button class="mn-btn mn-btn--sm action__btn" data-action="read-info" data-entry="${esc(info.entry)}">${icon('book')}${esc(info.read ?? t('Leer'))}</button>` : ''}` : ''}
+      ${m.prop.asset === 'consola-antena' && this.sim.otherTasksDone() && !this.sim.stats.probe ? `<button class="mn-btn action__btn" data-action="call-probe">${icon('antenna')}${t('Llamar a la sonda')}</button>` : ''}`);
   }
 
   /** Acciones de la máquina que tienes cerca (cada máquina tiene las suyas). */
@@ -1099,11 +1146,11 @@ export class StationScene extends Phaser.Scene {
     }).join('');
     const ch = CHARACTERS.find((c) => c.id === state.loadout!.character)!;
     this.openModal(`
-      <h2 class="mn-panel__title">Mapa de la Estación Central</h2>
-      <p class="mn-panel__body">Tu cara de michi marca dónde estás. La nave está arriba; los paneles solares y el invernadero, afuera.</p>
+      <h2 class="mn-panel__title">${t('Mapa de la Estación Central')}</h2>
+      <p class="mn-panel__body">${t('Tu cara de michi marca dónde estás. La nave está arriba; los paneles solares y el invernadero, afuera.')}</p>
       <div class="map" style="width:${f(MAP_W * k)}px;height:${f(MAP_H * k)}px">
         <svg class="map__plan" viewBox="0 0 ${f(MAP_W * k)} ${f(MAP_H * k)}" aria-hidden="true">${halls}</svg>${rooms}
-        <span class="map__me" data-map-me role="img" aria-label="Estás aquí">${michiFaceSvg(ch)}</span></div>
+        <span class="map__me" data-map-me role="img" aria-label="${t('Estás aquí')}">${michiFaceSvg(ch)}</span></div>
       <div class="mn-panel__footer"><button class="mn-btn mn-btn--sm" data-action="close">${icon('close')}Cerrar</button></div>`, 'map', 'modal__panel--wide');
     this.renderMapMarker();
   }
@@ -1118,13 +1165,13 @@ export class StationScene extends Phaser.Scene {
   private openPause(): void {
     this.overlay = 'pause';
     this.openModal(`
-      <h2 class="mn-panel__title">Pausa</h2>
+      <h2 class="mn-panel__title">${t('Pausa')}</h2>
       <div class="pause__actions">
-        <button class="mn-btn" data-action="resume">${icon('play')}Continuar</button>
-        <button class="mn-btn mn-btn--secondary" data-action="archive">${icon('book')}Archivo científico</button>
-        <button class="mn-btn mn-btn--secondary" data-action="controls">${icon('keyboard')}Controles</button>
-        <button class="mn-btn mn-btn--secondary" data-action="settings">${icon('gear')}Ajustes</button>
-        <button class="mn-btn mn-btn--secondary" data-action="quit">${icon('home')}Salir al menú</button>
+        <button class="mn-btn" data-action="resume">${icon('play')}${t('Continuar')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="archive">${icon('book')}${t('Archivo científico')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="controls">${icon('keyboard')}${t('Controles')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="settings">${icon('gear')}${t('Ajustes')}</button>
+        <button class="mn-btn mn-btn--secondary" data-action="quit">${icon('home')}${t('Salir al menú')}</button>
       </div>`, 'pause');
   }
 
@@ -1162,12 +1209,12 @@ export class StationScene extends Phaser.Scene {
   private startTutorial(): void {
     if (!state.training) return;
     this.openModal(`
-      <h2 class="mn-panel__title">Entrenamiento en la estación</h2>
+      <h2 class="mn-panel__title">${t('Entrenamiento en la estación')}</h2>
       ${controlsHtml()}
-      <p class="mn-panel__body">Esta es una estación de práctica: aquí no se pierde nada y el reloj está detenido. ¿Quieres que la Comandante Nébula te enseñe cómo se juega?</p>
+      <p class="mn-panel__body">${t('Esta es una estación de práctica: aquí no se pierde nada y el reloj está detenido. ¿Quieres que la Comandante Nébula te enseñe cómo se juega?')}</p>
       <div class="mn-panel__footer">
-        <button class="mn-btn mn-btn--secondary" data-action="tutorial-decline">${icon('skip')}Saltar tutorial</button>
-        <button class="mn-btn" data-action="tutorial-start">${icon('play')}Empezar tutorial</button>
+        <button class="mn-btn mn-btn--secondary" data-action="tutorial-decline">${icon('skip')}${t('Saltar tutorial')}</button>
+        <button class="mn-btn" data-action="tutorial-start">${icon('play')}${t('Empezar tutorial')}</button>
       </div>`, 'intro', 'modal__panel--wide');
     this.ui.focusFirst('.modal [data-action="tutorial-start"]');
   }
@@ -1175,11 +1222,11 @@ export class StationScene extends Phaser.Scene {
   /** Pausa → Controles: lista de teclas y opción de repetir el tutorial. */
   private openControls(): void {
     this.openModal(`
-      <h2 class="mn-panel__title">Controles de la estación</h2>
+      <h2 class="mn-panel__title">${t('Controles de la estación')}</h2>
       ${controlsHtml()}
       <div class="mn-panel__footer">
-        <button class="mn-btn mn-btn--secondary" data-action="close">${icon('back')}Volver</button>
-        <button class="mn-btn" data-action="tutorial-start">${icon('retry')}Repetir tutorial</button>
+        <button class="mn-btn mn-btn--secondary" data-action="close">${icon('back')}${t('Volver')}</button>
+        <button class="mn-btn" data-action="tutorial-start">${icon('retry')}${t('Repetir tutorial')}</button>
       </div>`, 'controls', 'modal__panel--wide');
   }
 
@@ -1193,15 +1240,15 @@ export class StationScene extends Phaser.Scene {
     const done = (action: ActionId): boolean => (this.sim.stats.actionsBy[action] ?? 0) >= 1;
     const own = this.mission.tutorial;
     this.tutorial = [
-      { text: 'Camina con WASD o las flechas, o toca el piso. Shift es un impulso y Espacio, un salto.', done: () => this.flags.moved },
-      { text: 'Cada acción cuesta: mira tus barras arriba a la izquierda. Abajo están el aire de la nave, los paneles y la radio.', done: () => false, manual: true },
+      { text: t('Camina con WASD o las flechas, o toca el piso. Shift es un impulso y Espacio, un salto.'), done: () => this.flags.moved },
+      { text: t('Cada acción cuesta: mira tus barras arriba a la izquierda. Abajo están el aire de la nave, los paneles y la radio.'), done: () => false, manual: true },
       { text: own.text, done: () => own.handsOn && done(own.action), guide: own.asset, manual: !own.handsOn },
-      { text: 'La cosecha: ve al Rack de plantas del invernadero y úsalo. Sales por la Esclusa; afuera el traje gasta oxígeno. Se cosecha una vez al día.', done: () => done('harvest'), guide: 'rack-plantas' },
-      { text: 'Eventos: una tormenta de polvo cubre los paneles y los limpias afuera. Si viene una llamarada, vuelve a la nave.', done: () => false, manual: true },
-      { text: 'Cumple las tareas de arriba a la derecha (algunas, una vez al día). Al terminar, repara la antena en Comunicaciones y vuelves a la Tierra.', done: () => false, guide: 'consola-antena', manual: true },
+      { text: t('La cosecha: ve al Rack de plantas del invernadero y úsalo. Sales por la Esclusa; afuera el traje gasta oxígeno. Se cosecha una vez al día.'), done: () => done('harvest'), guide: 'rack-plantas' },
+      { text: t('Eventos: una tormenta de polvo cubre los paneles y los limpias afuera. Si viene una llamarada, vuelve a la nave.'), done: () => false, manual: true },
+      { text: t('Cumple las tareas de arriba a la derecha (algunas, una vez al día). Al terminar, repara la antena en Comunicaciones y vuelves a la Tierra.'), done: () => false, guide: 'consola-antena', manual: true },
       state.training
-        ? { text: '¡Entrenamiento completo, michinauta! Ahora elige tu tripulante y tu primera misión.', done: () => false, manual: true, cta: 'Elegir mi misión' }
-        : { text: '¡Listo! Sigue con tus tareas. ¡Suerte!', done: () => false, manual: true },
+        ? { text: t('¡Entrenamiento completo, michinauta! Ahora elige tu tripulante y tu primera misión.'), done: () => false, manual: true, cta: t('Elegir mi misión') }
+        : { text: t('¡Listo! Sigue con tus tareas. ¡Suerte!'), done: () => false, manual: true },
     ];
     this.tutorialIndex = 0;
     this.showTutorial();
@@ -1213,7 +1260,7 @@ export class StationScene extends Phaser.Scene {
     this.ui.q('[data-tip-actions]').hidden = false;
     const next = this.ui.q('[data-action="tutorial-next"]');
     next.hidden = !step.manual; // los pasos con tarea avanzan solos
-    next.innerHTML = `${icon('check')}${esc(step.cta ?? 'Entendido')}`;
+    next.innerHTML = `${icon('check')}${esc(step.cta ?? t('Entendido'))}`;
     this.ui.q('[data-tip]').hidden = false;
   }
 
@@ -1291,7 +1338,7 @@ export class StationScene extends Phaser.Scene {
     state.lastResult = { loadout: state.loadout!, summary, score, newAchievements, newBest };
     audio.play(summary.won ? 'achievement' : 'hurt');
     this.playAnim(summary.won ? 'smile' : 'hurt', true);
-    this.alert(summary.won ? '¡Investigación completa! Volviendo a la Tierra…' : 'La tripulación debe volver a la Tierra…', summary.won ? 'ok' : 'danger');
+    this.alert(summary.won ? t('¡Investigación completa! Volviendo a la Tierra…') : t('La tripulación debe volver a la Tierra…'), summary.won ? 'ok' : 'danger');
     this.time.delayedCall(1600, () => fadeTo(this, SCENES.returnTrip, 500)); // viaje de regreso a la Tierra y después el informe
   }
 }

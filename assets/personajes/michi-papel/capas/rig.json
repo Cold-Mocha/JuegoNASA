@@ -34,8 +34,8 @@
       "nose": "#ee5fd6",
       "ear": "#ff9ad9"
     },
-    "tomas": {
-      "name": "Tomás",
+    "leo": {
+      "name": "Leo",
       "fur": "#cdd0dc",
       "band": "#4cc3f5",
       "nose": "#e58fa6",
@@ -60,7 +60,7 @@
       "nose": "#2f8f3a",
       "ear": "#c6f28a",
       "antennae": "#ffcb47",
-      "eyes": 1.45
+      "eyes": 1.22
     }
   }
 }

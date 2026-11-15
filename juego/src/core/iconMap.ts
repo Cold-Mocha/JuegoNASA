@@ -19,14 +19,14 @@ export const ROOM_ICON: Record<RoomId, IconName> = {
   invernadero: 'sprout', exterior: 'moon',
 };
 
-export const taskIcon = (t: TaskGoal): IconName => (t.kind === 'action' ? ACTION_ICON[t.action] : t.kind === 'shelter' ? 'shield' : 'flask');
+export const taskIcon = (t: TaskGoal): IconName => (t.kind === 'action' ? ACTION_ICON[t.action] : t.kind === 'shelter' ? 'shield' : t.kind === 'probe' ? 'antenna' : 'flask');
 
 export const MISSION_ICON: Record<MissionId, IconName> = {
   'huerto-lunar': 'sprout', 'paneles-solares': 'panel', 'hielo-lunar': 'snowflake',
 };
 
 export const CATEGORY_ICON: Record<EntryCategory, IconName> = {
-  luna: 'moon', sol: 'sun', vida: 'sprout', misiones: 'rocket', universo: 'galaxy',
+  luna: 'moon', sol: 'sun', vida: 'sprout', misiones: 'rocket', universo: 'galaxy', chile: 'flag',
 };
 
 export const ACHIEVEMENT_ICON: Record<AchievementId, IconName> = {

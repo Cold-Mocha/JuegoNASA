@@ -9,6 +9,8 @@ import { michiSvg, missionArtSvg } from '../core/art';
 import { MISSIONS, archiveFor, type MissionId } from '../data/missions';
 import { CHARACTERS, type CharacterId } from '../data/characters';
 import { DIFFICULTIES, type DifficultyId } from '../data/difficulties';
+import { t } from '../core/i18n';
+import { chapterFor } from '../data/chapters';
 import { icon } from '../core/icons';
 import { DIFFICULTY_ICON } from '../core/iconMap';
 import { MICHI_ANIMS, type MichiAnim } from '../data/preload';
@@ -55,32 +57,32 @@ export class SelectScene extends Phaser.Scene {
     };
     this.steps = [
       {
-        key: 'character', label: 'Tripulante', heading: 'Elige tu tripulante',
+        key: 'character', label: t('Tripulante'), heading: t('Elige tu tripulante'),
         options: CHARACTERS.map((c) => ({
-          id: c.id, title: c.name, subtitle: c.role, body: c.trait, art: michiSvg(c, tokenCss(c.accent)),
+          id: c.id, title: c.name, subtitle: c.species ? `${c.role} · ${c.species}` : c.role, body: c.trait, art: michiSvg(c, tokenCss(c.accent)),
         })),
       },
       {
-        key: 'mission', label: 'Jornada científica', heading: 'Jornadas científicas',
+        key: 'mission', label: t('Jornada científica'), heading: t('Jornadas científicas'),
         options: [...MISSIONS.map((m) => {
           const best = state.progress.best[m.id];
           const flares = archiveFor(m).flares.length;
           return {
             id: m.id, title: m.name, subtitle: m.question, body: m.brief,
             art: missionArtSvg(m.id, tokenCss(m.accent)),
-            chips: [`${m.tasks.length} tareas`, `Nuevo: ${m.newObject}`, `${flares} llamarada${flares === 1 ? '' : 's'} real${flares === 1 ? '' : 'es'}`, ...(best ? ['★'.repeat(best.stars)] : [])],
+            chips: [t('Capítulo {n}', { n: chapterFor(m.id)?.number ?? 0 }), t('{n} tareas', { n: m.tasks.length }), t('Nuevo: {object}', { object: m.newObject }), t(flares === 1 ? '{n} llamarada real' : '{n} llamaradas reales', { n: flares }), ...(best ? ['★'.repeat(best.stars)] : [])],
           };
         }),
           ...(casaUnlocked() ? [{
-            id: 'casa', title: 'Casa', subtitle: 'Vuelve a la Tierra', body: 'Gira, frena, reingresa y planea.',
-            art: CASA_ART, chips: ['4 fases', ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
+            id: 'casa', title: t('Casa'), subtitle: t('Vuelve a la Tierra'), body: t('Gira, frena, reingresa y planea.'),
+            art: CASA_ART, chips: [t('Capítulo {n}', { n: 4 }), t('4 fases'), ...(state.progress.casa ? ['★'.repeat(state.progress.casa.stars)] : [])],
           }] : []),
         ],
       },
       {
-        key: 'difficulty', label: 'Dificultad', heading: '¿Qué tan difícil?',
+        key: 'difficulty', label: t('Dificultad'), heading: t('¿Qué tan difícil?'),
         options: DIFFICULTIES.map((d) => ({
-          id: d.id, title: d.name, subtitle: `Nivel ${d.stars}`, body: d.description,
+          id: d.id, title: d.name, subtitle: t('Nivel {n}', { n: d.stars }), body: d.description,
           art: `<div class="option__icon">${icon(DIFFICULTY_ICON[d.id])}</div><div class="mn-stars">${STAR.repeat(d.stars)}${STAR_OFF.repeat(3 - d.stars)}</div>`,
         })),
       },
@@ -94,8 +96,8 @@ export class SelectScene extends Phaser.Scene {
         <h2 class="display-lg select__heading" data-heading></h2>
         <div class="select__grid" role="radiogroup" data-grid></div>
         <div class="select__footer">
-          <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}Atrás</button>
-          <button class="mn-btn" data-action="next" data-next>Siguiente${icon('next')}</button>
+          <button class="mn-btn mn-btn--secondary" data-action="back">${icon('back')}${t('Atrás')}</button>
+          <button class="mn-btn" data-action="next" data-next>${t('Siguiente')}${icon('next')}</button>
         </div>
       </div>`);
 
@@ -145,8 +147,8 @@ export class SelectScene extends Phaser.Scene {
           </span>
         </button>`).join('');
       grid.innerHTML = `<div class="roster">${cards}</div>
-        <aside class="preview mn-panel" aria-label="Vista previa del tripulante">
-          <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="Tu michi astronauta"></div></div>
+        <aside class="preview mn-panel" aria-label="${t('Vista previa del tripulante')}">
+          <div class="preview__stage"><div class="preview__sprite" data-preview-sprite role="img" aria-label="${t('Tu michi astronauta')}"></div></div>
           <span class="title preview__name" data-preview-name></span>
           <span class="heading preview__role" data-preview-role></span>
         </aside>`;
@@ -164,7 +166,7 @@ export class SelectScene extends Phaser.Scene {
         .join('');
     }
     const next = this.ui.q<HTMLButtonElement>('[data-next]');
-    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}¡Despegar!` : `Siguiente${icon('next')}`;
+    next.innerHTML = i === this.steps.length - 1 ? `${icon('rocket')}${t('¡Despegar!')}` : `${t('Siguiente')}${icon('next')}`;
     this.syncNext();
     this.ui.focusFirst(this.picks[step.key] ? `.option[data-id="${this.picks[step.key]}"]` : '.option');
   }

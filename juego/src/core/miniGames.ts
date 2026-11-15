@@ -1,3 +1,4 @@
+import { t } from './i18n';
 /**
  * Minijuegos con botones: reparar la antena (conectar cables) y cosechar (tocar solo las plantas maduras).
  * Solo usan DOM (sin Phaser): los monta la escena de la estación dentro de un panel. Se pueden jugar con ratón, dedo o teclado (Tab y Enter).
@@ -36,8 +37,8 @@ const shuffle = <T,>(xs: T[]): T[] => {
 
 export function mountAntennaGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
   const order = shuffle([0, 1, 2, 3]); // qué cable va en cada enchufe de la derecha
-  const plug = (i: number): string => `<button class="wire wire--plug" data-plug="${i}" style="left:24px;top:${WIRE_ROWS[i]}px;--wire:${WIRES[i].color}" aria-label="Cable ${WIRES[i].name}"><span aria-hidden="true">${WIRES[i].shape}</span></button>`;
-  const socket = (slot: number): string => `<button class="wire wire--socket" data-socket="${order[slot]}" style="right:24px;top:${WIRE_ROWS[slot]}px;--wire:${WIRES[order[slot]].color}" aria-label="Enchufe ${WIRES[order[slot]].name}"><span aria-hidden="true">${WIRES[order[slot]].shape}</span></button>`;
+  const plug = (i: number): string => `<button class="wire wire--plug" data-plug="${i}" style="left:24px;top:${WIRE_ROWS[i]}px;--wire:${WIRES[i].color}" aria-label="${t('Cable {color}', { color: t(WIRES[i].name) })}"><span aria-hidden="true">${WIRES[i].shape}</span></button>`;
+  const socket = (slot: number): string => `<button class="wire wire--socket" data-socket="${order[slot]}" style="right:24px;top:${WIRE_ROWS[slot]}px;--wire:${WIRES[order[slot]].color}" aria-label="${t('Enchufe {color}', { color: t(WIRES[order[slot]].name) })}"><span aria-hidden="true">${WIRES[order[slot]].shape}</span></button>`;
   root.innerHTML = `<div class="wires" style="width:${WIRE_W}px;height:${WIRE_H}px">
     <svg class="wires__back" viewBox="0 0 ${WIRE_W} ${WIRE_H}" aria-hidden="true">
       <rect x="6" y="6" width="368" height="488" rx="16" fill="#c4c2e0" stroke="#0e0b33" stroke-width="5"/>
@@ -108,8 +109,8 @@ export function mountHarvestGame(root: HTMLElement, cb: MiniCallbacks): MiniGame
   const cells = shuffle([...Array(7).fill(true), ...Array(5).fill(false)] as boolean[]);
   const ripeTotal = cells.filter(Boolean).length;
   root.innerHTML = `<div class="harvest" style="width:${WIRE_W}px;height:${WIRE_H}px">
-    <div class="harvest__time" role="progressbar" aria-label="Tiempo" aria-valuemin="0" aria-valuemax="${HARVEST_SECONDS}"><i data-time></i></div>
-    <div class="harvest__grid">${cells.map((ripe, i) => `<button class="plant" data-ripe="${ripe}" data-i="${i}" aria-label="${ripe ? 'Planta madura' : 'Planta verde'}">${plantSvg(ripe)}</button>`).join('')}</div>
+    <div class="harvest__time" role="progressbar" aria-label="${t('Tiempo')}" aria-valuemin="0" aria-valuemax="${HARVEST_SECONDS}"><i data-time></i></div>
+    <div class="harvest__grid">${cells.map((ripe, i) => `<button class="plant" data-ripe="${ripe}" data-i="${i}" aria-label="${ripe ? t('Planta madura') : t('Planta verde')}">${plantSvg(ripe)}</button>`).join('')}</div>
     <div class="harvest__basket" aria-hidden="true">${Array.from({ length: ripeTotal }, () => '<i></i>').join('')}</div></div>`;
   const bar = root.querySelector<HTMLElement>('[data-time]')!;
   const basket = [...root.querySelectorAll<HTMLElement>('.harvest__basket i')];
@@ -172,7 +173,7 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
       <rect x="246" y="176" width="70" height="30" rx="15" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5" transform="rotate(-18 280 190)"/>
       <rect x="138" y="300" width="48" height="120" rx="22" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5"/><rect x="194" y="300" width="48" height="120" rx="22" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5"/>
     </svg>
-    ${spots.map((p, i) => `<button class="heal__spot" data-spot="${i}" style="left:${p.x - 34}px;top:${p.y - 34}px" aria-label="Herida en la ${p.label}"><span class="heal__ring"></span><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#f5f5f2" stroke-width="4" stroke-linecap="round"/></svg></button>`).join('')}
+    ${spots.map((p, i) => `<button class="heal__spot" data-spot="${i}" style="left:${p.x - 34}px;top:${p.y - 34}px" aria-label="${t('Herida en la {part}', { part: t(p.label) })}"><span class="heal__ring"></span><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#f5f5f2" stroke-width="4" stroke-linecap="round"/></svg></button>`).join('')}
   </div>`;
   const buttons = [...root.querySelectorAll<HTMLButtonElement>('.heal__spot')];
   const startedAt = performance.now();
@@ -241,8 +242,8 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     <div class="pedal__lane pedal__lane--l"></div><div class="pedal__lane pedal__lane--r"></div>
     <div class="pedal__line" style="top:${PEDAL_LINE}px"></div>
     <div class="pedal__meter" aria-hidden="true"><i data-meter></i><b class="pedal__goal" style="left:${PEDAL_PASS * 100}%"></b></div>
-    <button class="pedal__btn pedal__btn--l" data-side="L" aria-label="Pedal izquierdo">◀</button>
-    <button class="pedal__btn pedal__btn--r" data-side="R" aria-label="Pedal derecho">▶</button></div>`;
+    <button class="pedal__btn pedal__btn--l" data-side="L" aria-label="${t('Pedal izquierdo')}">◀</button>
+    <button class="pedal__btn pedal__btn--r" data-side="R" aria-label="${t('Pedal derecho')}">▶</button></div>`;
   const wheel = root.querySelector<HTMLElement>('.pedal__wheel')!;
   const meter = root.querySelector<HTMLElement>('[data-meter]')!;
   const lanes = { L: root.querySelector<HTMLElement>('.pedal__lane--l')!, R: root.querySelector<HTMLElement>('.pedal__lane--r')! };
@@ -328,7 +329,7 @@ export function mountNoisyMessage(root: HTMLElement, cb: MiniCallbacks): MiniGam
     const right = message[bad[step]];
     const other = shuffle([0, 1, 2, 3].filter((x) => x !== right))[0];
     slots.forEach((s, i) => s.classList.toggle('is-active', i === step));
-    choices.innerHTML = shuffle([right, other]).map((c) => `<button class="msg__choice" data-c="${c}" style="--c:${MSG_SYMBOLS[c].color}" aria-label="Símbolo">${MSG_SYMBOLS[c].shape}</button>`).join('');
+    choices.innerHTML = shuffle([right, other]).map((c) => `<button class="msg__choice" data-c="${c}" style="--c:${MSG_SYMBOLS[c].color}" aria-label="${t('Símbolo')}">${MSG_SYMBOLS[c].shape}</button>`).join('');
     choices.querySelectorAll<HTMLButtonElement>('.msg__choice').forEach((b) => b.addEventListener('click', () => {
       if (Number(b.dataset.c) !== right) {
         wrongs++;
@@ -375,8 +376,8 @@ export function mountBiosignature(root: HTMLElement, cb: MiniCallbacks): MiniGam
   root.innerHTML = `<div class="bio" style="width:${WIRE_W}px;height:${WIRE_H}px">
     <svg class="bio__spectrum" viewBox="0 0 ${WIRE_W} 250" aria-hidden="true"><path d="M20 230 H360" stroke="#c4c2e0" stroke-width="3"/>
       ${peaks.map((_, i) => `<path d="M${40 + i * 84} 230 Q${58 + i * 84} ${230 - heights[i] * 1.4} ${76 + i * 84} 230" fill="none" stroke="#5ad6b2" stroke-width="5" stroke-linecap="round"/>`).join('')}</svg>
-    <div class="bio__peaks">${peaks.map((k, i) => `<button class="bio__peak" data-peak="${i}" style="left:${40 + i * 84 - 6}px;top:${210 - heights[i] * 0.7}px;--c:${BIO_KINDS[k].color}" aria-label="Pico del espectro"></button>`).join('')}</div>
-    <div class="bio__cards">${cards.map((k, i) => `<button class="bio__card" data-card="${i}" style="--c:${BIO_KINDS[k].color}" aria-label="Huella"><svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">${BIO_KINDS[k].icon}</svg></button>`).join('')}</div></div>`;
+    <div class="bio__peaks">${peaks.map((k, i) => `<button class="bio__peak" data-peak="${i}" style="left:${40 + i * 84 - 6}px;top:${210 - heights[i] * 0.7}px;--c:${BIO_KINDS[k].color}" aria-label="${t('Pico del espectro')}"></button>`).join('')}</div>
+    <div class="bio__cards">${cards.map((k, i) => `<button class="bio__card" data-card="${i}" style="--c:${BIO_KINDS[k].color}" aria-label="${t('Huella')}"><svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">${BIO_KINDS[k].icon}</svg></button>`).join('')}</div></div>`;
   const peakEls = [...root.querySelectorAll<HTMLButtonElement>('[data-peak]')];
   const cardEls = [...root.querySelectorAll<HTMLButtonElement>('[data-card]')];
   let selected: number | null = null;
@@ -431,14 +432,14 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   const pos = ALGAE_GAUGES.map(() => 0.5);
   const held = ALGAE_GAUGES.map(() => false);
   root.innerHTML = `<div class="algae" style="width:${WIRE_W}px;height:${WIRE_H}px">
-    <div class="algae__time" role="progressbar" aria-label="Tiempo" aria-valuemin="0" aria-valuemax="${ALGAE_SECONDS}"><i data-time></i></div>
+    <div class="algae__time" role="progressbar" aria-label="${t('Tiempo')}" aria-valuemin="0" aria-valuemax="${ALGAE_SECONDS}"><i data-time></i></div>
     <svg class="algae__tank" viewBox="0 0 ${WIRE_W} 190" aria-hidden="true">
       <rect x="70" y="20" width="240" height="150" rx="26" fill="#bfe6ff" fill-opacity=".25" stroke="#0e0b33" stroke-width="5"/>
       <path d="M78 70 Q130 56 190 70 T302 70 V150 Q302 162 290 162 H90 Q78 162 78 150Z" fill="#2f8f3a" fill-opacity=".85"/>
       <circle cx="120" cy="110" r="7" fill="#7ed957"/><circle cx="210" cy="132" r="9" fill="#7ed957"/><circle cx="260" cy="96" r="6" fill="#5ad6b2"/><circle cx="160" cy="145" r="5" fill="#5ad6b2"/>
       <circle cx="105" cy="84" r="3.5" fill="#fff" opacity=".8"/><circle cx="240" cy="116" r="3" fill="#fff" opacity=".8"/><circle cx="182" cy="98" r="3" fill="#fff" opacity=".8"/>
       <rect x="120" y="4" width="140" height="14" rx="7" fill="#ee5fd6" stroke="#0e0b33" stroke-width="3"/></svg>
-    ${ALGAE_GAUGES.map((g, i) => `<button class="algae__gauge" data-gauge="${i}" style="left:${28 + i * 112}px;--c:${g.color}" aria-label="${g.label}">
+    ${ALGAE_GAUGES.map((g, i) => `<button class="algae__gauge" data-gauge="${i}" style="left:${28 + i * 112}px;--c:${g.color}" aria-label="${t(g.label)}">
       <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">${g.icon}</svg>
       <span class="algae__track"><i class="algae__band" style="bottom:${(band[i].center - band[i].half) * 100}%;height:${band[i].half * 200}%"></i><i class="algae__needle" data-needle></i></span></button>`).join('')}</div>`;
   const bar = root.querySelector<HTMLElement>('[data-time]')!;

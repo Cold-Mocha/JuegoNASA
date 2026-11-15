@@ -2,6 +2,7 @@ import type { ActionId, RoomId } from '../sim/types';
 import type { MissionId } from './missions';
 import { ROOM_RECTS, type Point } from '../sim/stationMap';
 import { WORLD_SCALE } from '../sim/rules';
+import { localize } from '../core/i18n';
 
 /**
  * Salas de la Estación Central sobre el plano continuo (`sim/stationMap.ts`).
@@ -10,7 +11,7 @@ import { WORLD_SCALE } from '../sim/rules';
  * Cada máquina dice sus acciones (vacío = sala de lectura o información) y, si hace falta, su propio nombre.
  * El mapa base es fijo; cada investigación suma sus propios objetos (`only(...)`), que solo aparecen al elegirla.
  */
-export type PropKind = 'interactive' | 'deco' | 'wall';
+export type PropKind = 'interactive' | 'deco' | 'wall' | 'poster';
 
 export interface RoomProp {
   asset: string;
@@ -34,6 +35,8 @@ const machine = (asset: string, x: number, y: number, actions: ActionId[], name?
 const deco = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'deco', x, y });
 /** Adorno colgado en la pared del fondo: no estorba al caminar ni proyecta sombra en el piso. */
 const wall = (asset: string, x: number, y: number): RoomProp => ({ asset, kind: 'wall', x, y });
+/** Cartel de pared que se puede leer: abre su ficha real en el Archivo (ver MACHINE_INFO). No estorba al caminar. */
+const poster = (asset: string, x: number, y: number, name: string): RoomProp => ({ asset, kind: 'poster', x, y, actions: [], name });
 /** El objeto solo aparece cuando se elige esa investigación. */
 const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ...p, missions: Array.isArray(missions) ? missions : [missions] });
 
@@ -42,34 +45,35 @@ const only = (missions: MissionId | MissionId[], p: RoomProp): RoomProp => ({ ..
  * Invernadero 315–445; Exterior 935–1065 arriba y 515–645 abajo). Esas franjas y el centro quedan libres para caminar; las máquinas
  * y casilleros van contra la pared, y las cajas y plantas en los costados, una sola pila por lado y sin montarse sobre otro objeto.
  */
-export const ROOMS: Record<RoomId, Room> = {
+export const ROOMS: Record<RoomId, Room> = localize({
   soporte: {
     id: 'soporte', name: 'Soporte vital',
     props: [deco('reciclador-aire', 445, 78), // normalmente decorativo; cuando se rompe lo reemplaza 'reciclador-roto' (interactivo)
       deco('casillero', 62, 62), wall('extintor', 165, 12), wall('cuadro-tierra', 290, -8),
+      poster('cartel-alianza', 450, -8, 'Cartel: Alianza para el Progreso'),
       deco('planta', 45, 255), deco('cajas', 480, 350)],
   },
   puente: {
     id: 'puente', name: 'Puente',
-    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), wall('cuadro-tierra', 290, -8),
+    props: [deco('casillero', 62, 62), wall('extintor', 125, 12), poster('cartel-artemis', 290, -8, 'Cartel: Acuerdos Artemis'),
       machine('bicicleta-estatica', 445, 120, ['pedal'], 'Bicicleta de energía'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   enfermeria: {
     id: 'enfermeria', name: 'Enfermería',
     props: [machine('camilla-medica', 450, 66, ['heal']),
-      deco('casillero', 62, 62), wall('extintor', 165, 12),
+      deco('casillero', 62, 62), wall('extintor', 165, 12), poster('cartel-terremoto-1960', 300, -8, 'Cartel: Ayuda de 1960'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 480, 350)],
   },
   comunicaciones: {
     id: 'comunicaciones', name: 'Comunicaciones',
     props: [machine('consola-antena', 355, 72, ['repairAntenna'], 'Antena de la Tierra'),
-      deco('casillero', 62, 62), wall('extintor', 140, 12),
+      deco('casillero', 62, 62), wall('extintor', 140, 12), poster('cartel-seguimiento', 235, -8, 'Cartel: Estación de seguimiento'),
       deco('planta', 45, 215), deco('mesa-comedor', 105, 352), deco('cajas', 400, 350)],
   },
   esclusa: {
     id: 'esclusa', name: 'Esclusa',
-    props: [deco('casillero-trajes', 80, 66), deco('casillero-trajes', 370, 66), wall('extintor', 300, 12),
+    props: [deco('casillero-trajes', 80, 66), deco('casillero-trajes', 370, 66), wall('extintor', 300, 12), poster('cartel-tololo', 190, -8, 'Cartel: Cerro Tololo'),
       deco('planta', 45, 235), deco('cajas', 400, 350)],
   },
   exterior: {
@@ -83,7 +87,7 @@ export const ROOMS: Record<RoomId, Room> = {
   },
   invernadero: {
     id: 'invernadero', name: 'Invernadero',
-    props: [wall('extintor', 255, 12),
+    props: [wall('extintor', 255, 12), poster('cartel-arads', 420, -8, 'Cartel: ARADS'),
       // arriba a la derecha el rack de plantas (la cosecha está en todas las jornadas)
       machine('rack-plantas', 620, 100, ['harvest'], 'Rack de plantas'),
       // con la investigación del huerto: las algas al otro lado, las bandejas abajo y las macetas por los costados
@@ -91,7 +95,7 @@ export const ROOMS: Record<RoomId, Room> = {
       only('huerto-lunar', deco('bandeja-cultivo', 250, 350)), only('huerto-lunar', deco('bandeja-cultivo', 470, 350)),
       only('huerto-lunar', deco('planta', 50, 240)), only('huerto-lunar', deco('planta', 710, 250))],
   },
-};
+});
 
 export const ROOM_IDS = Object.keys(ROOMS) as RoomId[];
 

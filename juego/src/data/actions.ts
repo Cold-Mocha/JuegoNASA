@@ -1,7 +1,8 @@
 import type { ActionCheck, ActionId } from '../sim/types';
+import { localize } from '../core/i18n';
 
 /** Textos de las acciones de cada sala (los números viven en sim/rules.ts). */
-export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
+export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = localize({
   repairAntenna: { label: 'Reparar la antena', why: 'La antena se desajusta con los días y la señal con la Tierra se debilita. Conecta los cables en el minijuego para repararla. La Tierra tarda casi 3 segundos en responder.' },
   growLights: { label: 'Encender luces de las algas', why: 'Minijuego: mantén la luz, los nutrientes y la temperatura de las algas en la franja verde. La luz calienta el tanque, así que subirla te obliga a compensar. Cuanto mejor lo hagas, más O₂ y comida dan las algas.' },
   harvest: { label: 'Cosechar', why: 'Minijuego: toca solo las plantas maduras y deja las verdes. Cuanto más cosechas, más comida recuperas. Una vez por día.' },
@@ -11,9 +12,9 @@ export const ACTION_TEXT: Record<ActionId, { label: string; why: string }> = {
   repair: { label: 'Sellar la fractura', why: 'Una grieta deja escapar el aire: el oxígeno de la nave baja hasta cerrarla. Sigue la grieta con el sellador (minijuego).' },
   pedal: { label: 'Pedalear', why: 'La bicicleta de la estación convierte tu esfuerzo en energía: sigue el ritmo. Cuesta un poco de comida. Hasta 3 veces por día.' },
   heal: { label: 'Curarse', why: 'Minijuego: trata cada herida de la camilla. Recupera salud; gasta energía y un poco de comida.' },
-};
+});
 
-export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = {
+export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = localize({
   busy: 'Estás caminando.',
   cooldown: 'Espera un momento…',
   noEnergy: 'No hay energía suficiente.',
@@ -26,18 +27,24 @@ export const BLOCK_REASON: Record<NonNullable<ActionCheck['reason']>, string> = 
   clean: 'Los paneles están limpios. Cuando una tormenta de polvo los cubra, podrás limpiarlos.',
   doneToday: 'Eso ya lo hiciste hoy. Vuelve mañana.',
   ended: 'La misión terminó.',
-};
+});
 
-export const RESOURCE_TEXT = {
+export const RESOURCE_TEXT = localize({
   energy: { label: 'Energía', short: 'Energía' },
   oxygen: { label: 'Oxígeno', short: 'O₂' },
   food: { label: 'Comida', short: 'Comida' },
   health: { label: 'Salud', short: 'Salud' },
   radiation: { label: 'Radiación', short: 'Rad' },
   science: { label: 'Ciencia', short: 'Ciencia' },
-} as const;
+} as const);
 
 
 /** Máquinas sin acciones: información (y, si tienen, una ficha del Archivo para leer). */
-export const MACHINE_INFO: Record<string, { body: string; read?: string; entry?: string }> = {
-};
+export const MACHINE_INFO: Record<string, { body: string; read?: string; entry?: string }> = localize({
+  'cartel-alianza': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-alianza' },
+  'cartel-artemis': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-artemis' },
+  'cartel-terremoto-1960': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-1960' },
+  'cartel-seguimiento': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-seguimiento' },
+  'cartel-tololo': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-tololo' },
+  'cartel-arads': { body: 'Un cartel del museo de la estación. Lee su ficha real en el Archivo.', read: 'Leer la ficha real', entry: 'chile-arads' },
+});

@@ -46,6 +46,7 @@ export type TaskGoal = (
   | { id: string; kind: 'action'; action: ActionId; count: number }
   | { id: string; kind: 'science'; count: number }
   | { id: string; kind: 'shelter'; count: number }
+  | { id: string; kind: 'probe'; count: number }
 ) & {
   /** 1 (por defecto): tareas propias de la investigación. 2: "Avisar a la Tierra", disponible solo cuando se terminan todas las de la etapa 1. */
   stage?: 1 | 2;
@@ -96,4 +97,11 @@ export interface SimStats {
   antennaAligns: number;
   actions: number;
   actionsBy: Partial<Record<ActionId, number>>;
+  /** Fase E (la sonda): 1 cuando se entregó; nota 0–1 y rocas lunares recogidas (x/8). */
+  probe: number;
+  /** Fase C: mejor nota (0–1) del circuito de «ADN de papel» de la jornada; 0 si no se diseñó. */
+  dna: number;
+  probeScore: number;
+  probeRocks: number;
+  probeCargo: number;
 }

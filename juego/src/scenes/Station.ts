@@ -281,17 +281,20 @@ export class StationScene extends Phaser.Scene {
    * una flecha en el borde de la pantalla apunta a la sala que lo resuelve; si la sala se ve, el aviso queda sobre su máquina.
    */
   private updateGuides(): void {
-    const needs = new Map<string, string[]>(); // máquina (asset) → motivos
-    const add = (asset: string, label: string): void => void needs.set(asset, [...(needs.get(asset) ?? []), label]);
-    for (const key of this.sim.criticals) if (key !== 'radiation') add(key === 'energy' && !(this.sim.comp.dust > 0.05 && this.sim.light > 0) ? BIKE_ASSET : GUIDE_ASSET[key], resourceLabel(key));
-    if (this.sim.breach) add(BREACH_GUIDE, t('guide.breach'));
+    const needs = new Map<string, Set<IconName>>(); // máquina (asset) → iconos del motivo
+    const add = (asset: string, ic: IconName): void => void needs.set(asset, (needs.get(asset) ?? new Set<IconName>()).add(ic));
+    for (const key of this.sim.criticals) if (key !== 'radiation') add(key === 'energy' && !(this.sim.comp.dust > 0.05 && this.sim.light > 0) ? BIKE_ASSET : GUIDE_ASSET[key], RESOURCE_ICON[key]);
+    if (this.sim.breach) add(BREACH_GUIDE, 'wind');
     const guide = this.tutorialIndex >= 0 ? this.tutorial[this.tutorialIndex]?.guide : undefined;
-    if (guide) add(guide, t('guide.tutorial'));
+    if (guide) add(guide, 'info');
     const incoming = this.sim.incomingFlare;
     const outside = !this.sim.sheltered;
-    if (outside && this.sim.flareActive) add(DOOR_ASSET, t('guide.flare'));
-    else if (outside && incoming) add(DOOR_ASSET, t('guide.flareIn', { s: Math.ceil(incoming.inSec) }));
-    else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, t('guide.suit'));
+    let flareSecs: number | null = null; // cuenta de la llamarada junto a la Esclusa
+    if (outside && this.sim.flareActive) add(DOOR_ASSET, 'radiation');
+    else if (outside && incoming) {
+      add(DOOR_ASSET, 'radiation');
+      flareSecs = Math.ceil(incoming.inSec);
+    } else if (outside && this.sim.suit <= SUIT_LOW && this.zone === 'surface') add(DOOR_ASSET, 'helmet');
     for (const asset of needs.keys()) if (this.guideTarget(asset)?.room === this.here) needs.delete(asset); // ya estás ahí
     if (this.sim.ended || PAUSING.has(this.overlay)) needs.clear();
 
@@ -299,10 +302,10 @@ export class StationScene extends Phaser.Scene {
     for (const el of [...box.children] as HTMLElement[]) if (!needs.has(el.dataset.guide!)) el.remove();
     const cam = this.cameras.main;
     const view = cam.worldView;
-    const margin = { left: 70, right: GAME_WIDTH - 70, top: 150, bottom: GAME_HEIGHT - 70 };
+    const margin = { left: 70, right: GAME_WIDTH - 70, top: 215, bottom: GAME_HEIGHT - 70 }; // arriba: bajo el reloj y las tareas
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
-    for (const [asset, labels] of needs) {
+    for (const [asset, icons] of needs) {
       const m = this.guideTarget(asset);
       if (!m) continue;
       let el = box.querySelector<HTMLElement>(`[data-guide="${asset}"]`);
@@ -310,17 +313,25 @@ export class StationScene extends Phaser.Scene {
         el = document.createElement('div');
         el.className = 'hud__guide';
         el.dataset.guide = asset;
-        el.innerHTML = `<span class="hud__guide-arrow">${icon('next')}</span><span class="hud__guide-label">${icon(ROOM_ICON[m.room])}<span data-text></span></span>`;
+        el.innerHTML = `<span class="hud__guide-arrow">${GUIDE_ARROW}</span><span class="hud__guide-label"><span class="hud__guide-icons" data-icons></span><span data-text></span></span>`;
         box.append(el);
       }
-      const text = `${labels.join(', ')} → ${m.name}`;
+      // resumen: por qué (iconos) y adónde (la sala, que es donde la flecha desaparece)
+      const sig = [...icons].join(',');
+      if (el.dataset.icons !== sig) {
+        el.dataset.icons = sig;
+        el.querySelector<HTMLElement>('[data-icons]')!.innerHTML = [...icons].map((ic) => icon(ic)).join('');
+      }
+      const text = flareSecs !== null && asset === DOOR_ASSET ? `${roomName(m.room)} · ${flareSecs} s` : roomName(m.room);
       const label = el.querySelector<HTMLElement>('.hud__guide-label [data-text]')!;
       if (label.textContent !== text) label.textContent = text;
       const sx = (m.at.x - view.x) * cam.zoom; // de mapa a pantalla (la cámara está alejada)
-      const sy = (m.at.y - 290 - view.y) * cam.zoom;
-      const onScreen = sx > margin.left && sx < margin.right && sy > margin.top && sy < margin.bottom;
+      const sy = (m.at.y - GUIDE_LIFT - view.y) * cam.zoom;
+      const bodyY = sy + GUIDE_LIFT * cam.zoom; // la máquina misma, bajo el punto de la flecha
+      // máquina a la vista: la flecha la señala desde arriba, aunque tenga que quedarse bajo el reloj y las tareas
+      const onScreen = sx > margin.left && sx < margin.right && bodyY > margin.top && sy < margin.bottom;
       let x = sx;
-      let y = sy;
+      let y = onScreen ? Math.max(sy, margin.top) : sy;
       let angle = 90; // apunta hacia abajo, a la máquina
       if (!onScreen) {
         const dx = sx - cx;
@@ -333,6 +344,7 @@ export class StationScene extends Phaser.Scene {
         angle = (Math.atan2(dy, dx) * 180) / Math.PI;
       }
       el.classList.toggle('is-onscreen', onScreen);
+      el.classList.toggle('is-low', y > GAME_HEIGHT * 0.75); // abajo: la etiqueta va sobre la flecha (no tapa el pie)
       el.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
       el.style.setProperty('--angle', `${angle.toFixed(0)}deg`);
     }
@@ -593,7 +605,7 @@ export class StationScene extends Phaser.Scene {
         this.pulse(this.ui.q('[data-day]'), 'is-tick');
         const light = ev.light >= 1 ? t('day.light.day') : ev.light > 0 ? t('day.light.dusk') : t('day.light.night');
         const tip = ev.light === 0 && ev.day === 5 ? this.hint(t('tip.night')) : undefined;
-        this.toast('day', t('day.start', { day: ev.day, date: realDate(this.mission, ev.day) }), 'info', ALERT_MS, tip ? `${light} · ${tip}` : light);
+        this.toast('day', t('day.start', { day: ev.day, date: realDate(this.mission, ev.day) }), 'info', ALERT_MS, tip ? `${light} · ${tip}` : light, ev.light > 0 ? 'sun' : 'moon');
         break;
       }
       case 'flareWarning': {
@@ -1290,13 +1302,13 @@ export class StationScene extends Phaser.Scene {
    * «en camino» a «llegó» y a su resultado en el mismo aviso, sin apilar copias. `ms`: cuánto dura (Infinity: hasta cerrarlo por id).
    * `hint`: 2.ª línea corta con qué hacer.
    */
-  private toast(id: string, text: string, tone: 'info' | 'ok' | 'danger', ms = ALERT_MS, hint?: string): void {
+  private toast(id: string, text: string, tone: 'info' | 'ok' | 'danger', ms = ALERT_MS, hint?: string, ic: IconName = toastIcon(id)): void {
     const box = this.ui.q('[data-toasts]');
     const entry = this.toasts.get(id) ?? { el: document.createElement('div') };
     this.toasts.delete(id);
     this.toasts.set(id, entry); // el orden del Map es de antigüedad: este pasa a ser el más nuevo
     entry.el.className = `hud__toast hud__toast--${tone}`;
-    entry.el.innerHTML = `<span class="hud__toast-text">${esc(text)}</span>${hint ? `<span class="hud__toast-hint">${esc(hint)}</span>` : ''}`;
+    entry.el.innerHTML = `<span class="hud__toast-icon">${icon(ic)}</span><span class="hud__toast-text">${esc(text)}</span>${hint ? `<span class="hud__toast-hint">${esc(hint)}</span>` : ''}`;
     if (tone === 'danger') box.prepend(entry.el); // lo urgente, arriba
     else box.append(entry.el);
     entry.timer?.remove();
@@ -1758,6 +1770,9 @@ const DOOR_ASSET = 'esclusa';
 const BREACH_GUIDE = 'reciclador-roto';
 /** Clase de la llamarada de muestra del tutorial (no ocurre: solo se ve la cuenta regresiva). */
 const DEMO_FLARE = 'M2.0';
+/** Flecha sólida (cuerpo + punta) que apunta a la derecha; el CSS la gira hacia el objetivo. */
+const GUIDE_LIFT = 290; // px de mapa sobre los pies de la máquina donde se dibuja la flecha
+const GUIDE_ARROW = '<svg class="hud__guide-svg" viewBox="0 0 60 40" aria-hidden="true"><path d="M5 14h27V5l23 15-23 15v-9H5z"/></svg>';
 /** Sala donde empieza cada jornada. */
 const START_ROOM: RoomId = 'puente';
 /** Nombre que se muestra de una máquina: el suyo propio o el de su sala. */
@@ -1775,6 +1790,12 @@ const TOAST_MAX = 3;      // avisos a la vista a la vez
 const TOAST_OUT_MS = 220; // salida del aviso (igual que la transición del CSS)
 const TOAST_STICKY = new Set(['breach', 'flare']); // no se desplazan por avisos nuevos
 const RES_KEYS: (keyof Resources)[] = ['energy', 'oxygen', 'food', 'health', 'radiation'];
+/** Icono de cada aviso según lo que es (los críticos llevan el icono de su recurso). */
+const TOAST_ICON: Record<string, IconName> = {
+  flare: 'radiation', breach: 'wind', panels: 'panel', suit: 'helmet', radio: 'antenna', stage: 'flask', day: 'sun', end: 'rocket',
+};
+const toastIcon = (id: string): IconName =>
+  TOAST_ICON[id] ?? (id.startsWith('critical-') ? RESOURCE_ICON[id.slice('critical-'.length) as keyof Resources] : 'alert');
 const FLARE_RESULT_MS = 7000;
 /** Tamaño de la llamarada en palabras, con su clase GOES real entre paréntesis (p. ej. "enorme (X9.3)"). */
 const flareName = (classType: string): string => `${t(`flare.size.${severity(classType)}`)} (${classType})`;

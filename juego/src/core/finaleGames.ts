@@ -149,6 +149,19 @@ const sxOf = (lane: number, q: number): number => VX + (LANE_X[lane] - VX) * 1.1
 const syOf = (q: number): number => HZ + (SHIP_SCREEN_Y - HZ) * q;
 const COMMAND_DELAY = 0.22;     // [MODELO] retardo de la orden «a control remoto» (la luz tarda horas en la realidad)
 
+/** Imagen real de Saturno (NASA/JPL/Space Science Institute, PIA06193) si el archivo está en public/game/nasa/saturn.jpg; si no, dibujo propio. */
+let saturnImg: HTMLImageElement | null = null;
+let saturnOk = false;
+function saturnPhoto(): HTMLImageElement | null {
+  if (typeof Image === 'undefined') return null;
+  if (!saturnImg) {
+    saturnImg = new Image();
+    saturnImg.onload = () => { saturnOk = true; };
+    saturnImg.src = `${import.meta.env.BASE_URL}game/nasa/saturn.jpg`;
+  }
+  return saturnOk ? saturnImg : null;
+}
+
 function drawSpace(c: CanvasRenderingContext2D, t: number): void {
   const g = c.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#05041a'); g.addColorStop(0.5, '#0b0830'); g.addColorStop(1, '#150f45');
@@ -164,6 +177,15 @@ function drawSpace(c: CanvasRenderingContext2D, t: number): void {
     const sz = 1 + ph * 1.8;
     c.fillRect(x, y, sz, sz);
   }
+  const photo = saturnPhoto();
+  if (photo) {
+    const pw = 130, ph = pw * (photo.naturalHeight / photo.naturalWidth);
+    c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.95;
+    c.drawImage(photo, 290 - pw / 2, 78 - ph / 2, pw, ph);
+    c.restore();
+    c.font = '700 8px Arial, Helvetica, sans-serif'; c.textAlign = 'right'; c.fillStyle = 'rgba(200,200,230,0.7)';
+    c.fillText('Saturno: NASA/JPL/Space Science Institute', W - 8, 118);
+  } else {
   // Saturno, lejos (dibujo): globo + anillo inclinado
   const sx = 290, sy = 78, R = 26;
   c.save(); c.translate(sx, sy); c.rotate(-0.35);
@@ -175,6 +197,7 @@ function drawSpace(c: CanvasRenderingContext2D, t: number): void {
   for (const k of [-9, -2, 7]) { c.beginPath(); c.moveTo(-Math.sqrt(R * R - k * k) + 2, k); c.lineTo(Math.sqrt(R * R - k * k) - 2, k); c.stroke(); }
   c.fillStyle = 'rgba(232,212,160,0.9)'; c.beginPath(); c.ellipse(0, 0, R * 1.9, R * 0.5, 0, 0, Math.PI); c.fill();           // anillo, mitad delantera
   c.restore();
+  }
   // cometa que cruza de vez en cuando
   const cp = (t * 0.07) % 1;
   if (cp < 0.35) {

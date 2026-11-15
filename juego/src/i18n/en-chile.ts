@@ -10,10 +10,6 @@ export const EN_CHILE: Record<string, string> = {
   'Datos para todos': "Data for everyone",
   'De vuelta a casa': "Back home",
   'Dra. Almendra, Control Tierra-Chile': "Dr. Almendra, Earth-Chile Control",
-  '¡Gran cosecha, tripulación! Cuidar seres vivos pequeños enseña mucho. En el desierto de Atacama, otros equipos buscan microbios que sobreviven en lugares extremos.': "Great harvest, crew! Caring for tiny living things teaches a lot. In the Atacama Desert, other teams look for microbes that survive in extreme places.",
-  'Recibimos sus mediciones de energía. Para que un mensaje llegue hasta nosotros hacen falta antenas en la Tierra: hace décadas, una de ellas estaba cerca de Santiago.': "We received your power measurements. For a message to reach us, antennas on Earth are needed: decades ago, one of them was near Santiago.",
-  'Sus muestras de hielo ya están anotadas. Un dato vale más cuando se comparte: los mapas de un telescopio del desierto chileno están abiertos para cualquier científico.': "Your ice samples are logged. Data is worth more when it is shared: the maps from a telescope in the Chilean desert are open to any scientist.",
-  '¡Bienvenidos a la Tierra! Misión cumplida. Explorar la Luna se hace entre países que cooperan y comparten lo que descubren, como dicen los Acuerdos Artemis.': "Welcome to Earth! Mission accomplished. Exploring the Moon is done by countries that cooperate and share what they discover, as the Artemis Accords say.",
   // Fichas
   'Chile y los Acuerdos Artemis': "Chile and the Artemis Accords",
   'Chile firmó el 25 de octubre de 2024: país n.º 47': "Chile signed on October 25, 2024: country no. 47",

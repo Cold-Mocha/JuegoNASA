@@ -48,6 +48,7 @@ export class MissionReportScene extends Phaser.Scene {
     const chapterHtml = chapter ? `<div class="report__chapter"><span class="mn-chip mn-chip--science">${t('Capítulo {n}', { n: chapter.number })} · ${esc(chapter.title)}</span>
           <p class="caption-mono">${t('Mensaje de la Tierra (RECREACIÓN: personaje ficticio)')}</p>
           <p class="mn-panel__body"><strong>${esc(chapter.from)}:</strong> ${esc(chapter.message)}</p>
+          <p class="body-sm">🌙 ${esc(chapter.habitat)} · ${chapter.number}/4</p>
           <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="chapter" data-entry="${esc(chapter.entry)}">${icon('book')}${t('Leer la ficha real')}</button></div>` : '';
 
     const tasks = mission.tasks.map((task) => {

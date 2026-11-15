@@ -133,5 +133,6 @@ function casaChapter(): string {
   return `<div class="casa__chapter"><span class="mn-chip mn-chip--science">${t('Capítulo {n}', { n: c.number })} · ${esc(c.title)}</span>
     <p class="caption-mono">${t('Mensaje de la Tierra (RECREACIÓN: personaje ficticio)')}</p>
     <p class="mn-panel__body"><strong>${esc(c.from)}:</strong> ${esc(c.message)}</p>
+    <p class="body-sm">🌙 ${esc(c.habitat)} · ${c.number}/4</p>
     <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="chapter" data-entry="${esc(c.entry)}">${icon('book')}${t('Leer la ficha real')}</button></div>`;
 }

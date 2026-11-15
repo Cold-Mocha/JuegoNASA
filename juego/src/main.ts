@@ -23,8 +23,10 @@ import { MissionReportScene } from './scenes/MissionReport';
 import { audio } from './core/audio';
 import { state } from './core/state';
 import { applyComfort } from './core/theme';
+import { setLang } from './core/i18n';
 
 applyComfort({ calm: state.calm, solid: state.settings.ultraLight });
+setLang(state.settings.lang);
 
 const game = new Phaser.Game({
   // Ultra Ligero usa el renderizador Canvas 2D: en equipos sin GPU (WebGL por software) rinde mucho mejor

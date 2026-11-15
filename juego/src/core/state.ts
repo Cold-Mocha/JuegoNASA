@@ -1,4 +1,5 @@
 import type { ThemeId } from './theme';
+import { detectLang, type Lang } from './i18n';
 import type { MissionId } from '../data/missions';
 import type { CharacterId } from '../data/characters';
 import type { DifficultyId } from '../data/difficulties';
@@ -13,6 +14,7 @@ import type { AchievementId } from '../sim/achievements';
  */
 export interface Settings {
   theme: ThemeId;
+  lang: Lang;
   textSpeed: number; // caracteres por segundo del texto de diálogo
   reducedMotion: boolean;
   ultraLight: boolean; // modo "Ultra Ligero": sin partículas, destellos ni sacudidas
@@ -55,6 +57,7 @@ const lowEnd = (): boolean => {
 
 const defaults: Settings = {
   theme: 'deep-space',
+  lang: detectLang(),
   textSpeed: 40,
   reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
   ultraLight: lowEnd(),

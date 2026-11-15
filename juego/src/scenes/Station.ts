@@ -1158,7 +1158,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   private openSettings(): void {
-    this.openModal(settingsHtml(), 'settings');
+    this.openModal(settingsHtml(false), 'settings'); // sin idioma: cambiarlo reinicia la escena y se perdería la misión
   }
 
   private openArchive(entry?: string): void {

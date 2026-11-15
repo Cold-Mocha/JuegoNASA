@@ -17,6 +17,8 @@ button { font-family: inherit; }
 .menu__actions > .mn-btn { width: 100%; }
 .menu__play { min-height: 72px; font-size: 28px; }
 /* Logros, Ajustes y Créditos: fila secundaria más chica; Jugar es el único botón dominante */
+.menu__lang { position: absolute; top: var(--space-5); right: var(--space-5); display: flex; gap: var(--space-2); }
+.setting__langs { display: flex; gap: var(--space-2); padding: var(--space-3) 0; }
 .menu__more { display: flex; justify-content: center; gap: var(--space-3); margin-top: var(--space-2); }
 
 .modal { position: absolute; inset: 0; background: var(--overlay); display: grid; place-items: center; z-index: 10; }

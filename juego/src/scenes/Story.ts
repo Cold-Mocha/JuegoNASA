@@ -34,6 +34,7 @@ export class StoryScene extends Phaser.Scene {
   private finish(): void {
     this.dlg?.destroy();
     this.input.keyboard?.removeAllListeners();
+    state.saveProgress({ prologueSeen: true });
     if (state.progress.tutorialDone) return fadeTo(this, SCENES.select);
     // primera vez: antes de elegir misión, una sesión de entrenamiento aparte (estación de práctica con el Huerto lunar)
     state.training = true;

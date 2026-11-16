@@ -388,6 +388,7 @@ export const es = {
   'menu.credits': 'Créditos',
   'menu.nav': 'Menú principal',
   'menu.play': 'Jugar',
+  'menu.story': 'Ver el prólogo',
   'menu.reset': 'Hard reset',
   'menu.reset.body': 'Borra récords, logros y archivo leído. Los ajustes se quedan.',
   'menu.reset.confirm': 'Borrar y empezar',

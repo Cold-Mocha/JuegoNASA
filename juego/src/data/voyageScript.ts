@@ -3,9 +3,17 @@
  * Etiquetas: [REAL] dato verificable · [PROPUESTA] diseño del juego · [MODELO] simplificación. La nave es ficción (orbitador tipo transbordador).
  * El nombre de la nave está en un solo lugar (`SHIP_NAME`) para poder cambiarlo.
  */
-export type Who = 'PILOTO' | 'TORRE' | 'VUELO' | 'NAVE' | 'SALA';
+export type Who = 'PILOTO' | 'TORRE' | 'VUELO' | 'NAVE' | 'SALA' | 'NEBULA' | 'MIU' | 'GUINA' | 'LEO' | 'ZIB' | 'NARRA';
 export type Fx = 'shake' | 'static' | 'whisper';
-export interface ScriptLine { who: Who; es: string; en: string; fx?: Fx; /** Tarjeta de datos del Modo Ingeniero (solo se muestra en ese nivel). */ card?: { es: string; en: string }; }
+export interface ScriptLine {
+  who: Who; es: string; en: string; fx?: Fx;
+  /** Tarjeta de datos del Modo Ingeniero (solo se muestra en ese nivel). */
+  card?: { es: string; en: string };
+  /** Fondo a pantalla completa (ruta relativa a la base); se mantiene hasta que otra línea lo cambie. */
+  bg?: string;
+  /** Aviso de honestidad que se muestra bajo la caja ([REAL], [PROPUESTA]…). */
+  note?: { es: string; en: string };
+}
 
 /** Küyen = «luna» (y también «mes») en mapudungun. Elegido por el equipo; la grafía se confirma con hablantes. */
 export const SHIP_NAME = 'Küyen';
@@ -16,6 +24,13 @@ export const WHO_LABEL: Record<Who, { es: string; en: string; color: string }> =
   VUELO: { es: 'VUELO', en: 'FLIGHT', color: '#ffcb47' },
   NAVE: { es: 'NAVE', en: 'SHIP', color: '#f5f5f2' },
   SALA: { es: 'SALA', en: 'ROOM', color: '#c9b6ff' },
+  NEBULA: { es: 'Comandante Nébula', en: 'Commander Nébula', color: '#c9b6ff' },
+  MIU: { es: 'Miu', en: 'Miu', color: '#ffcb47' },
+  GUINA: { es: 'Güiña', en: 'Güiña', color: '#ff8fe0' },
+  LEO: { es: 'Leo', en: 'Leo', color: '#7fd4ff' },
+  ZIB: { es: 'Zib', en: 'Zib', color: '#8cf06a' },
+  /** Narración sin nombre ni retrato. */
+  NARRA: { es: '', en: '', color: '#f5f5f2' },
 };
 
 const L = (who: Who, es: string, en: string, fx?: Fx, card?: { es: string; en: string }): ScriptLine => ({ who, es, en, fx, card });

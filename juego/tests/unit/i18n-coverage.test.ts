@@ -7,7 +7,7 @@ import { DIFFICULTIES } from '../../src/data/difficulties';
 import { CHARACTERS } from '../../src/data/characters';
 import { LAYERS, CISLUNAR } from '../../src/data/atmosphere';
 import { LAUNCH_SCRIPT } from '../../src/data/launch';
-import { STORY } from '../../src/data/story';
+import { INTRO } from '../../src/data/prologueScript';
 import { MISSIONS } from '../../src/data/missions';
 import { CATEGORIES, ENTRIES } from '../../src/data/encyclopedia';
 import { ROOMS } from '../../src/data/rooms';
@@ -34,7 +34,7 @@ describe('cobertura del inglés', () => {
     for (const c of CHARACTERS) { need(`personaje ${c.id}`, c.role); need(`personaje ${c.id}`, c.trait); }
     for (const l of [...LAYERS, CISLUNAR]) { need(`capa ${l.id}`, l.name); need(`capa ${l.id}`, l.fact); }
     for (const l of LAUNCH_SCRIPT) need('despegue', l.text);
-    for (const s of STORY) { need('historia', s.text); need('historia', s.speaker); need('historia', s.note); }
+    for (const l of INTRO) { if (!l.es || !l.en) throw new Error(`prólogo sin ES/EN: ${l.es}`); if (l.note && (!l.note.es || !l.note.en)) throw new Error(`nota sin ES/EN: ${l.es}`); }
     for (const m of MISSIONS) {
       for (const f of [m.name, m.question, m.brief, m.tagline, m.newObject, m.tutorial.text]) need(`jornada ${m.id}`, f);
       for (const t of m.tasks) need(`tarea ${t.id}`, t.label);

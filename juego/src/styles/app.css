@@ -664,10 +664,25 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .voyage__stage { display: grid; place-items: center; min-height: 0; overflow: auto; }
 .voyage__art { position: relative; width: min(100%, 720px); aspect-ratio: 16 / 7; border-radius: 18px; overflow: hidden; border: 4px solid #0e0b33; background: #05041a; }
 .voyage__art svg { width: 100%; height: 100%; display: block; }
-.dlg__box { background: rgba(8,6,32,.92); border: 4px solid #f5f5f2; border-radius: 12px; padding: var(--space-4) var(--space-6); min-height: 150px; max-width: 920px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.dlg__box { position: relative; display: flex; gap: var(--space-4); align-items: flex-start; background: #000; border: 6px solid #f5f5f2; border-radius: 0; padding: var(--space-4) var(--space-6); min-height: 150px; max-width: 920px; margin: 0 auto; width: 100%; box-sizing: border-box; font-family: "Determination Mono", "Courier New", ui-monospace, monospace; }
+.dlg__main { flex: 1; min-width: 0; }
+.dlg__face { flex: none; width: 112px; height: 112px; border: 4px solid #f5f5f2; background: #faf6ee; overflow: hidden; }
+.dlg__face[hidden] { display: none; }
+.dlg__face img, .dlg__face svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dlg__next { position: absolute; right: 14px; bottom: 6px; font-size: 16px; animation: dlg-blink 1s steps(2) infinite; }
+.dlg__note { margin: var(--space-2) 0 0; font-size: 12px; line-height: 1.35; color: #b9b6d6; }
+.dlg__note[hidden] { display: none; }
+@keyframes dlg-blink { 50% { opacity: 0; } }
+.dlg__bg { display: none; }
+.dlg--full { position: absolute; inset: 0; display: flex; align-items: flex-end; background: #000; padding: 0 var(--space-6) var(--space-6); box-sizing: border-box; }
+.dlg--full .dlg__bg { display: block; position: absolute; inset: 0; }
+.dlg--full .dlg__bg img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
+.dlg--full .dlg__box { position: relative; z-index: 1; max-width: 1100px; }
+.dlg--full .dlg__text { font-size: 26px; }
 .dlg__box[data-fx="shake"] .dlg__text { animation: dlg-shake .18s linear infinite; }
 .dlg__box[data-fx="whisper"] .dlg__text { opacity: .8; font-style: italic; }
-.dlg__who { margin: 0 0 6px; font: 700 14px/1 Arial, sans-serif; letter-spacing: .12em; }
+.dlg__who { position: absolute; top: -17px; left: 18px; margin: 0; padding: 0 10px; background: #000; border: 3px solid #f5f5f2; font: 700 15px/24px "Courier New", ui-monospace, monospace; letter-spacing: .08em; }
+.dlg__who[hidden] { display: none; }
 .dlg__text { margin: 0; min-height: 3.6em; font-size: 20px; line-height: 1.45; color: #f5f5f2; }
 .dlg__text.is-nave { color: #d7d4ef; }
 .dlg__foot { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-3); gap: var(--space-3); }
@@ -692,9 +707,11 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .vg__sw { justify-content: space-between; } .vg__sw em { font-style: normal; opacity: .7; }
 .vg__sw.is-on { border-color: #ffcb47; } .vg__item.is-ok { opacity: .4; } .vg__item.is-bad { border-color: #ff7a59; animation: dlg-shake .18s 2; }
 .vg__item:focus-visible, .vg__sw:focus-visible { outline: 3px solid #7fd4ff; outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .dlg__box[data-fx="shake"] .dlg__text, .vg__item.is-bad { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .dlg__box[data-fx="shake"] .dlg__text, .vg__item.is-bad, .dlg__next { animation: none; } }
 .dlg__card { margin: var(--space-3) 0 0; padding: 8px 12px; border-left: 4px solid #7fd4ff; background: rgba(127,212,255,.1); font-size: 13px; color: #cfeaff; }
 .dlg__card[hidden] { display: none; }
 .dlg-in-stage { display: flex; align-items: flex-end; background: radial-gradient(ellipse at 50% 30%, #1a1050, #05041a 70%); border: 4px solid #0e0b33; border-radius: 14px; box-sizing: border-box; padding: 10px; }
 .dlg-in-stage .dlg { width: 100%; } .dlg-in-stage .dlg__box { min-height: 0; padding: 12px; border-width: 3px; }
+.dlg-in-stage .dlg__face { width: 64px; height: 64px; border-width: 3px; }
+.dlg-in-stage .dlg__who { top: -14px; font-size: 12px; line-height: 20px; }
 .dlg-in-stage .dlg__text { font-size: 15px; min-height: 6em; } .dlg-in-stage .dlg__hint { display: none; }

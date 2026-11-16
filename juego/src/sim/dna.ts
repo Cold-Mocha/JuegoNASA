@@ -34,6 +34,25 @@ export const dnaScore = (d: DnaDesign, p: DnaProblem): number => 0.6 * dnaFit(d,
 export const DNA_MAX_BONUS = 0.25;
 export const dnaBonus = (score: number): number => 1 + DNA_MAX_BONUS * Math.max(0, Math.min(1, score));
 
+// ------------------------------------------------------------------ cepas
+/**
+ * [REAL en concepto] Una cepa es una variante de un microbio con rasgos propios. [PROPUESTA] Las tres cepas del juego (Brisa, Escudo y Polar)
+ * son inventadas para enseñar a elegir según el problema; sus números son un [MODELO] y no miden nada real.
+ */
+export type StrainId = 'brisa' | 'escudo' | 'polar';
+export interface Strain { id: StrainId; /** Problema que mejor aguanta. */ good: Sensor; /** Multiplica el costo para el alga (menor = más económica). */ costMod: number; }
+export const STRAINS: readonly Strain[] = [
+  { id: 'brisa', good: 'light', costMod: 0.9 },
+  { id: 'escudo', good: 'radiation', costMod: 1 },
+  { id: 'polar', good: 'temperature', costMod: 1.1 },
+];
+/** La cepa ideal para el problema rinde al 100 %; una poco adecuada, al 55 %. */
+export const strainFit = (s: Strain, p: DnaProblem): number => (s.good === p.sensor ? 1 : 0.55);
+export const dnaCostFor = (d: DnaDesign, s: Strain): number => dnaCost(d) * s.costMod;
+export const dnaEfficiencyFor = (d: DnaDesign, s: Strain): number => Math.max(0, Math.min(1, 1 - dnaCostFor(d, s) / MAX_COST));
+/** 80 % circuito (0,6 ajuste + 0,4 eficiencia con el costo de la cepa) + 20 % cepa adecuada. Entre 0 y 1. */
+export const dnaScoreFor = (d: DnaDesign, p: DnaProblem, s: Strain): number => 0.8 * (0.6 * dnaFit(d, p) + 0.4 * dnaEfficiencyFor(d, s)) + 0.2 * strainFit(s, p);
+
 // ------------------------------------------------------------------ biofirmas: tres pruebas independientes
 export type BioTest = 'spectrum' | 'repeat' | 'control';
 export const BIO_TESTS: readonly BioTest[] = ['spectrum', 'repeat', 'control'];

@@ -4,6 +4,7 @@ export const GAME_HEIGHT = 720;
 export const SCENES = {
   boot: 'Boot',
   menu: 'MainMenu',
+  story: 'Story',
   select: 'Select',
   launch: 'LaunchLoading',
   flight: 'Flight',

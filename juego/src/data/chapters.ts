@@ -24,3 +24,5 @@ export const CHAPTERS: readonly Chapter[] = [
 export const chapterFor = (id: ChapterId): Chapter => CHAPTERS.find((c) => c.id === id)!;
 export const chapterTitle = (c: Chapter): string => t(`chapter.${c.id}.title`);
 export const chapterMessage = (c: Chapter): string => t(`chapter.${c.id}.message`);
+/** Qué avanza hacia un hábitat lunar con este capítulo ([PROPUESTA]: metáfora de juego, no un dato real). */
+export const chapterHabitat = (c: Chapter): string => t(`chapter.${c.id}.habitat`);

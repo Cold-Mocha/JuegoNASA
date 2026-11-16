@@ -271,6 +271,21 @@ const SHIP_X = 170;
 const BELT_K = (W + 50 - SHIP_X) / (BELT_SHIP_Y + 30);
 const beltX = (y: number): number => SHIP_X + (BELT_SHIP_Y - y) * BELT_K;
 
+const COMMAND_DELAY = 0.22; // [MODELO] retardo de la orden «a control remoto» (en la realidad la luz tarda horas)
+
+/** Imagen real de Saturno (NASA/JPL/Space Science Institute, PIA06193) si el archivo está en public/game/nasa/saturn.jpg. */
+let saturnImg: HTMLImageElement | null = null;
+let saturnOk = false;
+function saturnPhoto(): HTMLImageElement | null {
+  if (typeof Image === 'undefined') return null;
+  if (!saturnImg) {
+    saturnImg = new Image();
+    saturnImg.onload = () => { saturnOk = true; };
+    saturnImg.src = `${import.meta.env.BASE_URL}game/nasa/saturn.jpg`;
+  }
+  return saturnOk ? saturnImg : null;
+}
+
 function drawAsteroid(c: CanvasRenderingContext2D, x: number, y: number, seed: number, rot: number): void {
   const n = 11;
   const pts = Array.from({ length: n }, (_, i) => {
@@ -325,14 +340,19 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
   const ids = new WeakMap<BeltThing, number>();
   let nextId = 1;
   const idOf = (th: BeltThing): number => { let v = ids.get(th); if (!v) { v = nextId++; ids.set(th, v); } return v; };
+  // Control remoto: la orden viaja hasta la sonda y llega con un pequeño retardo ([MODELO]; en la realidad tarda horas).
+  const delay = opts.calm ? COMMAND_DELAY * 0.5 : COMMAND_DELAY;
+  const pending: { at: number; dir: -1 | 1 }[] = [];
+  let sentAt = -9;
+  const send = (dir: -1 | 1): void => { pending.push({ at: s.t + delay, dir }); sentAt = s.t; };
   const onKey = (e: KeyboardEvent): void => {
     const k = e.key.toLowerCase();
-    if (k === 'arrowup' || k === 'w' || k === 'arrowleft' || k === 'a') { moveBelt(s, -1); e.preventDefault(); }
-    if (k === 'arrowdown' || k === 's' || k === 'arrowright' || k === 'd') { moveBelt(s, 1); e.preventDefault(); }
+    if (k === 'arrowup' || k === 'w' || k === 'arrowleft' || k === 'a') { send(-1); e.preventDefault(); }
+    if (k === 'arrowdown' || k === 's' || k === 'arrowright' || k === 'd') { send(1); e.preventDefault(); }
   };
   const onPointer = (e: PointerEvent): void => {
     const r = el.getBoundingClientRect();
-    moveBelt(s, e.clientY - r.top < r.height / 2 ? -1 : 1);
+    send(e.clientY - r.top < r.height / 2 ? -1 : 1);
   };
   window.addEventListener('keydown', onKey);
   el.addEventListener('pointerdown', onPointer);
@@ -341,6 +361,7 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
   let shake = 0;
   let lastHull = s.hull;
   const draw = (dt: number): void => {
+    while (pending.length && pending[0].at <= s.t) moveBelt(s, pending.shift()!.dir); // la orden «llega» a la sonda
     scroll += dt * 260;
     if (s.hull < lastHull) shake = 0.35;
     lastHull = s.hull;
@@ -350,6 +371,16 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
     starfield(c, scroll, '#070523', '#1d1257');
     nebula(c, W * 0.35, H * 0.25, 260, 'rgba(155,92,255,.18)');
     nebula(c, W * 0.75, H * 0.8, 220, 'rgba(238,95,214,.12)');
+    // Saturno, muy lejos: foto real de la NASA (con crédito) si el archivo cargó
+    const photo = saturnPhoto();
+    if (photo) {
+      const pw = 150, ph = pw * (photo.naturalHeight / photo.naturalWidth);
+      c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.9;
+      c.drawImage(photo, W * 0.5 - pw / 2, 118 - ph / 2, pw, ph);
+      c.restore();
+      c.font = '700 10px Arial, Helvetica, sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(200,200,230,.75)';
+      c.fillText(t('finale.belt.saturnCredit'), W * 0.5, 118 + ph / 2 + 12);
+    }
     // la Luna se acerca a medida que pasa el tiempo
     const near = Math.min(1, s.t / BELT_SECONDS);
     moonDisc(c, W + 40 - near * 70, H * 0.42, 70 + near * 120);
@@ -391,6 +422,12 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
     text(c, `▮ ${s.got.battery}`, W / 2 - 120, 43, 22, 'center', GOLD);
     text(c, `▪ ${s.got.chip}`, W / 2, 43, 22, 'center', TEAL);
     text(c, `● ${s.got.algae}`, W / 2 + 120, 43, 22, 'center', '#7ed957');
+    // enlace de control remoto
+    const sending = s.t - sentAt < delay + 0.12;
+    c.font = '700 13px Arial, Helvetica, sans-serif'; c.textAlign = 'left'; c.fillStyle = sending ? CYAN : '#a9a6c4';
+    c.fillText(sending ? t('finale.belt.sending') : t('finale.belt.link'), 18, 74);
+    c.font = '700 11px Arial, Helvetica, sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(200,200,230,.8)';
+    c.fillText(t('finale.belt.delayNote'), W / 2, H - 34);
     c.fillStyle = 'rgba(14,11,51,.72)'; c.beginPath(); c.roundRect(160, H - 26, W - 320, 12, 6); c.fill();
     c.fillStyle = CYAN; c.beginPath(); c.roundRect(160, H - 26, (W - 320) * near, 12, 6); c.fill();
   };

@@ -138,6 +138,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.light = state.settings.ultraLight;
     this.speed = this.calm ? CALM_SPEED : 1;
     this.resetRun();
+    if (state.progress.launchSeen) return this.quickLoad(loadout); // la animación completa ya se vio: ahora solo se carga la estación
 
     ensureSoftTextures(this);
     ensureCrowdTextures(this);
@@ -160,6 +161,23 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.startLoading(loadout);
     this.bindSkip();
     this.ready = true;
+  }
+
+  /** Carga breve (sin la animación de despegue) para las misiones siguientes. */
+  private quickLoad(loadout: NonNullable<typeof state.loadout>): void {
+    fadeIn(this, 250);
+    const layer = new UiLayer(this, `<div class="launchq"><div><p>${tr('launch.quick')}</p><div class="launchq__bar"><i data-bar></i></div></div></div>`, 'screen');
+    this.startLoading(loadout);
+    this.time.addEvent({
+      delay: 80, loop: true,
+      callback: () => {
+        layer.q('[data-bar]').style.width = `${Math.round(this.loadProgress * 100)}%`;
+        if (this.loadProgress >= 1 && !this.done) {
+          this.done = true;
+          fadeTo(this, SCENES.flight, 250); // igual que tras la animación completa: sigue el vuelo a la Luna
+        }
+      },
+    });
   }
 
   private resetRun(): void {
@@ -801,6 +819,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   private arrive(): void {
     this.done = true;
+    state.saveProgress({ launchSeen: true });
     this.tweens.add({ targets: this.ui, alpha: 0, duration: 250 });
     this.time.delayedCall(150, () => fadeTo(this, SCENES.flight, 400));
   }

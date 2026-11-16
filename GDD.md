@@ -78,3 +78,31 @@ Estrellas: ★ aterrizar · ★★ calor bajo el límite · ★★★ además in
 
 ## 12. Idiomas
 Español e inglés (`src/core/i18n.ts`, diccionarios en `src/data/locales/`). El idioma inicial sale del navegador y se cambia en el menú o en Ajustes; los archivos de `data/` guardan claves, no textos.
+
+## 16. Capítulo final reforzado (reingreso, carretera espacial, hábitat)
+- **Reingreso:** fase 2 de «Casa» usa `sim/reentry.ts` + `core/reentryGame.ts` (orbitador con alabeo, calor, g, apagón). El viaje de regreso (`ReturnTrip`) ahora es más lento y con orbitador. Datos reales pendientes de verificar (ver SOURCES.md).
+- **Cinturón:** `mountBelt` ahora es una «carretera» pseudo-3D vista desde detrás de una sonda tipo New Horizons; estrellas que se abren, Saturno, cometa y destellos **[DIBUJO]**; las órdenes llegan con retardo **[MODELO]**. La lógica de `sim/finale.ts` no cambió.
+- **Narrativa:** la historia y los capítulos apuntan a investigar si la Luna podría ser habitable (aire y comida, energía y señal, agua), conectada a la misión real chilena en la ISS y a los laboratorios naturales; indicador «n/4» en el reporte. Sin verificar visualmente en navegador.
+
+## 17. Regreso «Rueda detenida» — etapa 1 (`sim/voyage.ts`, `core/dialogue.ts`, `core/voyageGames.ts`, `core/voyageArt.ts`, `data/voyageScript.ts`, `scenes/Reentry.ts`)
+- Casa ahora empieza con el tramo 1: GO/NO-GO (estado de la nave según las estrellas de las 3 jornadas), la vista, señal perdida (sintonía de radio), el aire (adaptador de CO₂) y apagar para volver (presupuesto de energía). Luego siguen inspección, quema, reingreso y planeo.
+- Tres finales: A «Rueda detenida», B «El rescate», C «Silencio» (siempre se puede reintentar). Reglas **[PROPUESTA]** en `endingFor`.
+- Diálogos estilo máquina de escribir con aviso accesible, `calm` quita temblor y estática, subtítulos siempre visibles.
+- Pendiente (etapas 2 y 3): voltereta, quema y apagón con arte por capas y más mecánica; mejorar el cinturón, la entrega y el rover; tarjetas de datos en Modo Ingeniero; elegir el nombre final de la nave. Sin verificar en navegador.
+
+## 18. Regreso «Rueda detenida» — etapas 2 y 3 (`core/returnGames.ts`, `core/dialogue.ts`, `scenes/Station.ts`)
+- **Voltereta** (`mountRollover`): se controla la velocidad del giro; solo se fotografía con giro estable y luz; cada corrección gasta combustible; mapa de 24 losetas y cobertura (≥ 85 % para el final A). **Quema** (`mountBurnAlign`): 2 ejes, cuenta regresiva, empujones y llama de partículas. Ambas con capas (estrellas con parallax, limbo de la Tierra, destello solar).
+- **Apagón de radio** (reingreso): ahora con escenas de diálogo antes y después (sala sin enlace, «¿nos escuchas?»).
+- **Columbia:** tarjeta de recuerdo respetuosa tras la inspección. **Modo Ingeniero:** tarjetas de datos [REAL/MODELO] bajo el diálogo.
+- **Cinturón, entrega y rover** abren con diálogos que ligan la carga (baterías, chips, algas) con los pasos hacia un hábitat lunar. No se retocó la jugabilidad del cinturón, la entrega ni el rover (proporciones y mecánica quedan para una pasada con capturas).
+- Sin verificar visualmente en navegador. Pendiente: nombre final de la nave confirmado con hablantes; cifras del Modo Ingeniero.
+
+## 19. Integración de `main` con el trabajo de Nicolás (PR #1) — 15 nov 2026
+- **Base:** lo desplegado en `main` (HUD nuevo, sonda apaisada, laboratorio de minijuegos, idiomas con claves en `src/data/locales/`). Encima va todo lo del PR.
+- **Idiomas:** se mantiene un solo sistema, el de claves (`t('clave')`). Los textos nuevos del PR que pasan por `t()` se agregaron a `es.ts` y `en.ts`; los diálogos (`voyageScript`, `earthGuides`, `prologueScript`, `reentryText`) traen su propio ES/EN y reciben el idioma con `getLang()`. Se retiró `src/i18n/`.
+- **Prólogo:** vuelve la escena `Story` con los diálogos estilo RPG; se muestra solo la primera vez (antes del entrenamiento). Después, Jugar va directo a elegir misión.
+- **Regreso a casa:** `Reentry` usa el flujo del PR (tramo 1 con GO / NO-GO, radio, aire y energía; voltereta, quema, reingreso físico, planeo y tres finales). El puntaje de la radio alimenta `link` de `casaScore`.
+- **Cinturón de la sonda:** se conserva la versión apaisada (940 × 590) y se le suman el control remoto con retardo y la foto de Saturno de la NASA con su crédito. La vista en perspectiva «carretera» del PR no se integró: las dos versiones redibujan el mismo juego.
+- **Estación:** «Avanzar el día», guías de Control Tierra antes de cada minijuego (una vez por sesión) y diálogos antes del cinturón, la entrega y el rover, todo dentro del marco común de minijuegos (pista, teclas y resultado).
+- **Taller de ADN:** cepas del PR (Brisa, Escudo, Polar) con la explicación de cada intento; el panel se reordenó en filas para que quepa.
+- **Minijuegos:** cosecha apta para daltonismo, bicicleta con ritmo variable y eventos sorpresa, sobre los niveles de dificultad de `main`.

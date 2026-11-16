@@ -138,7 +138,8 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.light = state.settings.ultraLight;
     this.speed = this.calm ? CALM_SPEED : 1;
     this.resetRun();
-    if (state.progress.launchSeen) return this.quickLoad(loadout); // la animación completa ya se vio: ahora solo se carga la estación
+    // el entrenamiento carga rápido: el despegue épico se reserva para la primera misión de verdad, y solo esa vez
+    if (state.training || state.progress.launchSeen) return this.quickLoad(loadout);
 
     ensureSoftTextures(this);
     ensureCrowdTextures(this);
@@ -819,7 +820,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   private arrive(): void {
     this.done = true;
-    state.saveProgress({ launchSeen: true });
+    if (!state.training) state.saveProgress({ launchSeen: true });
     this.tweens.add({ targets: this.ui, alpha: 0, duration: 250 });
     this.time.delayedCall(150, () => fadeTo(this, SCENES.flight, 400));
   }

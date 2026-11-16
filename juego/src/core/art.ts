@@ -9,6 +9,14 @@ import type { MissionId } from '../data/missions';
 export function michiSvg(c: Character, visor: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="${c.name}">
   <circle cx="80" cy="84" r="66" fill="#f5f5f2" stroke="#0e0b33" stroke-width="5"/>
+  ${michiHeadSvg(c)}
+  <path d="M30 60 A60 60 0 0 1 130 60" fill="none" stroke="${visor}" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+</svg>`;
+}
+
+/** La cabeza del michi (antenas, orejas, cara, manchas, ojos, morro y bigotes) en el espacio 160×160 del retrato, sin burbuja ni visor. */
+export function michiHeadSvg(c: Character): string {
+  return `
   ${c.antennae ? antennaeSvg(c) : ''}
   ${c.spots
     ? `<path d="M38 56 C30 36 40 18 54 20 C66 22 72 34 70 44 Z" fill="${c.fur}" stroke="#0e0b33" stroke-width="4" stroke-linejoin="round"/>
@@ -22,9 +30,35 @@ export function michiSvg(c: Character, visor: string): string {
   ${eyesSvg(c)}
   <path d="M74 99 L86 99 L80 107 Z" fill="#ee5fd6" stroke="#0e0b33" stroke-width="2" stroke-linejoin="round"/>
   <path d="M80 107 V112 M80 112 Q73 120 66 114 M80 112 Q87 120 94 114" fill="none" stroke="#0e0b33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M30 60 A60 60 0 0 1 130 60" fill="none" stroke="${visor}" stroke-width="6" stroke-linecap="round" opacity=".9"/>
-</svg>`;
+  <path d="M60 100 Q40 94 24 90 M60 105 Q40 106 22 108 M61 110 Q44 118 28 126 M100 100 Q120 94 136 90 M100 105 Q120 106 138 108 M99 110 Q116 118 132 126" fill="none" stroke="#0e0b33" stroke-width="2.6" stroke-linecap="round"/>`;
+}
+
+/** Color de la franja del traje de cada michi (como en los dibujos de referencia). */
+const SUIT_STRIPE: Record<string, string> = { miu: '#ffcb47', leo: '#4cc3f5', luna: '#ee5fd6', zib: '#9b7bff' };
+
+/**
+ * Michi astronauta tumbado en la camilla (juego de curarse), en el espacio 380×500 de la camilla: cabeza grande con carita de
+ * los retratos, bufanda gris, traje blanco con franja de color, mochila, guantes y botas blancas y cola enroscada. Las heridas (puntos
+ * de HEAL_SPOTS) caen sobre cabeza (190,92), pecho (190,232), brazo izquierdo (84,250) y pierna (148,410).
+ */
+export function healPatientSvg(c: Character): string {
+  const K = '#0e0b33';
+  const stripe = SUIT_STRIPE[c.id] ?? '#4cc3f5';
+  const W = '#f5f5f2';
+  const limb = (d: string): string => `<path d="${d}" fill="none" stroke="${K}" stroke-width="40" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${W}" stroke-width="30" stroke-linecap="round"/>`;
+  return `
+  <path d="M150 330 C84 330 70 392 110 420" fill="none" stroke="${K}" stroke-width="26" stroke-linecap="round"/><path d="M150 330 C84 330 70 392 110 420" fill="none" stroke="${c.fur}" stroke-width="17" stroke-linecap="round"/>
+  ${c.spots ? `<circle cx="96" cy="372" r="3.4" fill="${c.spots}"/><circle cx="100" cy="396" r="3" fill="${c.spots}"/><circle cx="116" cy="350" r="3" fill="${c.spots}"/>` : ''}
+  <rect x="112" y="170" width="156" height="120" rx="40" fill="#b9b7da" stroke="${K}" stroke-width="5"/>
+  ${limb('M148 190 L92 250')}${limb('M232 190 L288 250')}
+  <circle cx="86" cy="256" r="17" fill="${W}" stroke="${K}" stroke-width="5"/><circle cx="294" cy="256" r="17" fill="${W}" stroke="${K}" stroke-width="5"/>
+  ${limb('M165 300 L152 404')}${limb('M215 300 L228 404')}
+  <ellipse cx="150" cy="418" rx="26" ry="16" fill="${W}" stroke="${K}" stroke-width="5"/><ellipse cx="230" cy="418" rx="26" ry="16" fill="${W}" stroke="${K}" stroke-width="5"/>
+  <rect x="128" y="162" width="124" height="150" rx="42" fill="${W}" stroke="${K}" stroke-width="5"/>
+  <rect x="128" y="226" width="124" height="26" fill="${stripe}" stroke="${K}" stroke-width="4"/>
+  <rect x="160" y="262" width="60" height="26" rx="8" fill="#c4c2e0" stroke="${K}" stroke-width="4"/>
+  <ellipse cx="190" cy="162" rx="46" ry="14" fill="#c4c2e0" stroke="${K}" stroke-width="5"/>
+  <g transform="translate(102 11) scale(1.1)">${michiHeadSvg(c)}</g>`;
 }
 
 /**

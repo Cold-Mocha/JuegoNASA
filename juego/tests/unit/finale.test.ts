@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BELT_SECONDS, ROCKS, ROVER_LEN, beltDone, beltItems, beltScore, craters, createBelt, createRover, finaleScore, hintSeconds, moveBelt, roverDone, roverScore,
+  BELT_SECONDS, POTHOLE_W, ROVER_AIR_SEC, ROCKS, ROVER_LEN, beltDone, beltItems, beltScore, craters, createBelt, createRover, finaleScore, hintSeconds, moveBelt, roverDone, roverLives, roverScore, potholes,
   stepBelt, stepRover, terrainY,
 } from '../../src/sim/finale';
 
@@ -12,38 +12,76 @@ const runBelt = (seed: number, hard: boolean) => {
 };
 
 describe('la sonda', () => {
-  it('el terreno es determinista y su pendiente es subible (≤ 0,7)', () => {
+  it('el terreno es determinista y su pendiente es subible (≤ 0,85)', () => {
     let max = 0;
     for (let x = 0; x < ROVER_LEN; x += 2) max = Math.max(max, Math.abs(terrainY(x + 2) - terrainY(x)) / 2);
-    expect(max).toBeLessThanOrEqual(0.7);
+    expect(max).toBeLessThanOrEqual(0.85);
     expect(terrainY(1234)).toBe(terrainY(1234));
   });
 
-  it('las 8 rocas están sobre el terreno, separadas y fuera de los cráteres', () => {
+  it('las 8 rocas están separadas y lejos de los baches; baches y cráteres no se pisan', () => {
     expect(ROCKS).toHaveLength(8);
     ROCKS.forEach((r, i) => {
       expect(r).toBeLessThan(ROVER_LEN);
       if (i) expect(r - ROCKS[i - 1]).toBeLessThan(900);
-      for (const c of craters(true)) expect(Math.abs(r - c)).toBeGreaterThan(100);
+      for (const p of potholes(true)) expect(r < p - 60 || r > p + POTHOLE_W + 60).toBe(true);
     });
+    for (const p of potholes(true)) for (const c of craters(true)) expect(Math.abs(p - c.x)).toBeGreaterThan(c.r + 60);
   });
 
-  it('el rover con gas llega al final y la nota queda entre 0 y 1', () => {
-    const s = createRover(0, 0, false);
-    for (let i = 0; i < 60 * 60 && !roverDone(s); i++) stepRover(s, 1 / 60, { brake: false, jump: false });
-    expect(roverDone(s)).toBe(true);
-    expect(roverScore(s)).toBeGreaterThanOrEqual(0);
-    expect(roverScore(s)).toBeLessThanOrEqual(1);
+  /** Jugador automático: pedal siempre y salta antes de cada bache. */
+  const drive = (hard: boolean, jumper: boolean) => {
+    const s = createRover(0, 0, hard);
+    for (let i = 0; i < 60 * 120 && !roverDone(s); i++) {
+      const next = potholes(hard).find((p) => p + POTHOLE_W > s.x && p - s.x < 110);
+      stepRover(s, 1 / 60, { pedal: true, jump: jumper && next !== undefined && s.x + (s.v * ROVER_AIR_SEC) / 2 >= next + POTHOLE_W / 2 });
+    }
+    return s;
+  };
+
+  it('con pedal y saltando los baches se cruzan cuestas y cráteres, junta todas las rocas y llega a tiempo', () => {
+    for (const hard of [false, true]) {
+      const s = drive(hard, true);
+      expect(s.rocks.size).toBe(ROCKS.length); // junta todas las rocas del recorrido
+      expect(s.deaths).toBe(0);
+      expect(s.left).toBeGreaterThan(0);
+      expect(roverScore(s)).toBeGreaterThan(0);
+      expect(roverScore(s)).toBeLessThanOrEqual(1);
+    }
   });
 
-  it('volcar en un cráter cuesta 3 s y nunca termina la partida', () => {
+  it('el rover no se teletransporta: en un paso nunca avanza más que su velocidad máxima', () => {
     const s = createRover(0, 0, true);
-    s.x = craters(true)[0] + 1;
+    let last = s.x;
+    for (let i = 0; i < 60 * 30; i++) {
+      stepRover(s, 1 / 60, { pedal: true, jump: i % 90 === 0 });
+      if (s.respawnAt === null) expect(Math.abs(s.x - last)).toBeLessThan(6);
+      last = s.x;
+    }
+  });
+
+  it('un bache sin saltar quita 1 de 3 integridades, cuesta 2 s y devuelve al último punto de control; a la tercera queda varado', () => {
+    const s = createRover(0, 0, true);
+    const p = potholes(true)[1]; // 1650: el último punto de control antes es 1500
+    s.x = p - 1; s.v = 100;
     const before = s.left;
-    stepRover(s, 0.01, { brake: false, jump: false });
-    expect(s.flips).toBe(1);
-    expect(before - s.left).toBeGreaterThanOrEqual(3);
-    expect(s.x).toBeGreaterThan(craters(true)[0] + 70);
+    stepRover(s, 1 / 60, { pedal: false, jump: false });
+    expect(s.deaths).toBe(1);
+    expect(s.x).toBe(1500);
+    expect(before - s.left).toBeGreaterThanOrEqual(2);
+    expect(roverDone(s)).toBe(false);
+    for (let k = 0; k < 2; k++) { s.invuln = 0; s.x = p + 1; s.h = 0; stepRover(s, 1 / 60, { pedal: false, jump: false }); }
+    expect(roverLives(s)).toBe(0);
+    expect(roverDone(s)).toBe(true);
+  });
+
+  it('saltando se pasa por encima del bache sin perder integridad', () => {
+    const s = createRover(0, 0, true);
+    const p = potholes(true)[0];
+    s.x = p - 20; s.v = 120;
+    for (let i = 0; i < 60; i++) stepRover(s, 1 / 60, { pedal: true, jump: i === 0 });
+    expect(s.deaths).toBe(0);
+    expect(s.x).toBeGreaterThan(p + POTHOLE_W);
   });
 
   it('cada batería suma 4 s (máx. 16) y cada chip 8 s de flecha (máx. 3 chips)', () => {

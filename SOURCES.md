@@ -186,3 +186,9 @@ Guion y fuentes aportados por el equipo (`Michinautas — Misión final: Rueda d
 - **Taller de ADN a escala celular:** [REAL] una bacteria mide del orden de 2 µm y los plásmidos son anillos de ADN usados en biología sintética. El anillo con tres piezas (sensor, función, interruptor) y las cepas Brisa, Escudo y Polar son [PROPUESTA]/[MODELO] del juego.
 - **Cepa legendaria Aurora:** [PROPUESTA] ficción del juego; se gana con un diseño perfecto, cura 40 puntos de radiación una sola vez cuando esta llega a 60. [REAL en concepto] se estudian microbios y pigmentos que protegen de la radiación.
 - **Tormentas solares:** los avisos de color (amarillo, naranja, rojo) y la estática son una señal de juego; las llamaradas reales se clasifican por letras (C, M, X). Entre llamaradas hay al menos 20 s sin avisos nuevos.
+
+## Rover lunar: pedal, baches, cráteres y paisaje en capas
+- [MODELO] Física simple: el pedal acelera, soltarlo frena por fricción, las cuestas aceleran o frenan según la pendiente y el salto dura más que en la Tierra porque la gravedad lunar es ~1/6 (1,62 m/s², NASA).
+- [REAL] Los cráteres lunares son cuencos con borde elevado; el rover los cruza bajando y subiendo por sus paredes.
+- [PROPUESTA] Baches pequeños que quitan 1 de 3 de integridad y devuelven al último punto de control (mecánica del juego, no un dato real).
+- [DIBUJO] Paisaje en capas con paralaje (técnica de cámara multiplano de animación): cielo, crestas lejanas, bases, suelo y rocas de primer plano a distintas velocidades.

@@ -113,3 +113,13 @@ Todas las URLs son de dominios NASA (consultadas el 15 nov 2026). Correr `npm ru
 - **Primer laboratorio chileno en el espacio:** texto aportado por el equipo (contenedor a la ISS; experimentos biológicos y tecnológicos en microgravedad y radiación; proyecto Anillo AD220057, ANID). **[REAL, verificar]**: falta enlazar la fuente oficial (nota de prensa/ANID) antes de publicar; en el juego no se nombran las instituciones.
 - **Laboratorios naturales (Atacama, Antártica):** texto aportado por el equipo; los datos de ALMA, Paranal y La Silla son públicos en sus sitios oficiales. **[REAL, verificar enlaces]**
 - **«Tres pasos hacia un hábitat»:** orden de las jornadas, **[PROPUESTA]**, no es un plan de ninguna agencia. El juego dice que la Luna hoy no es habitable.
+
+## Regreso «Rueda detenida» (etapa 1: diálogos y escenas 1–5) — guion del equipo, 14 nov 2026
+Guion y fuentes aportados por el equipo (`Michinautas — Misión final: Rueda detenida`). Todo lo numérico del juego es **[MODELO]/[PROPUESTA]**.
+- NASA JSC-63400, *History of Space Shuttle Rendezvous* (maniobra R-bar pitch, 0,75°/s, STS-114). https://ntrs.nasa.gov/citations/20110023479 **[REAL, verificar cifras en el documento]**
+- Apollo 13, adaptador de CO₂ (filtros redondos/cuadrados): https://www.nasa.gov/history/afj/ap13fj/15day4-mailbox.html y https://www.nasa.gov/history/alsj/a13/a13_LIOH_Adapter.html **[REAL]**
+- NASA, podcast Mission Control (CAPCOM y director de vuelo): https://www.nasa.gov/podcasts/houston-we-have-a-podcast/mission-control-eye-of-the-storm/ **[REAL]**
+- Informe CAIB resumido por CRS RS21606: https://www.everycrsreport.com/reports/RS21606.html **[REAL]** (solo en tarjeta informativa y con respeto; etapa 2)
+- Duración del apagón de radio (10–13 min en el transbordador según las fuentes): **[verificar]** antes de publicar.
+- **Nombre de la nave «Wenu Lewfü»** (= «río del cielo», la Vía Láctea en mapudungun): Currículum Nacional (MINEDUC), glosario Wenu lewfü / Küyen / Wagülen. https://www.curriculumnacional.cl/614/articles-89653_recurso_pdf.pdf **[REAL]**. Hay varias grafías (wangülen, wagülen, wanglen): **[verificar con hablantes]**. Es una **[PROPUESTA]** pendiente de decisión del equipo; el nombre está solo en `SHIP_NAME` (`src/data/voyageScript.ts`).
+- Regreso desde la Luna en ficción (orbitador en «dos tramos»): la nave queda en órbita baja y reingresa como transbordador. Un regreso lunar real entra mucho más rápido y en cápsula; el juego lo dice en pantalla **[PROPUESTA]**.

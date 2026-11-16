@@ -110,3 +110,9 @@ Los cuatro tripulantes (Miu, Leo, Güiña, Zib) llevan un morro algo más grande
 - **Reingreso:** fase 2 de «Casa» usa `sim/reentry.ts` + `core/reentryGame.ts` (orbitador con alabeo, calor, g, apagón). El viaje de regreso (`ReturnTrip`) ahora es más lento y con orbitador. Datos reales pendientes de verificar (ver SOURCES.md).
 - **Cinturón:** `mountBelt` ahora es una «carretera» pseudo-3D vista desde detrás de una sonda tipo New Horizons; estrellas que se abren, Saturno, cometa y destellos **[DIBUJO]**; las órdenes llegan con retardo **[MODELO]**. La lógica de `sim/finale.ts` no cambió.
 - **Narrativa:** la historia y los capítulos apuntan a investigar si la Luna podría ser habitable (aire y comida, energía y señal, agua), conectada a la misión real chilena en la ISS y a los laboratorios naturales; indicador «n/4» en el reporte. Sin verificar visualmente en navegador.
+
+## 17. Regreso «Rueda detenida» — etapa 1 (`sim/voyage.ts`, `core/dialogue.ts`, `core/voyageGames.ts`, `core/voyageArt.ts`, `data/voyageScript.ts`, `scenes/Reentry.ts`)
+- Casa ahora empieza con el tramo 1: GO/NO-GO (estado de la nave según las estrellas de las 3 jornadas), la vista, señal perdida (sintonía de radio), el aire (adaptador de CO₂) y apagar para volver (presupuesto de energía). Luego siguen inspección, quema, reingreso y planeo.
+- Tres finales: A «Rueda detenida», B «El rescate», C «Silencio» (siempre se puede reintentar). Reglas **[PROPUESTA]** en `endingFor`.
+- Diálogos estilo máquina de escribir con aviso accesible, `calm` quita temblor y estática, subtítulos siempre visibles.
+- Pendiente (etapas 2 y 3): voltereta, quema y apagón con arte por capas y más mecánica; mejorar el cinturón, la entrega y el rover; tarjetas de datos en Modo Ingeniero; elegir el nombre final de la nave. Sin verificar en navegador.

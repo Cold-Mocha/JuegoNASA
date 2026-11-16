@@ -12,6 +12,13 @@ import { mountEntryGame } from '../core/reentryGame';
 import type { MiniGameHandle } from '../core/miniGames';
 import { casaScore, casaStars, type CasaResult } from '../sim/entry';
 import { t } from '../core/i18n';
+import { CHARACTERS } from '../data/characters';
+import { UI_TEXT, type SceneKey } from '../data/voyageScript';
+import { mountDialogue } from '../core/dialogue';
+import { voyageArt, type ArtKind } from '../core/voyageArt';
+import { mountAdapter, mountPowerBudget, mountRadioDial } from '../core/voyageGames';
+import { MISSIONS } from '../data/missions';
+import { endingFor, goNoGo, shipFromStars, voyageScore, type ShipState, type VoyageResult } from '../sim/voyage';
 
 const STAR = '<svg class="mn-star is-earned" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3C26 16 32 22 45 24C32 26 26 32 24 45C22 32 16 26 3 24C16 22 22 16 24 3Z"/></svg>';
 const STAR_OFF = STAR.replace(' is-earned', '');
@@ -28,6 +35,8 @@ export class ReentryScene extends Phaser.Scene {
   private timer?: Phaser.Time.TimerEvent;
   private res: CasaResult = { inspected: 1, burn: 0, corridor: 0, heatMax: 0, glide: 0 };
   private unfound = 0;
+  private ship: ShipState = shipFromStars(0);
+  private vr: VoyageResult = { signal: 0, air: 0, power: 0, inspected: 1, unfound: 0, reentry: 0, glide: 0 };
 
   constructor() {
     super(SCENES.reentry);
@@ -39,7 +48,7 @@ export class ReentryScene extends Phaser.Scene {
     this.res = { inspected: 1, burn: 0, corridor: 0, heatMax: 0, glide: 0 };
     this.unfound = 0;
     this.ui = new UiLayer(this, '<div class="casa" data-casa></div>');
-    this.ui.on('retry', () => this.startPhase(0)).on('home', () => this.exit())
+    this.ui.on('retry', () => this.runPrelude(0)).on('home', () => this.exit())
       .on('chapter', (el) => { this.stop(); fadeTo(this, SCENES.archive, 300, { from: SCENES.reentry, entry: el.dataset.entry }); });
     const kb = this.input.keyboard!;
     kb.on('keydown', (ev: KeyboardEvent) => {
@@ -52,7 +61,7 @@ export class ReentryScene extends Phaser.Scene {
       }
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stop());
-    this.startPhase(0);
+    this.runPrelude(0);
   }
 
   private stop(): void {
@@ -64,6 +73,51 @@ export class ReentryScene extends Phaser.Scene {
   private exit(): void {
     this.stop();
     fadeTo(this, SCENES.menu);
+  }
+
+  private get lang(): 'es' | 'en' { return state.settings.lang === 'en' ? 'en' : 'es'; }
+  private get pilot(): string { return CHARACTERS.find((c) => c.id === state.loadout?.character)?.name ?? (this.lang === 'es' ? 'Piloto' : 'Pilot'); }
+
+  /** Diálogo con arte por capas arriba y la caja de texto abajo; `extra` es HTML opcional bajo el arte (p. ej. la lista GO / NO-GO). */
+  private say(key: SceneKey, art: ArtKind | null, then: () => void, extra = ''): void {
+    this.stop();
+    const root = this.ui.q('[data-casa]');
+    root.innerHTML = `<div class="voyage"><div class="voyage__stage">${art ? `<div class="voyage__art">${voyageArt(art)}</div>` : ''}${extra}</div><div data-dlg></div></div>`;
+    const h = mountDialogue(this.ui.q('[data-dlg]'), key, { lang: this.lang, calm: state.calm, pilot: this.pilot, onDone: () => { h.destroy(); then(); } });
+    this.handle = h;
+  }
+
+  /** Un minijuego del tramo 1 a pantalla completa (mismo marco que las demás fases). */
+  private play(mount: (stage: HTMLElement) => MiniGameHandle): void {
+    this.stop();
+    const root = this.ui.q('[data-casa]');
+    root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
+    this.handle = mount(this.ui.q('[data-stage]'));
+  }
+
+  /** Tramo 1 del regreso (escenas 1–5 del guion «Rueda detenida»), seguido de las 4 fases de Casa. [PROPUESTA] */
+  private runPrelude(n: number): void {
+    const hard = state.loadout?.difficulty === 'comandante';
+    const total = MISSIONS.reduce((a, m) => a + (state.progress.best[m.id]?.stars ?? 0), 0);
+    if (n === 0) {
+      this.ship = shipFromStars(total);
+      this.vr = { signal: 0, air: 0, power: 0, inspected: 1, unfound: 0, reentry: 0, glide: 0 };
+    }
+    const go = (k: number): void => this.runPrelude(k);
+    const es = this.lang === 'es';
+    const done = (key: 'signal' | 'air' | 'power', next: number, after: SceneKey): ((score: number) => void) => (score) => {
+      this.vr[key] = score; audio.play('achievement');
+      this.timer = this.time.delayedCall(500, () => this.say(after, 'cabin', () => go(next)));
+    };
+    if (n === 0) {
+      const rows = goNoGo(this.ship).map((g) => `<div class="golist__row ${g.go ? 'is-go' : 'is-nogo'}"><span>${UI_TEXT.items[g.id][this.lang]}</span><b>${g.go ? UI_TEXT.go[this.lang] : UI_TEXT.nogo[this.lang]}</b></div>`).join('');
+      this.say('go', 'cabin', () => go(1), `<div class="golist" role="list" aria-label="GO / NO-GO">${rows}</div>`);
+    } else if (n === 1) this.say('view', 'view', () => go(2));
+    else if (n === 2) this.say('signalLost', 'storm', () => this.play((st) => mountRadioDial(st, { antenna: this.ship.antenna, hard, lang: this.lang, calm: state.calm, onDone: done('signal', 3, 'signalBack') })));
+    else if (n === 3) this.say('air', 'cabin', () => this.play((st) => mountAdapter(st, { hard, seed: total * 7 + 3, lang: this.lang, calm: state.calm, onDone: done('air', 4, 'airDone') })));
+    else if (n === 4) this.say('power', 'cabin', () => this.play((st) => mountPowerBudget(st, { energy: this.ship.energy, lang: this.lang, onDone: done('power', 5, 'powerDone') })));
+    else if (n === 5) this.say('leo', 'orbit', () => this.startPhase(0));
+    void es;
   }
 
   /** Icono de la fase un instante y después el juego. */
@@ -110,12 +164,19 @@ export class ReentryScene extends Phaser.Scene {
   /** Estrellas y puntaje; se guarda el mejor. Sin pérdida de tripulación: siempre se puede reintentar. */
   private finish(): void {
     this.stop();
-    const stars = casaStars(this.res);
-    const score = casaScore(this.res);
+    this.vr.inspected = this.res.inspected; this.vr.unfound = this.unfound; this.vr.reentry = this.res.corridor; this.vr.glide = this.res.glide;
+    const ending = endingFor(this.vr);
+    const stars = ending === 'C' ? Math.min(1, casaStars(this.res)) : casaStars(this.res);
+    const score = Math.max(casaScore(this.res), voyageScore(this.vr) >= 0 ? Math.round(voyageScore(this.vr)) : 0);
     const prev = state.progress.casa;
     if (!prev || score > prev.score) state.saveProgress({ casa: { score, stars: Math.max(stars, prev?.stars ?? 0) } });
+    this.say(ending === 'A' ? 'endA' : ending === 'B' ? 'endB' : 'endC', ending === 'C' ? 'storm' : 'orbit', () => this.showResult(stars, score, ending));
+  }
+
+  private showResult(stars: number, score: number, ending: 'A' | 'B' | 'C'): void {
+    this.stop();
     audio.play('achievement');
-    this.ui.q('[data-casa]').innerHTML = `<div class="casa__result">
+    this.ui.q('[data-casa]').innerHTML = `<div class="casa__result"><p class="caption-mono">${UI_TEXT.endings[ending][this.lang]}</p>${ending === 'C' ? `<p class="body-sm">${UI_TEXT.retryWhat[this.lang]}</p>` : ''}
       <div class="mn-stars">${STAR.repeat(stars)}${STAR_OFF.repeat(3 - stars)}</div>
       <p class="casa__score">${score}</p>
       ${casaChapter()}

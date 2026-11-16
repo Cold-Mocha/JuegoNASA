@@ -1,3 +1,4 @@
+import { GUIDES, takeGuide, type GuideKey } from '../data/earthGuides';
 import Phaser from 'phaser';
 import { withIntro } from '../core/dialogue';
 import { SCRIPT } from '../data/voyageScript';
@@ -741,7 +742,7 @@ export class StationScene extends Phaser.Scene {
 
   // ---------- minijuegos: todos a pantalla completa y sin texto (el reloj se detiene; el costo y el efecto se aplican al terminar)
   /** Minijuego a pantalla completa y sin texto: solo el juego (se sale con Esc). Termina con un destello y una marca de listo. */
-  private openFullMini(cfg: { mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
+  private openFullMini(cfg: { guide?: GuideKey; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => void; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null }): void {
     this.closeOverlay();
     this.miniOutdoor = !!cfg.outdoor;
     this.openModal(`
@@ -750,7 +751,7 @@ export class StationScene extends Phaser.Scene {
         <div class="mini-full__done" data-dust-result hidden aria-hidden="true">${icon('check')}</div>
       </div>
       ${cfg.outdoor ? `<div class="mini-suit" aria-label="${t('Oxígeno del traje')}">${icon('helmet')}<div class="mini-suit__track"><div class="mini-suit__fill" data-mini-suit></div></div></div>` : ''}`, 'minigame', 'modal__panel--full');
-    this.miniGame = cfg.mount(this.ui.q('[data-dust-root]'), {
+    const cbs: MiniCallbacks = {
       onProgress: () => undefined,
       onDone: (result) => {
         const failure = cfg.failed?.(result) ?? null; // no se alcanzó la meta: no hay marca de listo ni efecto
@@ -770,12 +771,19 @@ export class StationScene extends Phaser.Scene {
           else this.closeOverlay();
         });
       },
-    });
+    };
+    const stage = this.ui.q('[data-dust-root]');
+    if (cfg.guide && takeGuide(cfg.guide)) {
+      // Guía de Control Tierra antes del minijuego: el traje no gasta oxígeno mientras se lee
+      this.miniOutdoor = false;
+      const opts = { lang: (state.settings.lang === 'en' ? 'en' : 'es') as 'es' | 'en', calm: state.calm, engineer: this.difficulty.id === 'comandante', pilot: CHARACTERS.find((c) => c.id === state.loadout?.character)?.name ?? 'Piloto' };
+      this.miniGame = withIntro(GUIDES[cfg.guide], opts, (r) => { this.miniOutdoor = !!cfg.outdoor; return cfg.mount(r, cbs); })(stage);
+    } else this.miniGame = cfg.mount(stage, cbs);
   }
 
   private openDustGame(action: 'cleanDust'): void {
     this.openFullMini({
-      mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
+      guide: 'polvo', mount: (root, cb) => mountDustGame(root, { dust: this.sim.comp.dust, ...cb }),
       finish: () => void this.sim.act(action),
       outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
     });
@@ -783,16 +791,16 @@ export class StationScene extends Phaser.Scene {
 
   /** Panel de pruebas (Energía del Sol): limpiarlo y orientarlo al Sol. Se juega afuera: el traje sigue gastando. */
   private openTestPanelGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ guide: 'panel', mount: (root, cb) => mountTestPanel(root, cb), finish: (r) => void this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
   }
 
   /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja. */
   private openAlgaeGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
+    this.openFullMini({ guide: 'algas', mount: (root, cb) => mountAlgae(root, cb), finish: (r) => void this.sim.act('growLights', quality(r ?? 1)) });
   }
 
   private openSealGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
+    this.openFullMini({ guide: 'sellar', mount: (root, cb) => mountSealGame(root, cb), finish: () => void this.sim.act('repair') });
   }
 
   /**
@@ -801,7 +809,7 @@ export class StationScene extends Phaser.Scene {
    */
   private openAntennaFlow(): void {
     const message = (): void => this.openFullMini({ mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => void this.sim.act('repairAntenna', quality(r ?? 1)) });
-    if (this.sim.comp.antenna < 0.7) this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
+    if (this.sim.comp.antenna < 0.7) this.openFullMini({ guide: 'antena', mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message });
     else message();
   }
 
@@ -836,13 +844,13 @@ export class StationScene extends Phaser.Scene {
       mount: (root, cb) => mountBiofirmas(root, { hard: this.difficulty.id === 'comandante', seed: this.sim.day * 31 + 7, onDone: (score) => cb.onDone(score) }),
       finish: (r) => void this.sim.act('eva', quality(((r ?? 1) + spectrum) / 2)), outdoor: true,
     });
-    this.openFullMini({ mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => { spectrum = r ?? 1; }, outdoor: true, next: tests });
+    this.openFullMini({ guide: 'biofirmas', mount: (root, cb) => mountBiosignature(root, cb), finish: (r) => { spectrum = r ?? 1; }, outdoor: true, next: tests });
   }
 
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
   private openPedalGame(): void {
     this.openFullMini({
-      mount: (root, cb) => mountPedal(root, cb),
+      guide: 'pedal', mount: (root, cb) => mountPedal(root, cb),
       finish: (r) => void this.sim.act('pedal', quality(r ?? 1)),
       failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : t('No pedaleaste lo suficiente: hay que llenar más del {n} % de la barra.', { n: PEDAL_PASS * 100 })),
     });
@@ -850,18 +858,18 @@ export class StationScene extends Phaser.Scene {
 
   /** Curarse: tratar cada herida manteniendo apretado. */
   private openHealGame(): void {
-    this.openFullMini({ mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
+    this.openFullMini({ guide: 'curar', mount: (root, cb) => mountHealGame(root, cb), finish: (r) => void this.sim.act('heal', quality(r ?? 1)) });
   }
 
   private openHarvestGame(): void {
     const harvest = (): void => this.openFullMini({
-      mount: (root, cb) => mountHarvestGame(root, cb),
+      guide: 'cosecha', mount: (root, cb) => mountHarvestGame(root, cb),
       finish: (result) => void this.sim.act('harvest', quality(result ?? 1) * dnaYield(Math.max(0, this.dnaScore))),
     });
     if (this.dnaScore >= 0) { harvest(); return; }
     // Fase C: antes de cosechar se diseña el circuito de «ADN de papel» de la jornada (una vez); cuesta energía al alga y rinde según el ajuste
     this.openFullMini({
-      mount: (root, cb) => mountDnaWorkshop(root, { mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => { this.dnaScore = score; this.sim.stats.dna = Math.max(this.sim.stats.dna, score); cb.onDone(score); } }),
+      guide: 'bio', mount: (root, cb) => mountDnaWorkshop(root, { mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => { this.dnaScore = score; this.sim.stats.dna = Math.max(this.sim.stats.dna, score); cb.onDone(score); } }),
       finish: () => undefined, next: harvest,
     });
   }

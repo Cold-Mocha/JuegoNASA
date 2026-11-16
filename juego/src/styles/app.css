@@ -680,6 +680,8 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .dlg--full .dlg__box { position: relative; z-index: 1; max-width: 1100px; }
 .dlg--full .dlg__text { font-size: 26px; }
 .dlg__box[data-fx="shake"] .dlg__text { animation: dlg-shake .18s linear infinite; }
+.dlg__dim { position: absolute; inset: 0; z-index: 20; pointer-events: none; background: #000; opacity: 0; animation: dlg-dim 1.5s ease-in-out 1; }
+@keyframes dlg-dim { 0%, 100% { opacity: 0; } 25% { opacity: .92; } 40% { opacity: .35; } 55% { opacity: .9; } 80% { opacity: 0; } }
 .dlg__box[data-fx="whisper"] .dlg__text { opacity: .8; font-style: italic; }
 .dlg__who { position: absolute; top: -17px; left: 18px; margin: 0; padding: 0 10px; background: #000; border: 3px solid #f5f5f2; font: 700 15px/24px "Courier New", ui-monospace, monospace; letter-spacing: .08em; }
 .dlg__who[hidden] { display: none; }

@@ -14,6 +14,8 @@ export interface DialogueOptions {
 }
 
 const BASE = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+/** Retrato de Control Tierra: antena parabólica con ondas de radio (dibujo propio). */
+const TIERRA_FACE = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#10243a"/><circle cx="32" cy="34" r="22" fill="#1d5a8a"/><path d="M14 30c4 14 14 22 28 20 0-8-6-18-14-22-5-2-10-1-14 2z" fill="#3a9a5a"/><g transform="rotate(-30 32 34)"><path d="M18 34a14 10 0 0 0 28 0z" fill="#e8eef5"/><path d="M32 34V18" stroke="#e8eef5" stroke-width="2"/><circle cx="32" cy="17" r="2.5" fill="#ffcb47"/></g><path d="M44 12a14 14 0 0 1 8 8M42 6a22 22 0 0 1 14 14" fill="none" stroke="#9fe7c8" stroke-width="2" stroke-linecap="round"/></svg>';
 const FACE: Partial<Record<string, string>> = { MIU: 'tabby', GUINA: 'ocelot', LEO: 'snow', ZIB: 'alien' };
 /** Tono de la «voz» de cada personaje (estilo RPG). */
 const PITCH: Partial<Record<string, number>> = { MIU: 330, GUINA: 440, LEO: 260, ZIB: 560, NEBULA: 200 };
@@ -75,9 +77,10 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
     const meta = WHO_LABEL[line.who];
     who.textContent = meta[lang]; who.style.color = meta.color; who.hidden = !meta[lang];
     const fk = FACE[line.who];
-    face.hidden = !fk && line.who !== 'NEBULA';
+    face.hidden = !fk && line.who !== 'NEBULA' && line.who !== 'TIERRA';
     if (fk) face.innerHTML = `<img src="${BASE}prologue/portraits/${fk}.jpg" alt="">`;
     else if (line.who === 'NEBULA') face.innerHTML = michiSvg(NEBULA, tokenCss('nebula-violet'));
+    else if (line.who === 'TIERRA') face.innerHTML = TIERRA_FACE;
     box.classList.toggle('has-face', !face.hidden);
     if (line.bg) bgEl.innerHTML = `<img src="${BASE}${line.bg}" alt="">`;
     note.hidden = !line.note; note.textContent = line.note ? line.note[lang] : '';
@@ -85,6 +88,12 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
     box.dataset.fx = !opts.calm && line.fx === 'shake' ? 'shake' : line.fx === 'whisper' ? 'whisper' : '';
     text.classList.toggle('is-nave', line.who === 'NAVE');
     sr.textContent = '';
+    if (line.fx === 'dim' && !opts.calm && !reduce) { // guiño: la luz cae un instante (1–2 s)
+      const dim = document.createElement('div');
+      dim.className = 'dlg__dim';
+      root.appendChild(dim);
+      window.setTimeout(() => dim.remove(), 1600);
+    }
     card.hidden = !(opts.engineer && line.card); card.textContent = line.card ? `ⓘ ${line.card[lang]}` : '';
     opts.onLine?.(line, i);
     shown = 0; text.textContent = '';

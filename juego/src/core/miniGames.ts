@@ -602,9 +602,11 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
   const limit = ALGAE_SECONDS * Math.max(1, cfg.time); // con 3 tubos no se recorta el reloj: en Comandante la dificultad ya es el tercer tubo
   const ALGAE_GAUGES = ALL_ALGAE_GAUGES.slice(0, count);
   const KEYS = ['A', 'S', 'D'].slice(0, count); // la tecla de cada tubo, también dibujada debajo de él
-  const band = ALGAE_GAUGES.map(() => ({ center: 0.35 + Math.random() * 0.3, half: cfg.algaeBandHalf }));
+  const band = ALGAE_GAUGES.map(() => ({ center: 0.3 + Math.random() * 0.4, half: cfg.algaeBandHalf }));
   const phase = ALGAE_GAUGES.map(() => Math.random() * 6.28);
-  const pos = ALGAE_GAUGES.map(() => 0.5);
+  // cada aguja arranca FUERA de su franja (arriba o abajo al azar): hay que llevarla; nada se gana sin tocar
+  const pos = band.map((b) => Math.min(0.96, Math.max(0.04, b.center + (Math.random() < 0.5 ? -1 : 1) * (b.half + 0.2 + Math.random() * 0.15))));
+  const vel = ALGAE_GAUGES.map(() => 0);
   const held = ALGAE_GAUGES.map(() => false);
   root.innerHTML = `<div class="algae" style="width:${WIRE_W}px;height:${WIRE_H}px">
     <div class="algae__time" role="progressbar" aria-label="${t('mini.time')}" aria-valuemin="0" aria-valuemax="${limit}"><i data-time></i></div>
@@ -640,6 +642,7 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
     if (over) return;
     const i = Math.floor(Math.random() * ALGAE_GAUGES.length);
     pos[i] = Math.min(1, Math.max(0, pos[i] + (pos[i] > 0.5 ? -0.16 : 0.16)));
+    vel[i] = 0;
     gauges[i].classList.add('is-alert');
     alertFx(root, '❗', '#ff7a59');
     window.setTimeout(() => gauges[i].classList.remove('is-alert'), 1000);
@@ -652,10 +655,12 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
     last = now;
     elapsed += dt;
     pos.forEach((p, i) => {
-      let v = (held[i] ? 0.22 : -0.12) + 0.05 * Math.sin(elapsed * 1.3 + phase[i]); // movimiento lento: se puede guiar con calma
-      if (i === 2) v += ALGAE_HEAT_FROM_LIGHT * (pos[0] - 0.3); // la luz alta calienta; con luz baja el tanque se enfría
+      let target = (held[i] ? 0.34 : -0.2) + 0.07 * Math.sin(elapsed * 1.3 + phase[i]); // sube al apretar y cae al soltar; la deriva no se detiene sola
+      if (i === 2) target += ALGAE_HEAT_FROM_LIGHT * (pos[0] - 0.3); // la luz alta calienta; con luz baja el tanque se enfría
+      vel[i] += (target - vel[i]) * Math.min(1, dt * 5); // inercia: el movimiento es fluido, sin saltos
+      let v = vel[i];
       const dist = band[i].center - p;
-      if (Math.abs(dist) <= band[i].half) v = v * 0.2 + dist * 1.6; // imán: dentro de la franja la aguja se queda y tiende al centro
+      if (Math.abs(dist) <= band[i].half) v = v * 0.45 + dist * 0.35; // fijado ligero: al pasar por la franja la aguja se frena y se centra un poco, pero se va si no la sostienes
       pos[i] = Math.min(1, Math.max(0, p + v * dt));
       needles[i].style.bottom = `${pos[i] * 100}%`;
     });

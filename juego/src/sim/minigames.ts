@@ -10,7 +10,7 @@ const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 export interface MiniDifficulty {
   /** Multiplica el tiempo de los minijuegos con reloj (cosecha, algas, panel de pruebas, curarse) y el compás del pedal: más difícil, menos tiempo. */
   time: number;
-  /** Tubos (jeringas) del cultivo de algas: Cadete 1 (luz), Piloto 2 (+ nutrientes), Comandante 3 (+ temperatura, que se calienta con la luz). */
+  /** Tubos (jeringas) del cultivo de algas: Cadete 2 (luz y nutrientes), Piloto y Comandante 3 (+ temperatura, que se calienta con la luz). */
   algaeTubes: 1 | 2 | 3;
   /** Segundos que hay que tener las 3 jeringas en su franja para ganar el cultivo de algas. */
   algaeHoldSec: number;
@@ -19,9 +19,9 @@ export interface MiniDifficulty {
 }
 
 export const MINI_DIFFICULTY: Record<DifficultyId, MiniDifficulty> = {
-  cadete: { time: 1.25, algaeTubes: 1, algaeHoldSec: 5, algaeBandHalf: 0.15 },
-  piloto: { time: 1, algaeTubes: 2, algaeHoldSec: 6, algaeBandHalf: 0.12 },
-  comandante: { time: 0.75, algaeTubes: 3, algaeHoldSec: 5, algaeBandHalf: 0.14 }, // 3 tubos ya es difícil: franja ancha y menos tiempo a mantener
+  cadete: { time: 1.25, algaeTubes: 2, algaeHoldSec: 5, algaeBandHalf: 0.15 },
+  piloto: { time: 1, algaeTubes: 3, algaeHoldSec: 6, algaeBandHalf: 0.13 },
+  comandante: { time: 0.75, algaeTubes: 3, algaeHoldSec: 7, algaeBandHalf: 0.1 }, // franja más angosta y más tiempo a mantener
 };
 
 // ---------------------------------------------------------------- cosechar

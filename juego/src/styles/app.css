@@ -479,7 +479,7 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .plant { background: rgba(14, 11, 51, .35); border-color: transparent; }
 .harvest__basket { display: flex; justify-content: center; gap: 6px; padding: 6px 0 2px; }
 .harvest__basket i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #0e0b33; background: rgba(245, 245, 242, .15); }
-.harvest__basket i.is-full { background: #ff6b7a; box-shadow: 0 0 10px rgba(255, 107, 122, .7); }
+.harvest__basket i.is-full { background: #ffcb47; box-shadow: 0 0 10px rgba(255, 203, 71, .7); }
 .harvest__time { height: 14px; }
 .harvest__time i { background: linear-gradient(90deg, #ff7a59, #ffcb47); }
 
@@ -722,3 +722,9 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .menu--cover .menu__actions { padding: var(--space-4); background: rgba(14, 11, 51, .78); border: 2px solid rgba(245, 245, 242, .25); border-radius: 20px; }
 .menu--cover .menu__play { min-height: 60px; font-size: 24px; }
 .menu--cover .menu__footer { color: #f5f5f2; text-shadow: 0 1px 6px #05041a; bottom: var(--space-4); }
+
+.launch__skip { position: absolute; top: var(--space-4); left: var(--space-4); z-index: 5; }
+.launchq { display: grid; place-items: center; height: 100%; background: #0a0b33; color: #f5f5f2; text-align: center; }
+.launchq__bar { width: 320px; height: 12px; margin-top: var(--space-3); border-radius: var(--radius-pill); background: var(--space-600); overflow: hidden; }
+.launchq__bar i { display: block; height: 100%; width: 0; background: var(--star-gold); }
+.hud__ff { margin-top: var(--space-1); }

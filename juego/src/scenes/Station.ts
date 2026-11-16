@@ -67,12 +67,17 @@ type Overlay = 'none' | 'pause' | 'settings' | 'map' | 'actions' | 'intro' | 'co
 /** Paneles que detienen el reloj de la misión. */
 const PAUSING: ReadonlySet<Overlay> = new Set(['pause', 'settings', 'intro', 'controls', 'minigame']);
 
+/** Cuántas veces más rápido corre el reloj con «Avanzar el día». */
+const FFWD_FACTOR = 6;
+
 export class StationScene extends Phaser.Scene {
   private sim!: Simulation;
   private mission!: Mission;
   private difficulty!: Difficulty;
   private ui!: UiLayer;
   private timescale = 1;
+  /** El jugador aceleró el reloj para no esperar al final de la jornada. */
+  private ffwd = false;
 
   private michi!: Phaser.GameObjects.Sprite;
   private shadow!: Phaser.GameObjects.Ellipse;
@@ -367,7 +372,8 @@ export class StationScene extends Phaser.Scene {
     const paused = PAUSING.has(this.overlay);
     const simPaused = this.tutorialIndex >= 0 || (paused && !(this.overlay === 'minigame' && this.miniOutdoor)); // afuera el tiempo corre aunque se juegue; en el tutorial el reloj está detenido
     if (!simPaused) {
-      this.sim.tick(dt * this.timescale);
+      if (this.ffwd && this.overlay !== 'none') this.setFfwd(false);
+      this.sim.tick(dt * this.timescale * (this.ffwd ? FFWD_FACTOR : 1));
       for (const ev of this.sim.drainEvents()) this.onSimEvent(ev);
       tickDash(this.dash, dt);
     }
@@ -564,7 +570,17 @@ export class StationScene extends Phaser.Scene {
   }
 
   // ======================================================== simulación → pantalla
+  private setFfwd(on: boolean): void {
+    this.ffwd = on;
+    const b = this.ui?.el.querySelector<HTMLElement>('[data-ffwd]');
+    if (!b) return;
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('mn-btn--secondary', !on);
+  }
+
   private onSimEvent(ev: SimEvent): void {
+    // al empezar un nuevo día o ante cualquier alerta, el tiempo vuelve a la velocidad normal
+    if (this.ffwd && ev.type !== 'breachRepaired' && ev.type !== 'panelsRestored') this.setFfwd(false);
     switch (ev.type) {
       case 'dayStart': {
         audio.play('day');
@@ -903,6 +919,7 @@ export class StationScene extends Phaser.Scene {
         <div class="hud__clock mn-panel">
           <div class="hud__clock-row"><span class="mn-chip mn-chip--outline" data-day></span><span class="hud__light" data-light></span></div>
           <div class="hud__daybar" aria-hidden="true"><i data-daybar></i></div>
+          <button class="mn-btn mn-btn--secondary mn-btn--sm hud__ff" data-action="ffwd" data-ffwd aria-pressed="false">${icon('skip')}${t('Avanzar el día')}</button>
         </div>
         <div class="hud__guides" data-guides aria-live="polite"></div>
         <div class="hud__left">
@@ -960,6 +977,7 @@ export class StationScene extends Phaser.Scene {
       .on('settings', () => this.openSettings())
       .on('archive', () => this.openArchive())
       .on('quit', () => fadeTo(this, SCENES.menu))
+      .on('ffwd', () => this.setFfwd(!this.ffwd))
       .on('act', (el) => this.act(el.dataset.id as ActionId))
       .on('close-actions', () => this.closeOverlay())
       .on('tasks-tab', () => { this.taskTab = this.taskTab === 2 ? 1 : 2; this.renderTasks(); }) // alterna entre la investigación y "Avisar a la Tierra"

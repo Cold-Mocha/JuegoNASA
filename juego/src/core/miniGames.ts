@@ -94,13 +94,19 @@ export function mountAntennaGame(root: HTMLElement, cb: MiniCallbacks): MiniGame
 const HARVEST_SECONDS = 20;
 const HARVEST_PENALTY = 2;
 
+/**
+ * Madura = fruto GRANDE, dorado y brillante, con estrella y borde punteado; verde = fruto PEQUEÑO, oscuro y con capuchón.
+ * Se distingue por tamaño, luminosidad y forma, no por el color rojo/verde (apto para daltonismo).
+ */
 const plantSvg = (ripe: boolean): string => {
-  const fruit = ripe ? '#ff6b7a' : '#7ed957';
-  return `<svg viewBox="0 0 64 72" width="64" height="72" aria-hidden="true">
+  const fruit = ripe ? '#ffcb47' : '#2c6b4f';
+  const r = ripe ? 9 : 5;
+  const dot = (x: number, y: number): string => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fruit}" stroke="#0e0b33" stroke-width="3"/>${ripe ? `<circle cx="${x - 3}" cy="${y - 3}" r="2.4" fill="#fff8d6"/>` : `<path d="M${x - 4} ${y - r + 1} l4 -5 l4 5Z" fill="#1c4533" stroke="#0e0b33" stroke-width="2"/>`}`;
+  return `<svg viewBox="0 0 64 72" width="64" height="72" aria-hidden="true">${ripe ? '<circle cx="32" cy="36" r="31" fill="none" stroke="#ffcb47" stroke-width="3" stroke-dasharray="3 6" opacity=".9"/>' : ''}
     <path d="M12 52 H52 L47 68 H17Z" fill="#ff7a59" stroke="#0e0b33" stroke-width="3.5" stroke-linejoin="round"/>
     <path d="M32 52 V22" stroke="#2f8f3a" stroke-width="4" stroke-linecap="round"/>
     <path d="M32 40 q-16 -2 -18 -16 q16 0 18 16Z M32 34 q16 -2 18 -16 q-16 0 -18 16Z" fill="#5ad6b2" stroke="#0e0b33" stroke-width="3" stroke-linejoin="round"/>
-    <circle cx="22" cy="46" r="7" fill="${fruit}" stroke="#0e0b33" stroke-width="3"/><circle cx="42" cy="44" r="7" fill="${fruit}" stroke="#0e0b33" stroke-width="3"/><circle cx="32" cy="20" r="7" fill="${fruit}" stroke="#0e0b33" stroke-width="3"/>
+    ${dot(21, 46)}${dot(43, 44)}${dot(32, 19)}
     ${ripe ? '<path d="M50 6 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2Z" fill="#ffcb47" stroke="#0e0b33" stroke-width="2"/>' : ''}
   </svg>`;
 };
@@ -236,7 +242,23 @@ export const PEDAL_PASS = 0.75;
  * llegan a la línea. Con ratón o dedo (los dos botones grandes) o con las flechas izquierda y derecha. Calidad = notas acertadas.
  */
 export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle {
-  const sides = Array.from({ length: PEDAL_BEATS }, (_, i) => (i % 2 === 0 ? 'L' : 'R') as 'L' | 'R');
+  // ritmo distinto cada vez: lados al azar (sin más de 2 iguales seguidos), pausas desiguales que se acortan hacia el final y, a veces, dos pedales a la vez
+  const score: Array<{ side: 'L' | 'R'; t: number }> = [];
+  let clock = PEDAL_LEAD;
+  let run = 0;
+  let lastSide: 'L' | 'R' = Math.random() < 0.5 ? 'L' : 'R';
+  while (score.length < PEDAL_BEATS) {
+    if (score.length >= 3 && score.length <= PEDAL_BEATS - 2 && Math.random() < 0.16) {
+      score.push({ side: 'L', t: clock }, { side: 'R', t: clock });
+    } else {
+      let side: 'L' | 'R' = Math.random() < 0.5 ? 'L' : 'R';
+      if (side === lastSide && run >= 2) side = side === 'L' ? 'R' : 'L';
+      run = side === lastSide ? run + 1 : 1;
+      lastSide = side;
+      score.push({ side, t: clock });
+    }
+    clock += PEDAL_GAP * [0.75, 1, 1, 1.3][Math.floor(Math.random() * 4)] * (1 - 0.25 * (score.length / PEDAL_BEATS));
+  }
   root.innerHTML = `<div class="pedal" style="width:${WIRE_W}px;height:${WIRE_H}px">
     <div class="pedal__wheel" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div class="pedal__lane pedal__lane--l"></div><div class="pedal__lane pedal__lane--r"></div>
@@ -247,12 +269,12 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   const wheel = root.querySelector<HTMLElement>('.pedal__wheel')!;
   const meter = root.querySelector<HTMLElement>('[data-meter]')!;
   const lanes = { L: root.querySelector<HTMLElement>('.pedal__lane--l')!, R: root.querySelector<HTMLElement>('.pedal__lane--r')! };
-  const notes = sides.map((side, i) => {
+  const notes = score.map(({ side, t }) => {
     const el = document.createElement('i');
     el.className = `pedal__note pedal__note--${side.toLowerCase()}`;
     el.textContent = side === 'L' ? '◀' : '▶';
     lanes[side].append(el);
-    return { side, t: PEDAL_LEAD + i * PEDAL_GAP, el, judged: false };
+    return { side, t, el, judged: false };
   });
   const t0 = performance.now();
   let hits = 0;

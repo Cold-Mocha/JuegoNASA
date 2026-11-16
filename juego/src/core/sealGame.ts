@@ -9,6 +9,8 @@ const H = 500;
 const TOOL_R = 20;      // a qué distancia de la grieta sella el sellador
 const DONE_AT = 0.97;   // fracción de grieta sellada para terminar
 const KEY_STEP = 16;
+/** Dónde está la punta de la boquilla dentro del dibujo de la herramienta (84 px): debe quedar justo sobre el punto que se sella. */
+const TIP = { x: 57, y: 68 };
 
 export interface SealGame {
   nudge(dx: number, dy: number): void;
@@ -32,11 +34,24 @@ const TOOL_SVG = `<svg viewBox="0 0 96 96" width="84" height="84" aria-hidden="t
 
 /** Grieta zigzag de arriba a abajo, con muestras cada pocos píxeles para medir el avance. */
 function makeCrack(): { poly: Pt[]; samples: Pt[] } {
-  const poly: Pt[] = [{ x: 190, y: 28 }];
-  let x = 190;
-  for (let y = 28 + 52; y <= H - 28; y += 52) {
-    x = Math.min(W - 70, Math.max(70, x + (Math.random() < 0.5 ? -1 : 1) * (28 + Math.random() * 44)));
-    poly.push({ x, y: Math.min(H - 28, y) });
+  // cada grieta es distinta: sale de un punto cualquiera de arriba, con tramos rectos, curvas suaves y quiebres bruscos de largo variable
+  let x = 90 + Math.random() * (W - 180);
+  const poly: Pt[] = [{ x, y: 28 }];
+  let dir = Math.random() < 0.5 ? -1 : 1;
+  let y = 28;
+  while (y < H - 28) {
+    if (Math.random() < 0.4) dir = -dir;
+    const r = Math.random();
+    let dx: number;
+    let dy: number;
+    if (r < 0.2) { dx = 0; dy = 40 + Math.random() * 60; }                 // tramo recto hacia abajo
+    else if (r < 0.4) { dx = dir * (60 + Math.random() * 60); dy = 10 + Math.random() * 14; } // quiebre casi horizontal
+    else { dx = dir * (15 + Math.random() * 70); dy = 34 + Math.random() * 62; }              // diagonal suave o marcada
+    const nx = Math.min(W - 60, Math.max(60, x + dx));
+    if (nx === x && dx !== 0) dir = -dir; // chocó con el borde: rebota
+    x = nx;
+    y = Math.min(H - 28, y + dy);
+    poly.push({ x, y });
   }
   const samples: Pt[] = [];
   for (let i = 0; i < poly.length - 1; i++) {
@@ -74,7 +89,7 @@ function drawPlate(ctx: CanvasRenderingContext2D, poly: Pt[]): void {
   }
   ctx.restore();
   ctx.fillStyle = '#ff6b7a'; ctx.strokeStyle = '#0e0b33'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(W / 2, 40, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(poly[0].x, 40, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   // grieta
   const line = (w: number, c: string): void => {
     ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -102,13 +117,13 @@ export function mountSealGame(root: HTMLElement, opts: Options): SealGame {
   air.innerHTML = samples.filter((_, i) => i % 9 === 0).map((p, i) => `<i style="left:${p.x}px;top:${p.y}px;animation-delay:${(i % 6) * 0.25}s"></i>`).join('');
   const sealed = new Array<boolean>(samples.length).fill(false);
   let count = 0;
-  let cx = 190;
-  let cy = 28;
+  let cx = poly[0].x;
+  let cy = poly[0].y;
   let drawing = false;
   let finished = false;
   let last: Pt | null = null;
 
-  const place = (): void => void (tool.style.transform = `translate(${cx - 12}px, ${cy - 70}px)`);
+  const place = (): void => void (tool.style.transform = `translate(${cx - TIP.x}px, ${cy - TIP.y}px)`);
   const progress = (): void => {
     const f = count / samples.length;
     air.style.opacity = String(Math.max(0, 1 - f * 1.15));

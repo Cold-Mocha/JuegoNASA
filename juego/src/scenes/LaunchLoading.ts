@@ -16,6 +16,8 @@ import {
   altitudeKm, fillName, type LaunchLine, type Speaker,
 } from '../data/launch';
 import { getLang, t as tr } from '../core/i18n';
+import { UiLayer } from '../core/ui';
+import { icon } from '../core/icons';
 import { CROWD_KEYS, ensureBangTexture, ensureCrowdTextures, ensureGullTextures, ensureSoftTextures } from '../core/launchArt';
 
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
@@ -133,6 +135,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.light = state.settings.ultraLight;
     this.speed = this.calm ? CALM_SPEED : 1;
     this.resetRun();
+    if (state.progress.launchSeen) return this.quickLoad(loadout); // la animación completa ya se vio: ahora solo se carga la estación
 
     ensureSoftTextures(this);
     ensureCrowdTextures(this);
@@ -154,6 +157,28 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
     this.startLoading(loadout);
     this.ready = true;
+    const skip = new UiLayer(this, `<button class="mn-btn mn-btn--secondary mn-btn--sm launch__skip" data-action="skip">${icon('skip')}${tr('Saltar animación')}</button>`, 'screen screen--clear');
+    skip.on('skip', () => (this.skipRequested = true));
+    this.input.keyboard?.on('keydown-ESC', () => (this.skipRequested = true));
+  }
+
+  private skipRequested = false;
+
+  /** Carga breve (sin la animación de despegue) para las misiones siguientes. */
+  private quickLoad(loadout: NonNullable<typeof state.loadout>): void {
+    fadeIn(this, 250);
+    const layer = new UiLayer(this, `<div class="launchq"><div><p>${tr('Preparando la estación…')}</p><div class="launchq__bar"><i data-bar></i></div></div></div>`, 'screen');
+    this.startLoading(loadout);
+    this.time.addEvent({
+      delay: 80, loop: true,
+      callback: () => {
+        layer.q('[data-bar]').style.width = `${Math.round(this.loadProgress * 100)}%`;
+        if (this.loadProgress >= 1 && !this.done) {
+          this.done = true;
+          fadeTo(this, SCENES.station, 250);
+        }
+      },
+    });
   }
 
   private resetRun(): void {
@@ -513,6 +538,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (!this.ready) return;
+    if (this.skipRequested && this.loadProgress >= 1 && !this.done) return this.arrive();
     let next = this.clock + delta * this.speed;
     // la animación no puede terminar antes que la carga real
     if (this.loadProgress < 1) next = Math.min(next, END_MS - 300);
@@ -785,6 +811,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   private arrive(): void {
     this.done = true;
+    state.saveProgress({ launchSeen: true });
     this.tweens.add({ targets: this.ui, alpha: 0, duration: 250 });
     this.time.delayedCall(150, () => fadeTo(this, SCENES.station, 400));
   }

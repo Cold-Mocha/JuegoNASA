@@ -2,6 +2,9 @@
 export const EN_SCENES: Record<string, string> = {
   // Historia
   'Saltar': "Skip",
+  'Saltar animación': "Skip animation",
+  'Preparando la estación…': "Getting the station ready…",
+  'Avanzar el día': "Fast-forward the day",
   'FUENTE': "SOURCE",
   'Cada noche, desde su ventana, Miu y sus amigos miraban las estrellas y soñaban con viajar entre ellas.': "Every night, from her window, Miu and her friends watched the stars and dreamed of traveling among them.",
   'Un día llegó una carta brillante: «Has sido seleccionado para la Academia de Astronautas Junior».': "One day a shiny letter arrived: “You have been selected for the Junior Astronaut Academy.”",

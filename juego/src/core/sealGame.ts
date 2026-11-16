@@ -1,4 +1,5 @@
 import { t } from './i18n';
+import { alertFx } from './miniFx';
 /**
  * Minijuego de sellar una fractura: una placa del casco con una grieta zigzag por la que se escapa el aire.
  * Se sigue la grieta con el sellador (arrastrando el ratón o el dedo, o con las flechas del teclado) hasta cubrirla entera.
@@ -115,17 +116,50 @@ export function mountSealGame(root: HTMLElement, opts: Options): SealGame {
   const bctx = bead.getContext('2d')!;
   // bocanadas de aire que se escapan por la grieta: se apagan a medida que se sella
   air.innerHTML = samples.filter((_, i) => i % 9 === 0).map((p, i) => `<i style="left:${p.x}px;top:${p.y}px;animation-delay:${(i % 6) * 0.25}s"></i>`).join('');
-  const sealed = new Array<boolean>(samples.length).fill(false);
+  const sealed: boolean[] = new Array<boolean>(samples.length).fill(false);
   let count = 0;
+  let branched = false;
+  const pctx = plate.getContext('2d')!;
   let cx = poly[0].x;
   let cy = poly[0].y;
   let drawing = false;
   let finished = false;
   let last: Pt | null = null;
 
+  /** Evento: pasada la mitad, la grieta echa una rama corta que también hay que sellar (aviso con ⚠ y marco rojo). */
+  const addBranch = (): void => {
+    branched = true;
+    const pool = samples.map((_, i) => i).filter((i) => !sealed[i] && i > samples.length * 0.35);
+    if (!pool.length) return;
+    const o = samples[pool[Math.floor(pool.length / 2)]];
+    const dir = o.x < W / 2 ? 1 : -1;
+    const pts: Pt[] = [o];
+    let bx = o.x;
+    let by = o.y;
+    for (let k = 0; k < 3; k++) {
+      bx = Math.min(W - 60, Math.max(60, bx + dir * (22 + Math.random() * 20)));
+      by = Math.min(H - 40, by + 14 + Math.random() * 26);
+      pts.push({ x: bx, y: by });
+    }
+    pctx.save();
+    pctx.lineJoin = 'round'; pctx.lineCap = 'round';
+    for (const [w, c] of [[16, '#0e0b33'], [8, '#0b0c0f'], [2, 'rgba(255,203,71,.75)']] as Array<[number, string]>) {
+      pctx.strokeStyle = c; pctx.lineWidth = w;
+      pctx.beginPath(); pts.forEach((p, i) => (i ? pctx.lineTo(p.x, p.y) : pctx.moveTo(p.x, p.y))); pctx.stroke();
+    }
+    pctx.restore();
+    for (let i = 0; i < pts.length - 1; i++) {
+      const n = Math.ceil(Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y) / 7);
+      for (let k = 0; k < n; k++) { samples.push({ x: pts[i].x + ((pts[i + 1].x - pts[i].x) * k) / n, y: pts[i].y + ((pts[i + 1].y - pts[i].y) * k) / n }); sealed.push(false); }
+    }
+    air.insertAdjacentHTML('beforeend', pts.slice(1).map((p, i) => `<i style="left:${p.x}px;top:${p.y}px;animation-delay:${(i % 3) * 0.2}s"></i>`).join(''));
+    alertFx(root, '⚠', '#ff6b7a');
+  };
+
   const place = (): void => void (tool.style.transform = `translate(${cx - TIP.x}px, ${cy - TIP.y}px)`);
   const progress = (): void => {
     const f = count / samples.length;
+    if (!branched && f >= 0.4 && f < 0.8) addBranch();
     air.style.opacity = String(Math.max(0, 1 - f * 1.15));
     opts.onProgress(f);
     if (f >= DONE_AT && !finished) {

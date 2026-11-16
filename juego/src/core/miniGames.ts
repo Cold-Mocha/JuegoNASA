@@ -1,4 +1,5 @@
 import { t } from './i18n';
+import { alertFx, between, flash, pop } from './miniFx';
 /**
  * Minijuegos con botones: reparar la antena (conectar cables) y cosechar (tocar solo las plantas maduras).
  * Solo usan DOM (sin Phaser): los monta la escena de la estación dentro de un panel. Se pueden jugar con ratón, dedo o teclado (Tab y Enter).
@@ -123,10 +124,38 @@ export function mountHarvestGame(root: HTMLElement, cb: MiniCallbacks): MiniGame
   let left = HARVEST_SECONDS;
   let picked = 0;
   let over = false;
+  const plants = [...root.querySelectorAll<HTMLButtonElement>('.plant')];
+  const evTimers: number[] = [];
+  const open = (): HTMLButtonElement[] => plants.filter((p) => !p.disabled);
+  // Evento 1: una fruta dorada que brilla da +3 s si se toca a tiempo (aparece entre los 4 y 8 s)
+  evTimers.push(window.setTimeout(() => {
+    const ripe = open().filter((p) => p.dataset.ripe === 'true');
+    if (over || !ripe.length) return;
+    const g = ripe[Math.floor(Math.random() * ripe.length)];
+    g.classList.add('is-gold');
+    g.dataset.gold = '1';
+    pop(root, '⭐');
+    evTimers.push(window.setTimeout(() => { g.classList.remove('is-gold'); delete g.dataset.gold; }, 4500));
+  }, between(4, 8) * 1000));
+  // Evento 2: entre los 9 y 13 s dos macetas titilan y cambian de lugar
+  evTimers.push(window.setTimeout(() => {
+    const free = open();
+    if (over || free.length < 2) return;
+    const [a, b] = [...free].sort(() => Math.random() - 0.5);
+    a.classList.add('is-swap'); b.classList.add('is-swap');
+    flash(root, '#4cc3f5');
+    evTimers.push(window.setTimeout(() => {
+      a.classList.remove('is-swap'); b.classList.remove('is-swap');
+      if (over) return;
+      const mark = document.createComment('');
+      a.replaceWith(mark); b.replaceWith(a); mark.replaceWith(b);
+    }, 800));
+  }, between(9, 13) * 1000));
   const end = (): void => {
     if (over) return;
     over = true;
     window.clearInterval(timer);
+    evTimers.forEach((x) => window.clearTimeout(x));
     root.querySelectorAll<HTMLButtonElement>('.plant').forEach((p) => (p.disabled = true));
     cb.onDone(picked / ripeTotal);
   };
@@ -139,6 +168,7 @@ export function mountHarvestGame(root: HTMLElement, cb: MiniCallbacks): MiniGame
     if (over) return;
     if (p.dataset.ripe === 'true') {
       picked++;
+      if (p.dataset.gold) { left = Math.min(HARVEST_SECONDS, left + 3); p.classList.remove('is-gold'); alertFx(root, '+3', '#5ad6b2'); }
       p.classList.add('is-picked');
       p.disabled = true;
       basket[picked - 1]?.classList.add('is-full'); // la canasta se va llenando
@@ -152,7 +182,7 @@ export function mountHarvestGame(root: HTMLElement, cb: MiniCallbacks): MiniGame
     }
   }));
   cb.onProgress(0);
-  return { destroy() { over = true; window.clearInterval(timer); } };
+  return { destroy() { over = true; window.clearInterval(timer); evTimers.forEach((x) => window.clearTimeout(x)); } };
 }
 
 // ------------------------------------------------------------------ curarse: tratar cada herida manteniendo apretado hasta que se cierre
@@ -247,6 +277,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   let clock = PEDAL_LEAD;
   let run = 0;
   let lastSide: 'L' | 'R' = Math.random() < 0.5 ? 'L' : 'R';
+  const burstAt = 4 + Math.floor(Math.random() * (PEDAL_BEATS - 10)); // ráfaga: 4 notas seguidas algo más juntas
   while (score.length < PEDAL_BEATS) {
     if (score.length >= 3 && score.length <= PEDAL_BEATS - 2 && Math.random() < 0.16) {
       score.push({ side: 'L', t: clock }, { side: 'R', t: clock });
@@ -257,12 +288,14 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
       lastSide = side;
       score.push({ side, t: clock });
     }
-    clock += PEDAL_GAP * [0.75, 1, 1, 1.3][Math.floor(Math.random() * 4)] * (1 - 0.25 * (score.length / PEDAL_BEATS));
+    const inBurst = score.length > burstAt && score.length <= burstAt + 4;
+    clock += PEDAL_GAP * (inBurst ? 0.78 : [0.75, 1, 1, 1.3][Math.floor(Math.random() * 4)]) * (1 - 0.25 * (score.length / PEDAL_BEATS));
   }
   root.innerHTML = `<div class="pedal" style="width:${WIRE_W}px;height:${WIRE_H}px">
     <div class="pedal__wheel" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div class="pedal__lane pedal__lane--l"></div><div class="pedal__lane pedal__lane--r"></div>
     <div class="pedal__line" style="top:${PEDAL_LINE}px"></div>
+    <div class="pedal__combo" data-combo aria-hidden="true"></div>
     <div class="pedal__meter" aria-hidden="true"><i data-meter></i><b class="pedal__goal" style="left:${PEDAL_PASS * 100}%"></b></div>
     <button class="pedal__btn pedal__btn--l" data-side="L" aria-label="${t('Pedal izquierdo')}">◀</button>
     <button class="pedal__btn pedal__btn--r" data-side="R" aria-label="${t('Pedal derecho')}">▶</button></div>`;
@@ -277,6 +310,13 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     return { side, t, el, judged: false };
   });
   const t0 = performance.now();
+  const combo = root.querySelector<HTMLElement>('[data-combo]')!;
+  const evTimers: number[] = [];
+  // aviso de la ráfaga ~1 s antes de que lleguen las notas juntas; la rueda brilla mientras dura
+  const burstT = score[Math.min(score.length - 1, burstAt + 1)].t;
+  evTimers.push(window.setTimeout(() => { alertFx(root, '⚡', '#ffcb47'); root.firstElementChild?.classList.add('is-burst'); }, Math.max(0, burstT - 1100)));
+  evTimers.push(window.setTimeout(() => root.firstElementChild?.classList.remove('is-burst'), burstT + 2600));
+  let streak = 0;
   let hits = 0;
   let judged = 0;
   let over = false;
@@ -286,6 +326,8 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     judged++;
     n.el.classList.add(hit ? 'is-hit' : 'is-miss');
     if (hit) hits++;
+    streak = hit ? streak + 1 : 0;
+    if (hit && streak % 5 === 0) { combo.textContent = `🔥${streak}`; combo.classList.remove('is-on'); void combo.offsetWidth; combo.classList.add('is-on'); }
     meter.style.width = `${(hits / PEDAL_BEATS) * 100}%`;
     meter.classList.toggle('is-pass', hits / PEDAL_BEATS > PEDAL_PASS);
     wheel.style.setProperty('--spin', `${Math.max(0.25, 1.6 - (hits / PEDAL_BEATS) * 1.35)}s`);
@@ -293,6 +335,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
     if (judged === PEDAL_BEATS && !over) {
       over = true;
       cancelAnimationFrame(raf);
+      evTimers.forEach((x) => window.clearTimeout(x));
       window.setTimeout(() => cb.onDone(hits / PEDAL_BEATS), 250);
     }
   };
@@ -320,7 +363,7 @@ export function mountPedal(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   cb.onProgress(0);
   return {
     nudge(dx) { if (dx !== 0) press(dx < 0 ? 'L' : 'R'); },
-    destroy() { over = true; cancelAnimationFrame(raf); },
+    destroy() { over = true; cancelAnimationFrame(raf); evTimers.forEach((x) => window.clearTimeout(x)); },
   };
 }
 
@@ -469,6 +512,16 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   const needles = gauges.map((g) => g.querySelector<HTMLElement>('[data-needle]')!);
   let elapsed = 0;
   let inRange = 0;
+  // Evento: a los 5–9 s y de nuevo a los 14–17 s un medidor al azar se sacude y salta (hay que corregirlo)
+  const evTimers: number[] = [];
+  const jolt = (): void => {
+    const i = Math.floor(Math.random() * ALGAE_GAUGES.length);
+    pos[i] = Math.min(1, Math.max(0, pos[i] + (pos[i] > 0.5 ? -0.28 : 0.28)));
+    gauges[i].classList.add('is-alert');
+    alertFx(root, '❗', '#ff7a59');
+    window.setTimeout(() => gauges[i].classList.remove('is-alert'), 1000);
+  };
+  evTimers.push(window.setTimeout(jolt, between(5, 9) * 1000), window.setTimeout(jolt, between(14, 17) * 1000));
   let last = performance.now();
   let raf = 0;
   const tick = (now: number): void => {
@@ -501,5 +554,5 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks): MiniGameHandle
   });
   raf = requestAnimationFrame(tick);
   cb.onProgress(0);
-  return { destroy() { cancelAnimationFrame(raf); } };
+  return { destroy() { cancelAnimationFrame(raf); evTimers.forEach((x) => window.clearTimeout(x)); } };
 }

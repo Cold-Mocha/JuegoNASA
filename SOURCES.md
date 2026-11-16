@@ -192,3 +192,10 @@ Guion y fuentes aportados por el equipo (`Michinautas — Misión final: Rueda d
 - [REAL] Los cráteres lunares son cuencos con borde elevado; el rover los cruza bajando y subiendo por sus paredes.
 - [PROPUESTA] Baches pequeños que quitan 1 de 3 de integridad y devuelven al último punto de control (mecánica del juego, no un dato real).
 - [DIBUJO] Paisaje en capas con paralaje (técnica de cámara multiplano de animación): cielo, crestas lejanas, bases, suelo y rocas de primer plano a distintas velocidades.
+
+## Vuelo a la Luna: nave, cinturones de Van Allen y espacio cislunar
+- [REAL] Tras el despegue se sueltan las etapas inferiores del cohete; a la Luna sigue la cápsula con el módulo de servicio. [MODELO] La nave del juego es esa pareja, dibujada de forma simple.
+- [REAL] Los cinturones de Van Allen son zonas de partículas cargadas atrapadas por el campo magnético de la Tierra; el viaje a la Luna los cruza (NASA). [DIBUJO] En el juego son bandas de color y partículas que se cruzan sin riesgo.
+- [REAL] Cerca de la Tierra hay satélites y chatarra espacial; al alejarse, la Tierra se ve cada vez más pequeña. [DIBUJO] Satélites, restos y nebulosas son decorado.
+- [DIBUJO] Meteoros de roca, hierro (rojizo, rápido) e hielo (azul, lento y con vaivén) y nubes de polvo que frenan: estilización para variar el juego, no datos medidos.
+- [PROPUESTA] Recogibles (batería +1 vida, chip escudo 4 s, alga impulso): mecánica del juego, no un dato real.

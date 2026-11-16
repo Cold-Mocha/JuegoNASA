@@ -1054,3 +1054,21 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 /* charla diaria con Control Tierra (ver Station.queueTalk) */
 .modal__panel--talk { width: min(820px, 94vw); padding: 0; background: transparent; border: 0; box-shadow: none; }
 .talk { width: 100%; height: 280px; }
+
+/* ---- vuelo a la Luna: viñetas de cómic (no pausan el vuelo) y rótulo de los cinturones de Van Allen */
+.flight__vig { position: absolute; right: 28px; top: 96px; display: flex; gap: 12px; align-items: center; max-width: 380px; padding: 10px 16px 10px 10px; background: #f5f5f2; color: #0e0b33; border: 4px solid #0e0b33; border-radius: 16px; box-shadow: 6px 6px 0 rgba(14, 11, 51, .6); transform: translateX(130%); opacity: 0; pointer-events: none; }
+.flight__vig.is-in { animation: vig-in .45s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+.flight__vig.is-out { animation: vig-out .35s ease-in forwards; }
+.vig__face { width: 58px; height: 58px; flex: none; border-radius: 50%; background: #bfe6ff; border: 3px solid #0e0b33; display: grid; place-items: center; overflow: hidden; }
+.vig__face svg { width: 100%; height: 100%; }
+.vig__body { display: grid; gap: 2px; }
+.vig__body b { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #5a2f6b; }
+.vig__body span { font-size: 17px; line-height: 1.2; font-weight: 600; }
+@keyframes vig-in { from { transform: translateX(130%) rotate(4deg); opacity: 0; } to { transform: translateX(0) rotate(-1.5deg); opacity: 1; } }
+@keyframes vig-out { from { transform: translateX(0) rotate(-1.5deg); opacity: 1; } to { transform: translateX(130%) rotate(3deg); opacity: 0; } }
+.flight__cap { position: absolute; left: 50%; top: 66px; transform: translateX(-50%); max-width: 560px; padding: 8px 18px; text-align: center; background: rgba(14, 11, 51, .8); color: #fff; border: 2px solid rgba(255, 255, 255, .35); border-radius: 12px; opacity: 0; transition: opacity .4s; pointer-events: none; }
+.flight__cap.is-on { opacity: 1; }
+.flight__cap b { display: block; font-size: 17px; }
+.flight__cap span { font-size: 14px; opacity: .9; }
+@media (prefers-reduced-motion: reduce) { .flight__vig.is-in { animation: none; transform: none; opacity: 1; } .flight__vig.is-out { animation: none; opacity: 0; } }
+

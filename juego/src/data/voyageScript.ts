@@ -100,12 +100,12 @@ export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
     L('VUELO', 'Sin esas fotos no sé qué hay ahí. Seguimos con cuidado.', 'Without those photos I do not know what is there. We continue with care.'),
   ],
   burn: [
-    L('VUELO', 'Retro, GO. Combustible, GO. Escudo, GO. Torre, dile que tiene el GO para la quema.', 'Retro, GO. Fuel, GO. Shield, GO. Tower, tell them they have a GO for the burn.', undefined, { es: 'La nave gira con la cola hacia adelante y frena unos 60 min antes de tocar tierra; entra a ~122 km y ~26.000 km/h [REAL, verificar].', en: 'The ship turns tail-first and brakes about 60 min before touchdown; it enters at ~122 km and ~26,000 km/h [REAL, verify].' }),
+    L('VUELO', 'Retro, GO. Combustible, GO. Escudo, GO. Torre, dile que tiene el GO para la quema.', 'Retro, GO. Fuel, GO. Shield, GO. Tower, tell them they have a GO for the burn.', undefined, { es: 'La nave gira con la cola hacia adelante y frena unos 60 min antes de tocar tierra; entra a ~122 km y ~25.900 km/h [REAL].', en: 'The ship turns tail-first and brakes about 60 min before touchdown; it enters at ~122 km and ~25,900 km/h [REAL].' }),
     L('TORRE', 'Tienes GO para la quema.', 'You have a GO for the burn.'),
     L('NAVE', '* Cuenta regresiva. Tres, dos, uno.', '* Countdown. Three, two, one.'),
   ],
   blackout: [
-    L('NAVE', '* Afuera, el aire se vuelve plasma. Nadie puede hablarte.', '* Outside, the air turns to plasma. Nobody can talk to you.', 'whisper', { es: 'Apagón de radio: Apollo 16 ≈ 3,5 min; el transbordador, más de 10 min [REAL, verificar].', en: 'Radio blackout: Apollo 16 ≈ 3.5 min; the shuttle, over 10 min [REAL, verify].' }),
+    L('NAVE', '* Afuera, el aire se vuelve plasma. Nadie puede hablarte.', '* Outside, the air turns to plasma. Nobody can talk to you.', 'whisper', { es: 'Apagón de radio: Apollo 16 ≈ 3,5 min; el transbordador, unos 10–13 min [REAL].', en: 'Radio blackout: Apollo 16 ≈ 3.5 min; the shuttle, about 10–13 min [REAL].' }),
     L('TORRE', '(en la sala, sin enlace) Silencio de radio. Es lo esperado. Esperamos.', '(in the room, no link) Radio silence. It is expected. We wait.'),
     L('PILOTO', '(solo) Torre... sé que no me oyes.', '(alone) Tower... I know you cannot hear me.', 'whisper'),
     L('NAVE', '* Todo lo que hiciste antes sigue contigo.', '* Everything you did before is still with you.'),

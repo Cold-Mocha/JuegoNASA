@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { withIntro } from '../core/dialogue';
+import { SCRIPT } from '../data/voyageScript';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../core/config';
 import { state } from '../core/state';
 import { tokenColor, tokenCss, FONT_DISPLAY } from '../core/theme';
@@ -794,17 +796,18 @@ export class StationScene extends Phaser.Scene {
   private runFinale(): void {
     const hard = this.difficulty.id === 'comandante';
     const seed = this.mission.id.length * 977 + this.sim.day;
+    const dlg = { lang: (state.settings.lang === 'en' ? 'en' : 'es') as 'es' | 'en', calm: state.calm, engineer: hard, pilot: CHARACTERS.find((c) => c.id === state.loadout?.character)?.name ?? 'Piloto' };
     let belt: BeltResult = { score: 0, batteries: 0, chips: 0, algae: 0, hull: 3 };
     const moon = (): void => this.openFullMini({
-      mount: (root, cb) => mountRover(root, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r: RoverResult) => {
+      mount: (root, cb) => withIntro('roverIntro', dlg, (r) => mountRover(r, { hard, batteries: belt.batteries, chips: belt.chips, onDone: (r: RoverResult) => {
         this.sim.completeProbe(finaleScore(1, belt.score, r.score), r.rocks, belt.algae);
         cb.onDone(r.score);
-      } }),
+      } }))(root),
       finish: () => undefined,
     });
-    const delivery = (): void => this.openFullMini({ mount: (root, cb) => mountDelivery(root, () => cb.onDone()), finish: () => undefined, next: moon });
+    const delivery = (): void => this.openFullMini({ mount: (root, cb) => withIntro(['beltOutro', 'deliveryIntro'].flatMap((k) => SCRIPT[k as 'beltOutro']), dlg, (r) => mountDelivery(r, () => cb.onDone()))(root), finish: () => undefined, next: moon });
     const beltGame = (): void => this.openFullMini({
-      mount: (root, cb) => mountBelt(root, { hard, seed, calm: state.calm, onDone: (r) => { belt = r; cb.onDone(r.score); } }),
+      mount: (root, cb) => withIntro('beltIntro', dlg, (r) => mountBelt(r, { hard, seed, calm: state.calm, onDone: (res) => { belt = res; cb.onDone(res.score); } }))(root),
       finish: () => undefined, next: delivery,
     });
     this.openFullMini({ mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: beltGame }); // contacto

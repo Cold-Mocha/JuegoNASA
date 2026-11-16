@@ -693,3 +693,8 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .vg__sw.is-on { border-color: #ffcb47; } .vg__item.is-ok { opacity: .4; } .vg__item.is-bad { border-color: #ff7a59; animation: dlg-shake .18s 2; }
 .vg__item:focus-visible, .vg__sw:focus-visible { outline: 3px solid #7fd4ff; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .dlg__box[data-fx="shake"] .dlg__text, .vg__item.is-bad { animation: none; } }
+.dlg__card { margin: var(--space-3) 0 0; padding: 8px 12px; border-left: 4px solid #7fd4ff; background: rgba(127,212,255,.1); font-size: 13px; color: #cfeaff; }
+.dlg__card[hidden] { display: none; }
+.dlg-in-stage { display: flex; align-items: flex-end; background: radial-gradient(ellipse at 50% 30%, #1a1050, #05041a 70%); border: 4px solid #0e0b33; border-radius: 14px; box-sizing: border-box; padding: 10px; }
+.dlg-in-stage .dlg { width: 100%; } .dlg-in-stage .dlg__box { min-height: 0; padding: 12px; border-width: 3px; }
+.dlg-in-stage .dlg__text { font-size: 15px; min-height: 6em; } .dlg-in-stage .dlg__hint { display: none; }

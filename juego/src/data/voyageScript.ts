@@ -5,10 +5,10 @@
  */
 export type Who = 'PILOTO' | 'TORRE' | 'VUELO' | 'NAVE' | 'SALA';
 export type Fx = 'shake' | 'static' | 'whisper';
-export interface ScriptLine { who: Who; es: string; en: string; fx?: Fx; }
+export interface ScriptLine { who: Who; es: string; en: string; fx?: Fx; /** Tarjeta de datos del Modo Ingeniero (solo se muestra en ese nivel). */ card?: { es: string; en: string }; }
 
-/** [PROPUESTA] Wenu Lewfü = «río del cielo» (la Vía Láctea) en mapudungun. Pendiente de confirmar con hablantes y con el equipo. */
-export const SHIP_NAME = 'Wenu Lewfü';
+/** Küyen = «luna» (y también «mes») en mapudungun. Elegido por el equipo; la grafía se confirma con hablantes. */
+export const SHIP_NAME = 'Küyen';
 
 export const WHO_LABEL: Record<Who, { es: string; en: string; color: string }> = {
   PILOTO: { es: 'PILOTO', en: 'PILOT', color: '#7fd4ff' },
@@ -18,10 +18,12 @@ export const WHO_LABEL: Record<Who, { es: string; en: string; color: string }> =
   SALA: { es: 'SALA', en: 'ROOM', color: '#c9b6ff' },
 };
 
-const L = (who: Who, es: string, en: string, fx?: Fx): ScriptLine => ({ who, es, en, fx });
+const L = (who: Who, es: string, en: string, fx?: Fx, card?: { es: string; en: string }): ScriptLine => ({ who, es, en, fx, card });
 
 export type SceneKey =
   | 'go' | 'view' | 'signalLost' | 'signalBack' | 'air' | 'airDone' | 'power' | 'powerDone' | 'leo'
+  | 'inspectFound' | 'inspectMiss' | 'burn' | 'blackout' | 'blackoutEnd'
+  | 'beltIntro' | 'beltOutro' | 'deliveryIntro' | 'roverIntro' | 'roverOutro'
   | 'endA' | 'endB' | 'endC';
 
 export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
@@ -30,7 +32,7 @@ export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
     L('NAVE', '* Los sistemas despiertan uno por uno.', '* The systems wake up one by one.'),
     L('TORRE', `${SHIP_NAME}, aquí Torre. ¿Me escuchas?`, `${SHIP_NAME}, this is Tower. Do you read me?`),
     L('PILOTO', 'Fuerte y claro, Torre.', 'Loud and clear, Tower.'),
-    L('TORRE', 'Copiado. Director de vuelo, tengo a la tripulación en línea.', 'Copy. Flight director, I have the crew on the line.'),
+    L('TORRE', 'Copiado. Director de vuelo, tengo a la tripulación en línea.', 'Copy. Flight director, I have the crew on the line.', undefined, { es: 'CAPCOM: la única voz de la sala que habla con la tripulación [REAL, NASA].', en: 'CAPCOM: the only voice in the room that talks to the crew [REAL, NASA].' }),
     L('VUELO', 'Gracias. Voy a consultar a la sala.', 'Thank you. I will poll the room.'),
     L('NAVE', '* Una lista aparece en pantalla. Cada línea dice GO o NO-GO, según lo que cuidaste en la base.', '* A list appears on screen. Each line says GO or NO-GO, depending on how you cared for the base.'),
   ],
@@ -41,7 +43,7 @@ export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
     L('PILOTO', 'Gracias, Torre. ¿Sabes qué es raro? Se ve tan tranquilo.', 'Thank you, Tower. You know what is strange? It looks so calm.'),
     L('TORRE', 'Es lo bueno y lo malo del espacio. Todo parece tranquilo hasta que deja de estarlo.', 'That is the good and the bad of space. Everything looks calm until it is not.'),
     L('NAVE', '* Detrás de ti, la Luna se hace pequeña. Entre ustedes hay mucho, mucho vacío.', '* Behind you, the Moon grows small. Between you there is so much, so much emptiness.', 'whisper'),
-    L('NAVE', `* [Hallazgo] Esta nave se llama «${SHIP_NAME}»: así llamó el pueblo mapuche a la Vía Láctea, el río del cielo. [PROPUESTA]`, `* [Find] This ship is named “${SHIP_NAME}”: the Mapuche people's name for the Milky Way, the river of the sky. [PROPOSAL]`),
+    L('NAVE', `* [Hallazgo] Esta nave se llama «${SHIP_NAME}»: en mapudungun, la luna. La misma palabra sirve para decir «mes», porque la Luna ayudó a medir el tiempo. [REAL]`, `* [Find] This ship is named “${SHIP_NAME}”: in Mapudungun, the moon. The same word also means “month”, because the Moon helped people measure time. [REAL]`),
   ],
   // 3. Señal perdida [REAL: la señal pasa por satélites de relevo y se pierde y se recupera; las tormentas solares pueden interrumpir la radio]
   signalLost: [
@@ -63,7 +65,7 @@ export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
   ],
   airDone: [
     L('TORRE', 'El CO₂ está bajando. Buen trabajo.', 'CO₂ is coming down. Good work.'),
-    L('NAVE', '* [Dato] El hidróxido de litio captura el CO₂ que exhalamos. [REAL]', '* [Fact] Lithium hydroxide captures the CO₂ we exhale. [REAL]'),
+    L('NAVE', '* [Dato] El hidróxido de litio captura el CO₂ que exhalamos. [REAL]', '* [Fact] Lithium hydroxide captures the CO₂ we exhale. [REAL]', undefined, { es: 'Apollo 13: el CO₂ subió porque los filtros eran redondos y los de repuesto, cuadrados [REAL, NASA].', en: 'Apollo 13: CO₂ rose because the filters were round and the spares were square [REAL, NASA].' }),
   ],
   // 5. Apagar para volver [REAL: en Apollo 13 se apagaron sistemas para ahorrar energía para el reingreso]
   power: [
@@ -82,6 +84,53 @@ export const SCRIPT: Record<SceneKey, ScriptLine[]> = {
     L('VUELO', `${SHIP_NAME}, vamos a mirar tu nave por fuera, loseta por loseta.`, `${SHIP_NAME}, we are going to look at your ship from the outside, tile by tile.`),
     L('PILOTO', 'Entendido. Giro lento.', 'Understood. Slow turn.'),
     L('NAVE', '* El mundo da vueltas despacio. Cada pasada es una foto. [REAL: la voltereta de inspección del transbordador]', '* The world turns slowly. Every pass is a photo. [REAL: the shuttle inspection pitch maneuver]'),
+  ],
+
+  // Voltereta: la sala revisa la nave por fuera [REAL: R-bar pitch maneuver, 0,75 °/s; primera vez en STS-114]
+  inspectFound: [
+    L('NAVE', '* Cobertura lista. Una loseta se ve distinta.', '* Coverage complete. One tile looks different.', undefined, { es: 'Giro de 0,75 °/s (360° en 480 s); en el juego va ×20 más rápido [REAL / MODELO].', en: 'Turn of 0.75 °/s (360° in 480 s); the game runs it ×20 faster [REAL / MODEL].' }),
+    L('SALA', 'Pido más imágenes de esa zona.', 'I request more images of that area.'),
+    L('VUELO', 'Concedido. Quiero verlas antes de decidir.', 'Granted. I want to see them before I decide.'),
+    L('NAVE', '* La sala se queda en silencio. Cuando alguien pide más imágenes, la sala escucha.', '* The room goes quiet. When someone asks for more images, the room listens.', 'whisper'),
+    L('NAVE', '* [Recuerdo] En 2003 el transbordador Columbia se perdió al volver, con sus siete tripulantes. Un trozo de espuma había golpeado el ala al despegar. Desde entonces cada misión fotografía la nave por fuera. Este juego no lo representa: lo recordamos con respeto. [REAL, CAIB]', '* [Remembrance] In 2003 the Space Shuttle Columbia was lost on its way home, with its seven crew members. A piece of foam had struck the wing at liftoff. Since then every mission photographs the ship from the outside. This game does not depict it: we remember it with respect. [REAL, CAIB]'),
+    L('TORRE', 'El daño es pequeño y se puede reparar. Te leo el procedimiento.', 'The damage is small and can be repaired. I will read you the procedure.'),
+  ],
+  inspectMiss: [
+    L('NAVE', '* Faltan imágenes. Algunas losetas quedaron sin revisar.', '* Images are missing. Some tiles were never checked.', 'whisper'),
+    L('VUELO', 'Sin esas fotos no sé qué hay ahí. Seguimos con cuidado.', 'Without those photos I do not know what is there. We continue with care.'),
+  ],
+  burn: [
+    L('VUELO', 'Retro, GO. Combustible, GO. Escudo, GO. Torre, dile que tiene el GO para la quema.', 'Retro, GO. Fuel, GO. Shield, GO. Tower, tell them they have a GO for the burn.', undefined, { es: 'La nave gira con la cola hacia adelante y frena unos 60 min antes de tocar tierra; entra a ~122 km y ~26.000 km/h [REAL, verificar].', en: 'The ship turns tail-first and brakes about 60 min before touchdown; it enters at ~122 km and ~26,000 km/h [REAL, verify].' }),
+    L('TORRE', 'Tienes GO para la quema.', 'You have a GO for the burn.'),
+    L('NAVE', '* Cuenta regresiva. Tres, dos, uno.', '* Countdown. Three, two, one.'),
+  ],
+  blackout: [
+    L('NAVE', '* Afuera, el aire se vuelve plasma. Nadie puede hablarte.', '* Outside, the air turns to plasma. Nobody can talk to you.', 'whisper', { es: 'Apagón de radio: Apollo 16 ≈ 3,5 min; el transbordador, más de 10 min [REAL, verificar].', en: 'Radio blackout: Apollo 16 ≈ 3.5 min; the shuttle, over 10 min [REAL, verify].' }),
+    L('TORRE', '(en la sala, sin enlace) Silencio de radio. Es lo esperado. Esperamos.', '(in the room, no link) Radio silence. It is expected. We wait.'),
+    L('PILOTO', '(solo) Torre... sé que no me oyes.', '(alone) Tower... I know you cannot hear me.', 'whisper'),
+    L('NAVE', '* Todo lo que hiciste antes sigue contigo.', '* Everything you did before is still with you.'),
+  ],
+  blackoutEnd: [
+    L('TORRE', '...{PILOTO}, aquí Torre. ¿Nos escuchas?', '...{PILOTO}, this is Tower. Do you read us?', 'static'),
+    L('PILOTO', 'Aquí {PILOTO}. Aquí estoy.', 'This is {PILOTO}. I am here.'),
+  ],
+  // Etapa 3: la carga de la sonda cuenta la historia de la Luna [PROPUESTA]
+  beltIntro: [
+    L('TORRE', 'La sonda viaja a control remoto: lo que ordenes tarda en llegar. Anticipa.', 'The probe flies by remote control: what you command takes time to arrive. Anticipate.'),
+    L('NAVE', '* Baterías, chips y algas flotan entre las rocas. Son lo que la Luna necesita para tener un hábitat.', '* Batteries, chips and algae drift among the rocks. They are what the Moon needs to have a habitat.'),
+  ],
+  beltOutro: [
+    L('TORRE', 'La sonda pasó el cinturón. Lo que recogiste va a la Estación Central.', 'The probe made it through the belt. What you collected goes to Central Station.'),
+  ],
+  deliveryIntro: [
+    L('NAVE', '* La sonda baja despacio. No hay prisa: cada cosa en su lugar.', '* The probe descends slowly. No rush: everything in its place.'),
+  ],
+  roverIntro: [
+    L('TORRE', 'El rover recorre la superficie: aire y comida, energía y señal, agua. Busca lo que haga habitable este lugar.', 'The rover explores the surface: air and food, power and signal, water. Look for what could make this place habitable.'),
+  ],
+  roverOutro: [
+    L('VUELO', 'Datos recibidos. Todavía la Luna no es habitable, pero ya sabemos por dónde empezar.', 'Data received. The Moon is not habitable yet, but we know where to start.'),
+    L('NAVE', '* Es hora de volver a casa.', '* It is time to go home.'),
   ],
   // Finales (ninguno castiga)
   endA: [

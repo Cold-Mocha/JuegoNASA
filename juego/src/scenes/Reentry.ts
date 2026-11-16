@@ -7,8 +7,9 @@ import { fadeIn, fadeTo } from '../core/fade';
 import { audio } from '../core/audio';
 import { icon, type IconName } from '../core/icons';
 import { chapterFor } from '../data/chapters';
-import { mountBurn, mountGlide, mountInspect, type PhaseDone } from '../core/casaGames';
+import { mountGlide, type PhaseDone } from '../core/casaGames';
 import { mountEntryGame } from '../core/reentryGame';
+import { mountBurnAlign, mountRollover } from '../core/returnGames';
 import type { MiniGameHandle } from '../core/miniGames';
 import { casaScore, casaStars, type CasaResult } from '../sim/entry';
 import { t } from '../core/i18n';
@@ -35,6 +36,7 @@ export class ReentryScene extends Phaser.Scene {
   private timer?: Phaser.Time.TimerEvent;
   private res: CasaResult = { inspected: 1, burn: 0, corridor: 0, heatMax: 0, glide: 0 };
   private unfound = 0;
+  private blackoutSeen = false;
   private ship: ShipState = shipFromStars(0);
   private vr: VoyageResult = { signal: 0, air: 0, power: 0, inspected: 1, unfound: 0, reentry: 0, glide: 0 };
 
@@ -83,7 +85,7 @@ export class ReentryScene extends Phaser.Scene {
     this.stop();
     const root = this.ui.q('[data-casa]');
     root.innerHTML = `<div class="voyage"><div class="voyage__stage">${art ? `<div class="voyage__art">${voyageArt(art)}</div>` : ''}${extra}</div><div data-dlg></div></div>`;
-    const h = mountDialogue(this.ui.q('[data-dlg]'), key, { lang: this.lang, calm: state.calm, pilot: this.pilot, onDone: () => { h.destroy(); then(); } });
+    const h = mountDialogue(this.ui.q('[data-dlg]'), key, { lang: this.lang, calm: state.calm, engineer: state.loadout?.difficulty === 'comandante', pilot: this.pilot, onDone: () => { h.destroy(); then(); } });
     this.handle = h;
   }
 
@@ -123,7 +125,8 @@ export class ReentryScene extends Phaser.Scene {
   /** Icono de la fase un instante y después el juego. */
   private startPhase(i: number): void {
     this.stop();
-    if (i === 0) this.unfound = 0;
+    if (i === 0) { this.unfound = 0; this.blackoutSeen = false; }
+    if (i === 2 && this.blackoutSeen === false) { /* la escena del apagón se cuenta antes del juego */ }
     const root = this.ui.q('[data-casa]');
     root.innerHTML = `<div class="casa__intro">${icon(PHASE_ICON[i])}</div>`;
     audio.play(i === 2 ? 'alarm' : 'radio');
@@ -131,8 +134,16 @@ export class ReentryScene extends Phaser.Scene {
       const advance = (): void => {
         audio.play('achievement');
         root.querySelector('.mini-full')?.classList.add('is-done');
-        this.timer = this.time.delayedCall(700, () => (i === 3 ? this.finish() : this.startPhase(i + 1)));
+        this.timer = this.time.delayedCall(700, () => {
+          if (i === 3) return this.finish();
+          if (i === 0) return this.say(this.unfound < DAMAGED_TILES ? 'inspectFound' : 'inspectMiss', 'orbit', () => this.say('burn', 'orbit', () => this.startPhase(1)));
+          this.startPhase(i + 1);
+        });
       };
+      if (i === 2 && !this.blackoutSeen) {
+        this.blackoutSeen = true;
+        return this.say('blackout', 'storm', () => this.startPhase(2));
+      }
       if (i === 2) {
         // Reingreso del orbitador: modelo físico con alabeo, calor, g y apagón de comunicaciones (ver sim/reentry.ts)
         root.innerHTML = '<div class="casa__entry" data-stage></div>';
@@ -146,7 +157,7 @@ export class ReentryScene extends Phaser.Scene {
             this.res.corridor = r.quality;
             this.res.heatMax = Math.round((1 - r.heatMargin) * 100); // calor acumulado 0–100
             g.destroy();
-            this.timer = this.time.delayedCall(300, () => this.startPhase(3));
+            this.timer = this.time.delayedCall(300, () => this.say('blackoutEnd', 'orbit', () => this.startPhase(3)));
           },
         });
         this.handle = { destroy: () => g.destroy() };
@@ -155,8 +166,9 @@ export class ReentryScene extends Phaser.Scene {
       root.innerHTML = '<div class="mini-full"><div class="mini-full__stage" data-stage></div></div>';
       const stage = this.ui.q('[data-stage]');
       const done = (apply: (r: Parameters<PhaseDone>[0]) => void): PhaseDone => (r) => { apply(r); advance(); };
-      if (i === 0) this.handle = mountInspect(stage, DAMAGED_TILES, done((r) => { this.res.inspected = r.score; this.unfound = r.unfound ?? 0; }));
-      else if (i === 1) this.handle = mountBurn(stage, done((r) => void (this.res.burn = r.score)));
+      const hard = state.loadout?.difficulty === 'comandante';
+      if (i === 0) this.handle = mountRollover(stage, { damaged: DAMAGED_TILES, seed: Date.now() % 997, hard, lang: this.lang, calm: state.calm, cb: done((r) => { this.res.inspected = r.score; this.unfound = r.unfound ?? 0; }) });
+      else if (i === 1) this.handle = mountBurnAlign(stage, { hard, seed: Date.now() % 991, lang: this.lang, calm: state.calm, cb: done((r) => void (this.res.burn = r.score)) });
       else this.handle = mountGlide(stage, done((r) => void (this.res.glide = r.score)));
     });
   }

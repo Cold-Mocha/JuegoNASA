@@ -2,7 +2,7 @@ import { SCRIPT, UI_TEXT, WHO_LABEL, type ScriptLine, type SceneKey } from '../d
 import { esc } from './ui';
 import type { MiniGameHandle } from './miniGames';
 
-export interface DialogueOptions { lang: 'es' | 'en'; calm?: boolean; pilot: string; onDone(): void; onLine?(line: ScriptLine, index: number): void; }
+export interface DialogueOptions { lang: 'es' | 'en'; calm?: boolean; pilot: string; engineer?: boolean; onDone(): void; onLine?(line: ScriptLine, index: number): void; }
 
 const GLITCH = '▒░#%/·';
 /** Caja de diálogo estilo «máquina de escribir»: clic, Enter o Espacio avanza (el primero completa la línea). El texto completo va a un aviso accesible. */
@@ -15,10 +15,12 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
       <p class="dlg__who" data-who></p>
       <p class="dlg__text" data-text aria-hidden="true"></p>
       <p class="sr-only" data-sr aria-live="polite"></p>
+      <p class="dlg__card" data-card hidden></p>
       <div class="dlg__foot"><span class="dlg__hint">${esc(UI_TEXT.hint[lang])}</span>
         <button class="mn-btn mn-btn--secondary mn-btn--sm" data-skip>${esc(UI_TEXT.skip[lang])}</button></div>
     </div></div>`;
   const q = <T extends HTMLElement>(s: string): T => root.querySelector<T>(s)!;
+  const card = q('[data-card]');
   const who = q('[data-who]'), text = q('[data-text]'), sr = q('[data-sr]'), box = q('.dlg__box');
   let i = -1;
   let full = '';
@@ -43,6 +45,7 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
     box.dataset.fx = !opts.calm && line.fx === 'shake' ? 'shake' : line.fx === 'whisper' ? 'whisper' : '';
     text.classList.toggle('is-nave', line.who === 'NAVE');
     sr.textContent = '';
+    card.hidden = !(opts.engineer && line.card); card.textContent = line.card ? `ⓘ ${line.card[lang]}` : '';
     opts.onLine?.(line, i);
     shown = 0; text.textContent = '';
     if (reduce) return finishLine();
@@ -64,4 +67,14 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
   });
   next();
   return { destroy() { dead = true; clearInterval(timer); window.removeEventListener('keydown', onKey, true); } };
+}
+
+/** Muestra un diálogo dentro del escenario de un minijuego y, al terminar, monta el minijuego en el mismo contenedor. */
+export function withIntro(key: SceneKey | ScriptLine[], opts: Omit<DialogueOptions, 'onDone'>, mount: (root: HTMLElement) => MiniGameHandle): (root: HTMLElement) => MiniGameHandle {
+  return (root) => {
+    let inner: MiniGameHandle | null = null;
+    root.classList.add('dlg-in-stage');
+    const d = mountDialogue(root, key, { ...opts, onDone: () => { d.destroy(); root.classList.remove('dlg-in-stage'); inner = mount(root); } });
+    return { nudge: (dx, dy) => inner?.nudge?.(dx, dy), destroy() { d.destroy(); inner?.destroy(); root.classList.remove('dlg-in-stage'); } };
+  };
 }

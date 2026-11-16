@@ -116,3 +116,10 @@ Los cuatro tripulantes (Miu, Leo, Güiña, Zib) llevan un morro algo más grande
 - Tres finales: A «Rueda detenida», B «El rescate», C «Silencio» (siempre se puede reintentar). Reglas **[PROPUESTA]** en `endingFor`.
 - Diálogos estilo máquina de escribir con aviso accesible, `calm` quita temblor y estática, subtítulos siempre visibles.
 - Pendiente (etapas 2 y 3): voltereta, quema y apagón con arte por capas y más mecánica; mejorar el cinturón, la entrega y el rover; tarjetas de datos en Modo Ingeniero; elegir el nombre final de la nave. Sin verificar en navegador.
+
+## 18. Regreso «Rueda detenida» — etapas 2 y 3 (`core/returnGames.ts`, `core/dialogue.ts`, `scenes/Station.ts`)
+- **Voltereta** (`mountRollover`): se controla la velocidad del giro; solo se fotografía con giro estable y luz; cada corrección gasta combustible; mapa de 24 losetas y cobertura (≥ 85 % para el final A). **Quema** (`mountBurnAlign`): 2 ejes, cuenta regresiva, empujones y llama de partículas. Ambas con capas (estrellas con parallax, limbo de la Tierra, destello solar).
+- **Apagón de radio** (reingreso): ahora con escenas de diálogo antes y después (sala sin enlace, «¿nos escuchas?»).
+- **Columbia:** tarjeta de recuerdo respetuosa tras la inspección. **Modo Ingeniero:** tarjetas de datos [REAL/MODELO] bajo el diálogo.
+- **Cinturón, entrega y rover** abren con diálogos que ligan la carga (baterías, chips, algas) con los pasos hacia un hábitat lunar. No se retocó la jugabilidad del cinturón, la entrega ni el rover (proporciones y mecánica quedan para una pasada con capturas).
+- Sin verificar visualmente en navegador. Pendiente: nombre final de la nave confirmado con hablantes; cifras del Modo Ingeniero.

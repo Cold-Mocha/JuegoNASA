@@ -35,6 +35,7 @@ export class MainMenuScene extends Phaser.Scene {
         <nav class="menu__actions" aria-label="${t('menu.nav')}">
           <button class="mn-btn menu__play" data-action="play">${icon('rocket')}${t('menu.play')}</button>
           <button class="mn-btn mn-btn--secondary" data-action="archive">${icon('book')}${t('archive.title')}</button>
+          <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="story">${icon('book')}${t('menu.story')}</button>
           <div class="menu__more">
             <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="achievements">${icon('trophy')}${t('menu.achievements')}</button>
             <button class="mn-btn mn-btn--secondary mn-btn--sm" data-action="settings">${icon('gear')}${t('settings.title')}</button>
@@ -59,6 +60,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
 
     ui.on('play', () => this.play())
+      .on('story', () => fadeTo(this, SCENES.story))
       .on('close', closeModal)
       .on('archive', () => fadeTo(this, SCENES.archive))
       .on('settings', () => openModal(settingsHtml()))
@@ -103,6 +105,6 @@ export class MainMenuScene extends Phaser.Scene {
 
   /** Jugar: directo a elegir misión. La primera vez, antes, el prólogo y una sesión de entrenamiento aparte (los arma `StoryScene`). */
   private play(): void {
-    fadeTo(this, state.progress.tutorialDone ? SCENES.select : SCENES.story);
+    fadeTo(this, state.progress.tutorialDone && state.progress.prologueSeen ? SCENES.select : SCENES.story);
   }
 }

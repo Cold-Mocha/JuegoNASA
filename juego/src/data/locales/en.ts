@@ -390,6 +390,7 @@ export const en: Record<TKey, string> = {
   'menu.credits': 'Credits',
   'menu.nav': 'Main menu',
   'menu.play': 'Play',
+  'menu.story': 'Watch the prologue',
   'menu.reset': 'Hard reset',
   'menu.reset.body': 'Erases records, achievements and read archive. Settings stay.',
   'menu.reset.confirm': 'Delete and start',

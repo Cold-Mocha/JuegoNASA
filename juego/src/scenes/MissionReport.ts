@@ -111,7 +111,7 @@ export class MissionReportScene extends Phaser.Scene {
       .on('select', () => {
         if (r.training) { // fin del entrenamiento: se descarta la estación de práctica y se elige la primera misión
           state.training = false;
-          state.loadout = null;
+          state.afterTraining = true; // se conserva el tripulante elegido
         }
         fadeTo(this, SCENES.select);
       })

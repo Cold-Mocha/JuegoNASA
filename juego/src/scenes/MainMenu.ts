@@ -21,6 +21,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     audio.setMood('menu');
+    state.afterTraining = false;
+    state.skipFlight = false;
     state.training = false; // volver al menú cancela un entrenamiento a medias
     fadeIn(this);
     // portada ilustrada (el título MICHINAUTAS va dentro de la imagen; abajo queda un h1 solo para lectores de pantalla)

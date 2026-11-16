@@ -138,8 +138,8 @@ export class LaunchLoadingScene extends Phaser.Scene {
     this.light = state.settings.ultraLight;
     this.speed = this.calm ? CALM_SPEED : 1;
     this.resetRun();
-    // el entrenamiento carga rápido: el despegue épico se reserva para la primera misión de verdad, y solo esa vez
-    if (state.training || state.progress.launchSeen) return this.quickLoad(loadout);
+    // el despegue épico se ve una sola vez: al elegir tripulante por primera vez (antes del entrenamiento)
+    if (state.progress.launchSeen) return this.quickLoad(loadout);
 
     ensureSoftTextures(this);
     ensureCrowdTextures(this);
@@ -175,7 +175,7 @@ export class LaunchLoadingScene extends Phaser.Scene {
         layer.q('[data-bar]').style.width = `${Math.round(this.loadProgress * 100)}%`;
         if (this.loadProgress >= 1 && !this.done) {
           this.done = true;
-          fadeTo(this, SCENES.flight, 250); // igual que tras la animación completa: sigue el vuelo a la Luna
+          fadeTo(this, state.training ? SCENES.station : SCENES.flight, 250); // el cinturón de asteroides es el viaje de ida de cada misión; el entrenamiento no lo lleva
         }
       },
     });
@@ -820,8 +820,8 @@ export class LaunchLoadingScene extends Phaser.Scene {
 
   private arrive(): void {
     this.done = true;
-    if (!state.training) state.saveProgress({ launchSeen: true });
+    state.saveProgress({ launchSeen: true });
     this.tweens.add({ targets: this.ui, alpha: 0, duration: 250 });
-    this.time.delayedCall(150, () => fadeTo(this, SCENES.flight, 400));
+    this.time.delayedCall(150, () => fadeTo(this, state.training ? SCENES.station : SCENES.flight, 400)); // entrenamiento: del despegue directo a la estación de práctica
   }
 }

@@ -99,6 +99,9 @@ class GameState {
   loadout: Loadout | null = null;
   /** Sesión de entrenamiento (tutorial aparte, la primera vez): usa una estación de práctica y al terminar lleva al selector de misión. */
   training = false;
+  /** Recién terminado el entrenamiento: el selector arranca en la misión (el tripulante ya se eligió) y la primera misión no repite el paso por los asteroides. */
+  afterTraining = false;
+  skipFlight = false;
   lastResult: LastResult | null = null;
 
   saveSettings(patch: Partial<Settings>): void {
@@ -111,6 +114,8 @@ class GameState {
     this.progress = { ...emptyProgress, best: {}, achievements: [], readEntries: [] };
     safeWrite(PROGRESS_KEY, this.progress);
     this.training = false;
+    this.afterTraining = false;
+    this.skipFlight = false;
     this.loadout = null;
     this.lastResult = null;
   }

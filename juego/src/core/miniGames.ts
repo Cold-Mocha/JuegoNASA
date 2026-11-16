@@ -1,6 +1,7 @@
 import { t } from './i18n';
 import { healPatientSvg } from './art';
 import { CHARACTERS } from '../data/characters';
+import { state } from './state';
 import { audio } from './audio';
 import {
   ALGAE_SECONDS, HARVEST_PENALTY, HARVEST_SECONDS, HEAL_HOLD_MS, ICE_FILL_SECONDS, ICE_MAX_SECONDS, PEDAL_BEATS, PEDAL_PASS, algaeScore, drillScore, harvestScore, healScore,
@@ -246,7 +247,7 @@ export function mountHealGame(root: HTMLElement, cb: MiniCallbacks, time = 1): M
       <rect x="258" y="52" width="70" height="46" rx="8" fill="#0e0b33" stroke="#0e0b33" stroke-width="3"/><path d="M264 78 h12 l5 -14 l8 26 l6 -16 l5 4 h18" fill="none" stroke="#5ad6b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
       <rect x="52" y="440" width="60" height="26" rx="6" fill="#ff6b7a" stroke="#0e0b33" stroke-width="3"/><path d="M82 444 v18 M73 453 h18" stroke="#f5f5f2" stroke-width="5" stroke-linecap="round"/>
       <rect x="64" y="64" width="252" height="392" rx="26" fill="#f5f5f2" stroke="#0e0b33" stroke-width="4"/>
-      ${healPatientSvg(CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)])}
+      ${healPatientSvg(CHARACTERS.find((c) => c.id === state.loadout?.character) ?? CHARACTERS[0])}
     </svg>
     ${spots.map((p, i) => `<button class="heal__spot" data-spot="${i}" style="left:${p.x - 34}px;top:${p.y - 34}px" aria-label="${t('mini.wound')}"><span class="heal__ring"></span><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="#f5f5f2" stroke-width="4" stroke-linecap="round"/></svg></button>`).join('')}
   </div>`;

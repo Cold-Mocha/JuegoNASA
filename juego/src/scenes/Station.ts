@@ -1852,7 +1852,7 @@ export class StationScene extends Phaser.Scene {
     if (!state.training) return;
     // fin del entrenamiento: se descarta la estación de práctica y se elige la primera misión
     state.training = false;
-    state.loadout = null;
+    state.afterTraining = true; // se conserva el tripulante elegido
     this.ending = true;
     fadeTo(this, SCENES.select);
   }

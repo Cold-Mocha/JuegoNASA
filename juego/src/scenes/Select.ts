@@ -98,6 +98,7 @@ export class SelectScene extends Phaser.Scene {
       },
     ];
 
+    if (state.training) this.steps = this.steps.filter((s) => s.key === 'character'); // la primera vez solo se elige tripulante: sigue el despegue
     fadeIn(this);
     drawStarfield(this, 'select', !state.calm);
     this.ui = new UiLayer(this, /* html */ `
@@ -135,7 +136,8 @@ export class SelectScene extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopPreview());
-    this.render(0);
+    this.render(state.afterTraining && !state.training ? 1 : 0); // tras el entrenamiento el tripulante ya está elegido
+    state.afterTraining = false;
   }
 
   private render(i: number): void {

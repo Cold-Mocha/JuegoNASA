@@ -1,6 +1,6 @@
-import { GUIDES, takeGuide, type GuideKey } from '../data/earthGuides';
+import { DAY_TALKS, LEGEND_EARNED, LEGEND_USED, takeTalk } from '../data/earthGuides';
 import Phaser from 'phaser';
-import { withIntro } from '../core/dialogue';
+import { mountDialogue, withIntro } from '../core/dialogue';
 import { SCRIPT, type SceneKey, type ScriptLine } from '../data/voyageScript';
 import { SCENES, GAME_WIDTH, GAME_HEIGHT } from '../core/config';
 import { state } from '../core/state';
@@ -30,6 +30,7 @@ import {
   HALLS, MAP_H, MAP_W, ROOM_RECTS, WALL_H, findRoute, isWalkable, moveOnMap, roomAt, roomCenter, zoneAt, type Obstacle, type Point,
 } from '../sim/stationMap';
 import { severity } from '../sim/flares';
+import { mountSolarFx, type SolarFx } from '../core/solarFx';
 import { Pool } from '../sim/pool';
 import { computeScore } from '../sim/score';
 import { earnedAchievements } from '../sim/achievements';
@@ -97,6 +98,11 @@ export class StationScene extends Phaser.Scene {
   private michi!: Phaser.GameObjects.Sprite;
   private shadow!: Phaser.GameObjects.Ellipse;
   private flareTint!: Phaser.GameObjects.Rectangle;
+  /** Charla con Control Tierra que espera a que se cierre lo que haya abierto (minijuego, mapa…). */
+  private pendingTalk: number | null = null;
+  /** Escenas de la trama (cepa legendaria) que esperan a que se cierre el minijuego. */
+  private pendingScene: ScriptLine[] | null = null;
+  private solarFx?: SolarFx;
   private darkTint!: Phaser.GameObjects.Rectangle;
   private pos: Point = roomCenter(START_ROOM);
   private face = 1;
@@ -225,6 +231,8 @@ export class StationScene extends Phaser.Scene {
    * esos van en una cámara aparte sin zoom, y todo lo que se agregue al mundo después queda solo en la principal.
    */
   private splitCameras(): void {
+    this.solarFx = mountSolarFx(this.ui.el, state.calm); // capa de la tormenta solar sobre el HUD
+    this.disposers.push(() => this.solarFx?.destroy());
     const screenOnly: Phaser.GameObjects.GameObject[] = [this.ui.dom, this.darkTint, this.flareTint];
     const hudCam = this.cameras.add(0, 0, GAME_WIDTH, GAME_HEIGHT);
     hudCam.inputEnabled = false; // los clics van a la cámara del mundo (máquinas y piso)
@@ -643,10 +651,12 @@ export class StationScene extends Phaser.Scene {
         const light = ev.light >= 1 ? t('day.light.day') : ev.light > 0 ? t('day.light.dusk') : t('day.light.night');
         const tip = ev.light === 0 && ev.day === 5 ? this.hint(t('tip.night')) : undefined;
         this.toast('day', t('day.start', { day: ev.day, date: realDate(this.mission, ev.day) }), 'info', ALERT_MS, tip ? `${light} · ${tip}` : light, ev.light > 0 ? 'sun' : 'moon');
+        this.queueTalk(ev.day);
         break;
       }
       case 'flareWarning': {
         audio.play('radio');
+        this.solarFx?.warn(severity(ev.event.classType));
         const where = !this.sim.sheltered ? t('flare.goBack') : this.sim.res.energy > 0 ? t('flare.warn.inside') : t('flare.warn.noEnergy');
         const tip = this.sim.sheltered ? undefined : this.hint(ev.forecasted ? t('tip.flare.forecasted') : t('tip.flare.late'));
         this.toast('flare', t('flare.warning', { flare: flareName(ev.event.classType) }), 'danger', ev.inSec * 1000, tip ? `${where} · ${tip}` : where); // queda hasta que llega
@@ -659,13 +669,19 @@ export class StationScene extends Phaser.Scene {
         this.toast('flare', t('flare.start', { flare: flareName(ev.event.classType), date: realDate(this.mission, ev.event.day), source: sourceName(this.mission) }), 'danger', FLARE_DURATION_SEC * 1000, tip ? `${where} · ${tip}` : where);
         audio.play('alarm');
         if (!state.calm && sev !== 'minor') this.cameras.main.shake(500, sev === 'severe' ? 0.006 : 0.003);
-        this.flareTint.setAlpha(sev === 'severe' ? 0.22 : 0.14);
-        if (!state.calm) this.tweens.add({ targets: this.flareTint, alpha: 0.06, duration: 800, yoyo: true, repeat: Math.floor(FLARE_DURATION_SEC / 1.6) });
+        this.solarFx?.start(sev); // filtro de color según la intensidad + estática breve de interferencia
         break;
       }
+      case 'legendaryUsed':
+        audio.play('achievement');
+        this.float(`−${ev.cure} ${resourceShort('radiation')}`, 'nebula-magenta');
+        this.toast('flare', t('legend.used', { n: ev.cure }), 'ok');
+        this.openScene(LEGEND_USED); // si hay algo abierto, espera a que se cierre
+        break;
       case 'flareEnd':
         this.tweens.killTweensOf(this.flareTint);
         this.flareTint.setAlpha(0);
+        this.solarFx?.end();
         this.float(`+${ev.dose} ${resourceShort('radiation')}`, 'nebula-magenta');
         // la decisión, con el dato real de la llamarada: lo que recibiste y lo que habría pasado en el otro lugar
         if (!ev.exposed) this.toast('flare', t('flare.end.shielded', { dose: ev.dose, outside: FLARE_OUTSIDE_HIT }), 'ok', FLARE_RESULT_MS);
@@ -922,9 +938,9 @@ export class StationScene extends Phaser.Scene {
   /**
    * Minijuego a pantalla completa con el marco común: el juego, la pista de los primeros segundos (gesto y teclas) y el botón Salir.
    * Al terminar muestra 1 a 3 estrellas y la ganancia real; `finish` aplica la acción y devuelve su efecto.
-   * `guide`: transmisión de Control Tierra antes del juego (una vez por sesión); `intro`: diálogo de la historia antes del juego.
+   * `intro`: diálogo de la historia antes del juego (las pistas de cada juego van en la charla diaria con Control Tierra).
    */
-  private openFullMini(cfg: { hint: string; guide?: GuideKey; intro?: SceneKey | ScriptLine[]; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => ActionDelta | null | undefined; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null; wide?: boolean; mood?: Mood }): void {
+  private openFullMini(cfg: { hint: string; intro?: SceneKey | ScriptLine[]; mount: (root: HTMLElement, cb: MiniCallbacks) => MiniGameHandle; finish: (result?: number) => ActionDelta | null | undefined; outdoor?: boolean; next?: () => void; failed?: (result?: number) => string | null; wide?: boolean; mood?: Mood }): void {
     this.closeOverlay(!!cfg.mood);
     this.miniOutdoor = !!cfg.outdoor;
     if (cfg.mood) { this.miniMood = cfg.mood; audio.setMood(cfg.mood); } // la sonda trae su propia música
@@ -955,7 +971,7 @@ export class StationScene extends Phaser.Scene {
       },
     };
     const stage = this.ui.q('[data-mini-stage]');
-    const lines = cfg.intro ?? (cfg.guide && takeGuide(cfg.guide) ? GUIDES[cfg.guide] : null);
+    const lines = cfg.intro ?? null;
     if (lines) {
       // Diálogo antes del minijuego: el traje no gasta oxígeno mientras se lee, y la pista aparece cuando empieza el juego
       this.miniOutdoor = false;
@@ -998,7 +1014,7 @@ export class StationScene extends Phaser.Scene {
 
   private openDustGame(action: 'cleanDust'): void {
     this.openFullMini({
-      hint: t('hint.dust'), guide: 'polvo',
+      hint: t('hint.dust'),
       mount: (root, cb) => ({ ...mountDustGame(root, { dust: this.sim.comp.dust, ...cb }), gesture: 'drag', keys: ['← ↑ → ↓'] }),
       finish: (r) => this.sim.act(action, quality(r ?? 1)), // lo que queda sucio se suma después como resto de polvo
       outdoor: true, // en la superficie el traje sigue gastando oxígeno mientras limpias
@@ -1007,13 +1023,13 @@ export class StationScene extends Phaser.Scene {
 
   /** Panel de pruebas (Energía del Sol): limpiarlo y orientarlo al Sol. Se juega afuera: el traje sigue gastando. */
   private openTestPanelGame(): void {
-    this.openFullMini({ hint: t('hint.testPanel'), guide: 'panel', mount: (root, cb) => ({ ...mountTestPanel(root, cb, this.miniTime), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
+    this.openFullMini({ hint: t('hint.testPanel'), mount: (root, cb) => ({ ...mountTestPanel(root, cb, this.miniTime), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('cleanTestPanel', quality(r ?? 1)), outdoor: true });
   }
 
   /** Cultivo de algas (Huerto lunar): mantener luz, nutrientes y temperatura en su franja (en Cadete, sin la temperatura). */
   private openAlgaeGame(): void {
     this.openFullMini({
-      hint: t('hint.algae'), guide: 'algas',
+      hint: t('hint.algae'),
       mount: (root, cb) => mountAlgae(root, cb, MINI_DIFFICULTY[this.difficulty.id]),
       finish: (r) => this.sim.act('growLights', quality(r ?? 1)),
       failed: (r) => ((r ?? 1) > 0 ? null : t('alert.algaeFail')), // no se llenó la barra a tiempo: se pierde, sin costo ni efecto
@@ -1021,7 +1037,7 @@ export class StationScene extends Phaser.Scene {
   }
 
   private openSealGame(): void {
-    this.openFullMini({ hint: t('hint.seal'), guide: 'sellar', mount: (root, cb) => ({ ...mountSealGame(root, cb), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('repair', quality(r ?? 1)) });
+    this.openFullMini({ hint: t('hint.seal'), mount: (root, cb) => ({ ...mountSealGame(root, cb), gesture: 'drag', keys: ['← ↑ → ↓'] }), finish: (r) => this.sim.act('repair', quality(r ?? 1)) });
   }
 
   /**
@@ -1035,7 +1051,7 @@ export class StationScene extends Phaser.Scene {
 
   private openAntennaFlow(): void {
     const message = (): void => this.openFullMini({ hint: t('hint.message'), mount: (root, cb) => mountNoisyMessage(root, cb), finish: (r) => this.sim.act('repairAntenna', quality(r ?? 1)), outdoor: true });
-    if (this.sim.comp.antenna < 0.7) this.openFullMini({ hint: t('hint.wires'), guide: 'antena', mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message, outdoor: true });
+    if (this.sim.comp.antenna < 0.7) this.openFullMini({ hint: t('hint.wires'), mount: (root, cb) => mountAntennaGame(root, cb), finish: () => undefined, next: message, outdoor: true });
     else message();
   }
 
@@ -1047,7 +1063,7 @@ export class StationScene extends Phaser.Scene {
   /** Bicicleta de energía: seguir el ritmo con los dos pedales. */
   private openPedalGame(): void {
     this.openFullMini({
-      hint: t('hint.pedal'), guide: 'pedal',
+      hint: t('hint.pedal'),
       mount: (root, cb) => mountPedal(root, cb, this.miniTime),
       finish: (r) => this.sim.act('pedal', quality(r ?? 1)),
       failed: (r) => ((r ?? 1) > PEDAL_PASS ? null : t('alert.pedalFail')),
@@ -1056,19 +1072,22 @@ export class StationScene extends Phaser.Scene {
 
   /** Curarse: tratar cada herida manteniendo apretado. */
   private openHealGame(): void {
-    this.openFullMini({ hint: t('hint.heal'), guide: 'curar', mount: (root, cb) => mountHealGame(root, cb, this.miniTime), finish: (r) => this.sim.act('heal', quality(r ?? 1)) });
+    this.openFullMini({ hint: t('hint.heal'), mount: (root, cb) => mountHealGame(root, cb, this.miniTime), finish: (r) => this.sim.act('heal', quality(r ?? 1)) });
   }
 
   /** Cosechar; si se diseñó el ADN de papel (opcional), la cosecha rinde un poco más (sin taller, ×1: igual que siempre). */
   private openHarvestGame(): void {
-    this.openFullMini({ hint: t('hint.harvest'), guide: 'cosecha', mount: (root, cb) => mountHarvestGame(root, cb, this.miniTime), finish: (r) => this.sim.act('harvest', quality(r ?? 1) * dnaBonus(this.sim.stats.dna)) });
+    this.openFullMini({ hint: t('hint.harvest'), mount: (root, cb) => mountHarvestGame(root, cb, this.miniTime), finish: (r) => this.sim.act('harvest', quality(r ?? 1) * dnaBonus(this.sim.stats.dna)) });
   }
 
   /** Taller de ADN de papel (opcional, en el Rack de plantas): no cuesta recursos; su nota da el bonus de las cosechas siguientes. */
   private openDnaGame(): void {
     this.openFullMini({
-      hint: t('hint.dna'), guide: 'bio',
-      mount: (root, cb) => mountDnaWorkshop(root, { mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => cb.onDone(score) }),
+      hint: t('hint.dna'),
+      mount: (root, cb) => mountDnaWorkshop(root, {
+        mission: this.mission.id, hard: this.difficulty.id === 'comandante', onDone: (score) => cb.onDone(score),
+        onLegendary: () => { if (this.sim.grantLegendary()) this.pendingScene = LEGEND_EARNED; }, // el diseño perfecto abre la escena de la cepa Aurora al cerrar el taller
+      }),
       finish: (r) => { this.sim.setDna(r ?? 0); return undefined; },
     });
   }
@@ -1104,7 +1123,7 @@ export class StationScene extends Phaser.Scene {
   /** Biofirmas: analizar una muestra de hielo ya recogida con tres pruebas independientes. Se juega afuera: el traje sigue gastando. */
   private openBioTestsGame(): void {
     this.openFullMini({
-      hint: t('hint.bio'), guide: 'biofirmas',
+      hint: t('hint.bio'),
       mount: (root, cb) => mountBiofirmas(root, { hard: this.difficulty.id === 'comandante', seed: this.sim.day * 31 + this.sim.stats.bioTests * 7, onDone: (score) => cb.onDone(score) }),
       finish: (r) => this.sim.act('analyze', quality(r ?? 1)),
       outdoor: true,
@@ -1660,6 +1679,30 @@ export class StationScene extends Phaser.Scene {
     this.ui.q('[data-actions]').hidden = true;
     this.previewId = null;
     this.renderPreview();
+    if (this.pendingScene) { const lines = this.pendingScene; this.pendingScene = null; this.time.delayedCall(250, () => this.openScene(lines)); }
+    else if (this.pendingTalk !== null) this.time.delayedCall(250, () => this.queueTalk(this.pendingTalk!)); // la charla del día esperaba su turno
+  }
+
+  /** Abre la charla diaria con Control Tierra (estilo RPG, con el reloj detenido); si hay otra cosa abierta, espera a que se cierre. */
+  private queueTalk(day: number): void {
+    if (state.training || this.tutorialIndex >= 0 || this.sim.ended || !DAY_TALKS[day]) return;
+    if (this.overlay !== 'none' && this.overlay !== 'actions') { this.pendingTalk = day; return; }
+    this.pendingTalk = null;
+    if (!takeTalk(this.mission.id, day)) return;
+    this.openScene(DAY_TALKS[day]);
+  }
+
+  /** Escena de diálogo estilo RPG sobre el juego (con el reloj detenido). */
+  private openScene(lines: ScriptLine[]): void {
+    if (this.overlay !== 'none' && this.overlay !== 'actions') { this.pendingScene = lines; return; }
+    this.closeOverlay();
+    this.openModal('<div class="talk dlg-in-stage" data-talk></div>', 'intro', 'modal__panel--talk');
+    const host = this.ui.q('[data-talk]');
+    this.miniGame = mountDialogue(host, lines, {
+      lang: getLang(), calm: state.calm, muted: state.settings.sfxVolume <= 0, engineer: this.difficulty.id === 'comandante',
+      pilot: CHARACTERS.find((c) => c.id === state.loadout?.character)?.name ?? 'Piloto',
+      onDone: () => this.closeOverlay(),
+    });
   }
 
   // ---------- tutorial ----------

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BIO_TESTS, DNA_PROBLEMS, bioScore, dnaCost, dnaEfficiency, dnaFit, dnaBonus, dnaScore, STRAINS, dnaCostFor, dnaScoreFor, makeSample, needsMoreTests, type DnaDesign } from '../../src/sim/dna';
+import { BIO_TESTS, DNA_PROBLEMS, bioScore, isLegendaryBuild, dnaCost, dnaEfficiency, dnaFit, dnaBonus, dnaScore, STRAINS, dnaCostFor, dnaScoreFor, makeSample, needsMoreTests, type DnaDesign } from '../../src/sim/dna';
+import { makeSim } from './helpers';
 
 const design = (over: Partial<DnaDesign> = {}): DnaDesign => ({ sensor: 'light', fn: 'photosynthesis', sw: 'onDetect', ...over });
 
@@ -80,5 +81,31 @@ describe('cepas', () => {
   });
   it('el costo escala con la cepa', () => {
     expect(dnaCostFor(good, STRAINS[0])).toBeLessThan(dnaCostFor(good, STRAINS[2]));
+  });
+});
+
+describe('cepa legendaria Aurora', () => {
+  it('solo un diseño perfecto (sensor, función, cepa e interruptor «solo cuando detecta») la desbloquea', () => {
+    const p = DNA_PROBLEMS['huerto-lunar'];
+    const brisa = STRAINS.find((s) => s.id === 'brisa')!;
+    const polar = STRAINS.find((s) => s.id === 'polar')!;
+    expect(isLegendaryBuild({ sensor: 'light', fn: 'photosynthesis', sw: 'onDetect' }, p, brisa)).toBe(true);
+    expect(isLegendaryBuild({ sensor: 'light', fn: 'photosynthesis', sw: 'always' }, p, brisa)).toBe(false);
+    expect(isLegendaryBuild({ sensor: 'light', fn: 'photosynthesis', sw: 'onDetect' }, p, polar)).toBe(false);
+    expect(isLegendaryBuild({ sensor: 'radiation', fn: 'photosynthesis', sw: 'onDetect' }, p, brisa)).toBe(false);
+  });
+
+  it('se gana una sola vez y cura la radiación cuando llega a 60', () => {
+    const sim = makeSim({ drain: 0 });
+    expect(sim.grantLegendary()).toBe(true);
+    expect(sim.grantLegendary()).toBe(false);
+    sim.res.radiation = 65;
+    sim.tick(0.1);
+    const ev = sim.drainEvents().find((e) => e.type === 'legendaryUsed');
+    expect(ev).toBeTruthy();
+    expect(sim.res.radiation).toBeCloseTo(25, 0);
+    sim.res.radiation = 80;
+    sim.tick(0.1);
+    expect(sim.drainEvents().some((e) => e.type === 'legendaryUsed')).toBe(false); // un solo uso
   });
 });

@@ -3,7 +3,7 @@
  * Etiquetas: [REAL] dato verificable · [PROPUESTA] diseño del juego · [MODELO] simplificación. La nave es ficción (orbitador tipo transbordador).
  * El nombre de la nave está en un solo lugar (`SHIP_NAME`) para poder cambiarlo.
  */
-export type Who = 'PILOTO' | 'TORRE' | 'VUELO' | 'NAVE' | 'SALA' | 'TIERRA' | 'NEBULA' | 'MIU' | 'GUINA' | 'LEO' | 'ZIB' | 'NARRA';
+export type Who = 'PILOTO' | 'TORRE' | 'VUELO' | 'NAVE' | 'SALA' | 'TIERRA' | 'TIERRA_US' | 'TIERRA_CL' | 'NEBULA' | 'MIU' | 'GUINA' | 'LEO' | 'ZIB' | 'NARRA';
 export type Fx = 'shake' | 'static' | 'whisper' | 'dim';
 export interface ScriptLine {
   who: Who; es: string; en: string; fx?: Fx;
@@ -25,6 +25,8 @@ export const WHO_LABEL: Record<Who, { es: string; en: string; color: string }> =
   NAVE: { es: 'NAVE', en: 'SHIP', color: '#f5f5f2' },
   SALA: { es: 'SALA', en: 'ROOM', color: '#c9b6ff' },
   TIERRA: { es: 'Control Tierra', en: 'Earth Control', color: '#9fe7c8' },
+  TIERRA_US: { es: 'Control Tierra · EE. UU.', en: 'Earth Control · USA', color: '#8fb8ff' },
+  TIERRA_CL: { es: 'Control Tierra · Chile', en: 'Earth Control · Chile', color: '#ff9f8f' },
   NEBULA: { es: 'Comandante Nébula', en: 'Commander Nébula', color: '#c9b6ff' },
   MIU: { es: 'Miu', en: 'Miu', color: '#ffcb47' },
   GUINA: { es: 'Güiña', en: 'Güiña', color: '#ff8fe0' },

@@ -1,6 +1,6 @@
 import { t } from './i18n';
 import {
-  BIO_TESTS, DNA_PROBLEMS, STRAINS, bioScore, dnaCostFor, dnaEfficiencyFor, dnaFit, dnaScoreFor, makeSample, needsMoreTests,
+  BIO_TESTS, DNA_PROBLEMS, STRAINS, bioScore, isLegendaryBuild, dnaCostFor, dnaEfficiencyFor, dnaFit, dnaScoreFor, makeSample, needsMoreTests,
   type BioTest, type DnaDesign, type DnaProblem, type Fn, type Sensor, type Strain, type StrainId, type Switch,
 } from '../sim/dna';
 import type { MissionId } from '../data/missions';
@@ -27,7 +27,52 @@ const piece = (kind: 'strain' | 'sensor' | 'fn' | 'sw', id: string, label: strin
 const row = (label: string, pieces: string): string =>
   `<div style="margin-top:5px"><div style="font-size:12px;opacity:.9;margin-bottom:3px">${label}</div><div style="display:flex;gap:6px">${pieces}</div></div>`;
 
-export function mountDnaWorkshop(root: HTMLElement, opts: { mission: MissionId; hard: boolean; onDone(score: number): void }): MiniGameHandle {
+// ------------------------------------------------------------------ la célula y el plásmido (dibujo propio, a escala de microbio)
+const MEMBRANE: Record<StrainId, string> = { brisa: '#7fd4ff', escudo: '#ffcb47', polar: '#b8f1ff' };
+const SLOT_COLOR = { sensor: '#ffd23f', fn: '#5ad6b2', sw: '#ff8fe0' } as const;
+/** Cada pieza encaja en un tercio del anillo: arriba el sensor, a la derecha la función, a la izquierda el interruptor. */
+const SLOT_ANGLE = { sensor: -90, fn: 30, sw: 150 } as const;
+const RING = { cx: 150, cy: 60, r: 26 };
+const polar = (deg: number): { x: number; y: number } => ({ x: RING.cx + RING.r * Math.cos((deg * Math.PI) / 180), y: RING.cy + RING.r * Math.sin((deg * Math.PI) / 180) });
+const arc = (center: number): string => {
+  const a = polar(center - 52), b = polar(center + 52);
+  return `M${a.x.toFixed(1)} ${a.y.toFixed(1)} A${RING.r} ${RING.r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+};
+const RIBOSOMES = [[60, 44], [82, 84], [236, 40], [250, 82], [214, 94], [100, 38], [196, 30], [70, 66]];
+
+interface CellView {
+  strain?: Strain; sensor?: Sensor; fn?: Fn; sw?: Switch;
+  /** Qué partes del circuito están encendidas ahora (durante la prueba). */
+  lit?: { sensor: boolean; fn: boolean; sw: boolean };
+  /** 0 = el plásmido está afuera de la célula, 1 = ya está adentro. */
+  enter?: number;
+}
+
+/** La célula vista al microscopio, con su membrana (color de la cepa) y el plásmido con sus tres piezas encajadas. */
+function cellSvg(v: CellView): string {
+  const mem = v.strain ? MEMBRANE[v.strain.id] : '#9a98c8';
+  const enter = v.enter ?? 1;
+  const dy = -(1 - enter) * 78;
+  const glyph = { sensor: v.sensor ? SENSORS.find((x) => x.id === v.sensor)!.shape : '?', fn: v.fn ? FNS.find((x) => x.id === v.fn)!.shape : '?', sw: v.sw ? SWITCHES.find((x) => x.id === v.sw)!.shape : '?' };
+  const filled = { sensor: !!v.sensor, fn: !!v.fn, sw: !!v.sw };
+  const slots = (['sensor', 'fn', 'sw'] as const).map((k) => {
+    const c = polar(SLOT_ANGLE[k]);
+    const lit = v.lit?.[k];
+    return `<path d="${arc(SLOT_ANGLE[k])}" fill="none" stroke="${filled[k] ? SLOT_COLOR[k] : '#4a4690'}" stroke-width="11" stroke-linecap="round" ${filled[k] ? '' : 'stroke-dasharray="3 5"'}${lit ? ' style="filter:drop-shadow(0 0 5px #fff)"' : ''}/>
+      <text x="${c.x.toFixed(1)}" y="${(c.y + 4).toFixed(1)}" text-anchor="middle" font-size="12" fill="${filled[k] ? '#0e0b33' : '#8c88c8'}">${glyph[k]}</text>`;
+  }).join('');
+  const body = v.lit?.fn ? '#2c6b5a' : '#23205f'; // la célula se tiñe de verde cuando la función trabaja
+  return `<svg viewBox="0 -50 300 170" role="img" aria-label="${t('dna.cell')}" style="display:block;width:100%;height:140px">
+    <ellipse cx="150" cy="60" rx="130" ry="44" fill="${body}" stroke="${mem}" stroke-width="6" style="transition:fill .3s"/>
+    ${RIBOSOMES.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#8c88c8"/>`).join('')}
+    <path d="M70 60 q15 -22 30 0 t30 0" transform="translate(-6 12)" fill="none" stroke="#6f6ab3" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>
+    <g transform="translate(0 ${dy.toFixed(1)})">
+      <circle cx="${RING.cx}" cy="${RING.cy}" r="${RING.r}" fill="#18144e" stroke="#3a3578" stroke-width="11"/>
+      ${slots}
+    </g></svg>`;
+}
+
+export function mountDnaWorkshop(root: HTMLElement, opts: { mission: MissionId; hard: boolean; onDone(score: number): void; /** Diseño perfecto: se avisa antes de cerrar. */ onLegendary?(): void }): MiniGameHandle {
   const problem: DnaProblem = DNA_PROBLEMS[opts.mission];
   const design: Partial<DnaDesign> = {};
   let strain: Strain | undefined;
@@ -35,28 +80,48 @@ export function mountDnaWorkshop(root: HTMLElement, opts: { mission: MissionId; 
   let best = 0;
   let timer = 0;
   let dead = false;
+  let legend = false;
+  const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const full = (): boolean => !!(design.sensor && design.fn && design.sw && strain);
   const problemText = t(`dna.problem.${problem.sensor}`);
+  const view = (extra: Partial<CellView> = {}): CellView => ({ strain, sensor: design.sensor, fn: design.fn, sw: design.sw, ...extra });
   const render = (extra = ''): void => {
     const cost = design.fn && design.sw && strain ? Math.round(dnaCostFor(design as DnaDesign, strain) * 100) : 0;
-    root.innerHTML = `<div style="${BOX};padding:10px">
-      <div style="font-size:15px">🧬 ${t('dna.title')} · ${t('dna.attempt', { n: attempt })}</div>
-      <p style="margin:4px 0">${problemText}</p>
+    root.innerHTML = `<div style="${BOX};padding:8px 10px">
+      <div style="font-size:14px">🧬 ${t('dna.title')} · ${t('dna.attempt', { n: attempt })}</div>
+      <p style="margin:2px 0;font-size:12px">${problemText}</p>
+      <div data-cell style="background:#0e0b33;border-radius:10px;margin:2px 0">${cellSvg(view())}</div>
+      <p style="margin:0;font-size:10.5px;line-height:1.25;color:#cfeaff">${t('dna.cell')} ${t('dna.plasmid')}</p>
       ${row(t('dna.strain'), STRAINS.map((s) => piece('strain', s.id, t(`dna.strain.${s.id}`), STRAIN_SHAPE[s.id], strain?.id === s.id, !opts.hard && s.good === problem.sensor)).join(''))}
-      <p style="margin:3px 0 0;min-height:28px;font-size:11px;line-height:1.25;color:#cfeaff">${strain ? t(`dna.strain.${strain.id}.trait`) : t('dna.strainHint')}</p>
+      <p style="margin:3px 0 0;min-height:26px;font-size:11px;line-height:1.25;color:#cfeaff">${strain ? t(`dna.strain.${strain.id}.trait`) : t('dna.strainHint')}</p>
       ${row(t('dna.sensor'), SENSORS.map((s) => piece('sensor', s.id, t(`dna.sensor.${s.id}`), s.shape, design.sensor === s.id, !opts.hard && s.id === problem.sensor)).join(''))}
       ${row(t('dna.fn'), FNS.map((s) => piece('fn', s.id, t(`dna.fn.${s.id}`), s.shape, design.fn === s.id, false)).join(''))}
       ${row(t('dna.sw'), SWITCHES.map((s) => piece('sw', s.id, t(`dna.sw.${s.id}`), s.shape, design.sw === s.id, false)).join(''))}
-      <div style="margin-top:6px;font-size:12px">${t('dna.cost')}: <b>${cost} %</b>${opts.hard ? '' : ` · ${t('dna.hintMarked')}`}</div>
-      <div style="height:10px;background:#0e0b33;border-radius:6px;margin:3px 0"><i style="display:block;height:100%;width:${Math.min(100, cost / 0.15)}%;background:${cost > 10 ? '#ff7a59' : '#5ad6b2'};border-radius:6px"></i></div>
+      <div style="margin-top:5px;font-size:12px">${t('dna.cost')}: <b>${cost} %</b>${opts.hard ? '' : ` · ${t('dna.hintMarked')}`}</div>
+      <div style="height:8px;background:#0e0b33;border-radius:6px;margin:2px 0"><i style="display:block;height:100%;width:${Math.min(100, cost / 0.15)}%;background:${cost > 10 ? '#ff7a59' : '#5ad6b2'};border-radius:6px"></i></div>
       ${extra}
-      <button class="mn-btn" data-test ${full() ? '' : 'disabled'} style="margin-top:5px;min-height:44px;width:100%">${t('dna.test')}</button></div>`;
+      <button class="mn-btn" data-test ${full() ? '' : 'disabled'} style="margin-top:4px;min-height:42px;width:100%">${t('dna.insert')}</button></div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-k]').forEach((b) => b.addEventListener('click', () => {
       if (b.dataset.k === 'strain') strain = STRAINS.find((x) => x.id === b.dataset.id);
       else (design as Record<string, string>)[b.dataset.k!] = b.dataset.id!;
       render();
     }));
-    root.querySelector('[data-test]')?.addEventListener('click', () => { if (full()) test(); });
+    root.querySelector('[data-test]')?.addEventListener('click', () => { if (full()) insert(); });
+  };
+  /** 1) el plásmido entra a la célula; 2) la cápsula de prueba: el sensor detecta, la función se enciende. */
+  const insert = (): void => {
+    let step = 0;
+    const steps = calm ? 1 : 6;
+    const enterTick = (): void => {
+      if (dead) return;
+      step++;
+      const k = step / steps;
+      root.innerHTML = `<div style="${BOX};padding:14px;font-size:14px">
+        <div>🧬 ${t('dna.inserting')}</div><div style="background:#0e0b33;border-radius:10px;margin:10px 0">${cellSvg(view({ enter: k }))}</div></div>`;
+      if (step >= steps) { timer = window.setTimeout(test, 350); return; }
+      timer = window.setTimeout(enterTick, 160);
+    };
+    enterTick();
   };
   const test = (): void => {
     const d = design as DnaDesign;
@@ -65,10 +130,11 @@ export function mountDnaWorkshop(root: HTMLElement, opts: { mission: MissionId; 
       if (dead) return;
       sec++;
       const active = d.sw === 'always' || [2, 6, 10].some((e) => Math.abs(sec - e) <= 1);
-      const responds = d.sensor === problem.sensor && active;
-      root.innerHTML = `<div style="${BOX};padding:14px;font-size:15px">
-        <div>🧪 ${t('dna.capsule')} · ${sec}/12 s</div><p>${problemText}</p>
-        ${[0, 1, 2].map(() => `<div style="height:26px;margin:10px 0;border-radius:6px;border:3px solid #0e0b33;background:${responds ? '#5ad6b2' : '#c4c2e0'};transition:background .2s"></div>`).join('')}
+      const sensed = d.sensor === problem.sensor;
+      const responds = sensed && active;
+      root.innerHTML = `<div style="${BOX};padding:14px;font-size:14px">
+        <div>🧪 ${t('dna.capsule')} · ${sec}/12 s</div><p style="margin:4px 0">${problemText}</p>
+        <div style="background:#0e0b33;border-radius:10px;margin:8px 0">${cellSvg(view({ lit: { sensor: sensed && active, fn: responds, sw: d.sw === 'always' || active } }))}</div>
         <p>${responds ? t('dna.responds') : t('dna.waits')}</p></div>`;
       if (sec >= 12) { finishAttempt(); return; }
       timer = window.setTimeout(tick, 400); // 12 s de cápsula comprimidos a ~5 s de juego
@@ -83,19 +149,22 @@ export function mountDnaWorkshop(root: HTMLElement, opts: { mission: MissionId; 
     if (dnaCostFor(d, s) > 0.1) return t('dna.reason.cost');
     return t('dna.reason.good');
   };
+  const close = (): void => { if (legend) opts.onLegendary?.(); opts.onDone(best); };
   const finishAttempt = (): void => {
     const d = design as DnaDesign;
     const s = strain!;
     best = Math.max(best, dnaScoreFor(d, problem, s));
+    if (isLegendaryBuild(d, problem, s)) legend = true;
     const msg = `${t('dna.fit')}: ${Math.round(dnaFit(d, problem) * 100)} % · ${t('dna.efficiency')}: ${Math.round(dnaEfficiencyFor(d, s) * 100)} %`;
-    if (attempt >= 2) {
-      root.innerHTML = `<div style="${BOX};padding:14px;font-size:15px"><p>${msg}</p><p>${reason(d, s)}</p><p>${t('dna.bestAttempt')}</p></div>`;
-      timer = window.setTimeout(() => { if (!dead) opts.onDone(best); }, 1800);
+    const wow = legend ? `<p style="margin:4px 0;color:#ffd23f">✨ ${t('dna.legendary')}</p>` : '';
+    if (attempt >= 2 || legend) {
+      root.innerHTML = `<div style="${BOX};padding:14px;font-size:15px"><p>${msg}</p><p>${reason(d, s)}</p>${wow}<p>${t('dna.bestAttempt')}</p></div>`;
+      timer = window.setTimeout(() => { if (!dead) close(); }, legend ? 2600 : 1800);
       return;
     }
     attempt = 2;
-    render(`<p style="margin:2px 0;font-size:12px">${msg}</p><p style="margin:2px 0;font-size:12px;color:#cfeaff">${reason(d, s)}</p><button class="mn-btn mn-btn--secondary mn-btn--sm" data-keep style="min-height:34px;padding:2px 12px;font-size:12px">${t('dna.keep')}</button>`);
-    root.querySelector('[data-keep]')?.addEventListener('click', () => opts.onDone(best));
+    render(`<p style="margin:2px 0;font-size:12px">${msg}</p><p style="margin:2px 0;font-size:12px;color:#cfeaff">${reason(d, s)}</p><button class="mn-btn mn-btn--secondary mn-btn--sm" data-keep style="min-height:34px;padding:2px 10px;margin:2px 0">${t('dna.keep')}</button>`);
+    root.querySelector('[data-keep]')?.addEventListener('click', () => close());
   };
   render();
   return { destroy() { dead = true; clearTimeout(timer); } };

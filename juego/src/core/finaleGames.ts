@@ -371,15 +371,13 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
     starfield(c, scroll, '#070523', '#1d1257');
     nebula(c, W * 0.35, H * 0.25, 260, 'rgba(155,92,255,.18)');
     nebula(c, W * 0.75, H * 0.8, 220, 'rgba(238,95,214,.12)');
-    // Saturno, muy lejos: foto real de la NASA (con crédito) si el archivo cargó
+    // Saturno al fondo: grande, tenue y detrás de todo (foto de la NASA; el crédito está en «Créditos» y en SOURCES.md, no en pantalla)
     const photo = saturnPhoto();
     if (photo) {
-      const pw = 150, ph = pw * (photo.naturalHeight / photo.naturalWidth);
-      c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.9;
-      c.drawImage(photo, W * 0.5 - pw / 2, 118 - ph / 2, pw, ph);
+      const pw = 620, ph = pw * (photo.naturalHeight / photo.naturalWidth);
+      c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.55;
+      c.drawImage(photo, W * 0.42 - pw / 2, H * 0.3 - ph / 2, pw, ph);
       c.restore();
-      c.font = '700 10px Arial, Helvetica, sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(200,200,230,.75)';
-      c.fillText(t('finale.belt.saturnCredit'), W * 0.5, 118 + ph / 2 + 12);
     }
     // la Luna se acerca a medida que pasa el tiempo
     const near = Math.min(1, s.t / BELT_SECONDS);

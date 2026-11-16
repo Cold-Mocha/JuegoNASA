@@ -1,7 +1,7 @@
 import { t } from './i18n';
 import { audio } from './audio';
 import {
-  ALGAE_DRAIN, ALGAE_SECONDS, HARVEST_PENALTY, HARVEST_SECONDS, HEAL_HOLD_MS, ICE_FILL_SECONDS, ICE_MAX_SECONDS, PEDAL_BEATS, PEDAL_PASS, algaeScore, drillScore, harvestScore, healScore,
+  ALGAE_SECONDS, HARVEST_PENALTY, HARVEST_SECONDS, HEAL_HOLD_MS, ICE_FILL_SECONDS, ICE_MAX_SECONDS, PEDAL_BEATS, PEDAL_PASS, algaeScore, drillScore, harvestScore, healScore,
   messageScore, pedalScore, type MiniDifficulty,
 } from '../sim/minigames';
 
@@ -588,7 +588,7 @@ export function mountIceDrill(root: HTMLElement, cb: MiniCallbacks): MiniGameHan
 }
 
 // ------------------------------------------------------------------ cultivo de algas: mantener luz, nutrientes y temperatura en su franja verde
-const ALGAE_HEAT_FROM_LIGHT = 0.18; // la luz calienta el tanque: subir la luz obliga a compensar la temperatura (suave, para que 3 tubos se puedan)
+const ALGAE_HEAT_FROM_LIGHT = 0.08; // la luz calienta el tanque: subir la luz obliga a compensar la temperatura (suave, para que 3 tubos se puedan)
 const ALL_ALGAE_GAUGES = [
   { label: 'mini.gauge.light', color: '#ffcb47', icon: '<circle cx="24" cy="24" r="8" fill="#ffcb47" stroke="#0e0b33" stroke-width="3"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M10 38l4-4M34 14l4-4" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>' },
   { label: 'mini.gauge.nutrients', color: '#4cc3f5', icon: '<path d="M24 6 C33 17 38 24 38 31 A14 14 0 0 1 10 31 C10 24 15 17 24 6Z" fill="#4cc3f5" stroke="#0e0b33" stroke-width="3" stroke-linejoin="round"/>' },
@@ -597,8 +597,9 @@ const ALL_ALGAE_GAUGES = [
 
 /**
  * Cultivo de algas: de 1 a 3 jeringas según la dificultad (luz, nutrientes y temperatura) se desvían solas; mantener apretada su tecla (A, S, D) o su columna
- * la sube, soltarla la deja caer. Hay que tener TODAS en su franja verde hasta llenar la barra (`algaeHoldSec`); fuera de la franja
- * la barra baja. Si se acaba el tiempo antes, se pierde (puntaje 0). La luz calienta el tanque: subirla obliga a compensar la temperatura.
+ * la sube despacio, soltarla la deja caer despacio. Hay que tener TODAS en su franja verde hasta llenar la barra (`algaeHoldSec`).
+ * Sin castigos: al entrar a la franja la aguja se «pega» al centro (imán) y sale solo si la sueltas o la empujas; la barra nunca baja y el reloj
+ * solo da bonus (nunca se pierde). La luz calienta un poco el tanque: subirla obliga a compensar la temperatura.
  */
 export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDifficulty): MiniGameHandle {
   const count = cfg.algaeTubes;
@@ -637,17 +638,17 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
   let elapsed = 0;
   let hold = 0; // segundos acumulados con las tres en la franja (baja al salirse)
   let over = false;
-  // Evento: a los 5–9 s y de nuevo a los 14–17 s un medidor al azar se sacude y salta (hay que corregirlo)
+  // Evento: una sola vez, a los 8–12 s, un medidor al azar se sacude suavemente (hay que corregirlo)
   const evTimers: number[] = [];
   const jolt = (): void => {
     if (over) return;
     const i = Math.floor(Math.random() * ALGAE_GAUGES.length);
-    pos[i] = Math.min(1, Math.max(0, pos[i] + (pos[i] > 0.5 ? -0.28 : 0.28)));
+    pos[i] = Math.min(1, Math.max(0, pos[i] + (pos[i] > 0.5 ? -0.16 : 0.16)));
     gauges[i].classList.add('is-alert');
     alertFx(root, '❗', '#ff7a59');
     window.setTimeout(() => gauges[i].classList.remove('is-alert'), 1000);
   };
-  evTimers.push(window.setTimeout(jolt, between(5, 9) * 1000), window.setTimeout(jolt, between(14, 17) * 1000));
+  evTimers.push(window.setTimeout(jolt, between(8, 12) * 1000));
   let last = performance.now();
   let raf = 0;
   const tick = (now: number): void => {
@@ -655,8 +656,10 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
     last = now;
     elapsed += dt;
     pos.forEach((p, i) => {
-      let v = (held[i] ? 0.4 : -0.2) + 0.12 * Math.sin(elapsed * 1.7 + phase[i]);
+      let v = (held[i] ? 0.22 : -0.12) + 0.05 * Math.sin(elapsed * 1.3 + phase[i]); // movimiento lento: se puede guiar con calma
       if (i === 2) v += ALGAE_HEAT_FROM_LIGHT * (pos[0] - 0.3); // la luz alta calienta; con luz baja el tanque se enfría
+      const dist = band[i].center - p;
+      if (Math.abs(dist) <= band[i].half) v = v * 0.2 + dist * 1.6; // imán: dentro de la franja la aguja se queda y tiende al centro
       pos[i] = Math.min(1, Math.max(0, p + v * dt));
       needles[i].style.bottom = `${pos[i] * 100}%`;
     });
@@ -666,23 +669,22 @@ export function mountAlgae(root: HTMLElement, cb: MiniCallbacks, cfg: MiniDiffic
       dirs[i].textContent = ok[i] ? '' : pos[i] < band[i].center ? '▲' : '▼'; // fuera de la franja: flecha hacia dónde hay que llevarla
     });
     const all = ok.every(Boolean);
-    hold = Math.min(cfg.algaeHoldSec, Math.max(0, hold + (all ? dt : -dt * ALGAE_DRAIN)));
+    if (all) hold = Math.min(cfg.algaeHoldSec, hold + dt); // sin castigo: salirse de la franja no resta lo ya cultivado
     // se ve si vas ganando: la barra sube y las algas crecen; si no, la barra baja, parpadea en rojo y las algas se marchitan
     const progress = hold / cfg.algaeHoldSec;
     growFill.style.width = `${progress * 100}%`;
     plants.style.transform = `scale(${0.55 + 0.45 * progress})`;
     stage.classList.toggle('is-growing', all);
-    stage.classList.toggle('is-losing', !all);
+    stage.classList.toggle('is-losing', false);
     if (growing !== all) {
       if (growing !== null) audio.play(all ? 'hit' : 'miss');
       growing = all;
     }
     bar.style.width = `${Math.max(0, 1 - elapsed / limit) * 100}%`;
-    bar.classList.toggle('is-low', limit - elapsed <= 5); // últimos segundos: el reloj avisa
     cb.onProgress(progress);
-    if (progress >= 1 || elapsed >= limit) {
+    if (progress >= 1) {
       over = true;
-      cb.onDone(progress >= 1 ? algaeScore(limit - elapsed, limit) : 0); // sin llenar la barra a tiempo: se pierde
+      cb.onDone(algaeScore(Math.max(0, limit - elapsed), limit)); // el reloj solo da bonus: pasado el tiempo, el puntaje base
       return;
     }
     raf = requestAnimationFrame(tick);

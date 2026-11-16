@@ -172,6 +172,28 @@ export function rocketSvg(): string {
 </svg>`;
 }
 
+/**
+ * Nave del vuelo a la Luna: lo que queda del cohete cuando ya se soltaron los tanques inferiores (se consideran perdidos): la cápsula
+ * con su ventana y el módulo de servicio con el motor. Apunta hacia arriba; 56×112. Dibujo simple y propio, sin emblemas ni texto.
+ */
+export function capsuleSvg(): string {
+  const O = 'stroke="#0e0b33" stroke-width="2.6" stroke-linejoin="round"';
+  const W = '#f5f5f2';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="112" viewBox="0 0 56 112">
+  <path d="M22 90 L16 110 H40 L34 90Z" fill="#68668f" ${O}/>
+  <path d="M25 90 L22 104 H34 L31 90Z" fill="#9a98c8" ${O}/>
+  <rect x="4" y="60" width="9" height="13" rx="2" fill="#c4c2e0" ${O}/><rect x="43" y="60" width="9" height="13" rx="2" fill="#c4c2e0" ${O}/>
+  <rect x="10" y="50" width="36" height="42" rx="5" fill="${W}" ${O}/>
+  <rect x="35" y="52" width="9" height="38" fill="#dedded"/>
+  <rect x="10" y="64" width="36" height="9" fill="#0e0b33"/>
+  <path d="M28 4 C38 6 43 30 44 50 H12 C13 30 18 6 28 4Z" fill="${W}" ${O}/>
+  <path d="M34 8 C39 16 42 32 43 49 H36 C37 32 36 16 34 8Z" fill="#dedded"/>
+  <path d="M12 44 H44 V50 H12Z" fill="#68668f" ${O}/>
+  <circle cx="26" cy="28" r="6" fill="#4cc3f5" stroke="#0e0b33" stroke-width="2.4"/><circle cx="24" cy="26" r="1.8" fill="#fff"/>
+  <path d="M28 4 V0" stroke="#0e0b33" stroke-width="3" stroke-linecap="round"/>
+</svg>`;
+}
+
 export const svgDataUri = (svg: string): string => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
 /** Rasteriza un SVG a textura de Phaser (sin XHR: funciona offline y en cualquier hosting). */

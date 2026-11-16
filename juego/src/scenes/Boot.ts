@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SCENES } from '../core/config';
 import { state } from '../core/state';
 import { applyTheme, tokenCss } from '../core/theme';
-import { addSvgTexture, michiSvg, rocketSvg } from '../core/art';
+import { addSvgTexture, capsuleSvg, michiSvg, rocketSvg } from '../core/art';
 import { CHARACTERS } from '../data/characters';
 
 export class BootScene extends Phaser.Scene {
@@ -23,6 +23,7 @@ export class BootScene extends Phaser.Scene {
     const tex = this.textures;
     await Promise.all([
       addSvgTexture(tex, 'rocket', rocketSvg(), 52, 210),
+      addSvgTexture(tex, 'csm', capsuleSvg(), 56, 112),
       ...CHARACTERS.map((c) => addSvgTexture(tex, `michi-${c.id}`, michiSvg(c, tokenCss(c.accent)), 160, 160)),
     ]);
     this.scene.start(SCENES.menu);

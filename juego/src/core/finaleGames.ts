@@ -1,7 +1,7 @@
 import { t } from './i18n';
 import {
-  BELT_SECONDS, BELT_SHIP_Y, CRATER_W, ROCKS, ROVER_LEN, beltDone, beltScore, createBelt, createRover, craters, hintSeconds,
-  moveBelt, roverDone, roverScore, stepBelt, stepRover, terrainY, type BeltState, type BeltThing, type RoverState,
+  BELT_SECONDS, BELT_SHIP_Y, CHECKPOINTS, POTHOLE_W, ROCKS, ROVER_LEN, ROVER_LIVES, beltDone, beltScore, createBelt, createRover, craters, hintSeconds,
+  moveBelt, potholes, roverDone, roverLives, roverScore, slopeAt, stepBelt, stepRover, terrainY, type BeltState, type BeltThing, type RoverState,
 } from '../sim/finale';
 import type { MiniGameHandle } from './miniGames';
 
@@ -436,10 +436,8 @@ export function mountBelt(root: HTMLElement, opts: { hard: boolean; seed: number
 }
 
 // ------------------------------------------------------------------ rover lunar (horizontal, cámara que lo sigue)
-const GROUND_OFFSET = 90;
-const ROVER_X = 230;
-const groundY = (x: number): number => terrainY(x) + GROUND_OFFSET;
-const inCrater = (list: readonly number[], x: number): boolean => list.some((cr) => x > cr && x < cr + CRATER_W);
+const ROVER_X = 260;
+const GROUND_Y = 400; // y de pantalla donde queda siempre el suelo bajo el rover: la cámara sube y baja con las cuestas
 
 function mountains(c: CanvasRenderingContext2D, cam: number, k: number, base: number, amp: number, color: string, seed: number): void {
   c.fillStyle = color;
@@ -464,19 +462,65 @@ function drawCrystal(c: CanvasRenderingContext2D, x: number, y: number, tt: numb
   c.fillStyle = '#8d8aa8'; c.beginPath(); c.ellipse(x, y + 5, 16, 5, 0, 0, Math.PI * 2); c.fill(); c.stroke();
 }
 
+/**
+ * Cresta lunar de fondo para el efecto de profundidad (cámara multiplano): cada capa se mueve a su propia velocidad
+ * (`kx` en horizontal, `ky` en vertical): las lejanas casi no se mueven y las cercanas pasan rápido. Borde iluminado y manchas de sombra.
+ * [DIBUJO] Las capas lejanas se pintan más cerca del color del cielo para dar sensación de distancia (en la Luna real no hay bruma).
+ */
+function ridge(c: CanvasRenderingContext2D, camX: number, camY: number, kx: number, ky: number, base: number, amp: number, color: string, rim: string, seed: number): void {
+  const off = -camY * ky;
+  const ys: number[] = [];
+  c.fillStyle = color; c.beginPath(); c.moveTo(0, H);
+  for (let px = 0; px <= W; px += 8) {
+    const wx = (camX * kx + px) / 80 + seed;
+    const y = base + off - amp * (0.55 * Math.abs(Math.sin(wx)) + 0.3 * Math.abs(Math.sin(wx * 2.3 + 1)) + 0.15 * Math.sin(wx * 5.1));
+    ys.push(y); c.lineTo(px, y);
+  }
+  c.lineTo(W, H); c.closePath(); c.fill();
+  c.strokeStyle = rim; c.lineWidth = 2; c.beginPath();
+  ys.forEach((y, k) => (k ? c.lineTo(k * 8, y) : c.moveTo(0, y)));
+  c.stroke();
+  c.fillStyle = 'rgba(8,6,40,.22)'; // manchas de sombra (cráteres lejanos) que viajan con la capa
+  for (let k = 0; k < 7; k++) {
+    const wx = Math.floor((camX * kx) / 160) * 160 + k * 160 + hash(k + Math.floor((camX * kx) / 160) + seed) * 100;
+    const px = wx - camX * kx;
+    const idx = Math.max(0, Math.min(ys.length - 1, Math.round(px / 8)));
+    if (px < -40 || px > W + 40) continue;
+    c.beginPath(); c.ellipse(px, ys[idx] + 28 + hash(wx) * 40, 20 + hash(wx * 3) * 26, 4 + hash(wx * 5) * 4, 0, 0, Math.PI * 2); c.fill();
+  }
+}
+
+/** Domo de una base lunar lejana, con su antena y una luz que parpadea (siluetas en la capa media). */
+function farBase(c: CanvasRenderingContext2D, x: number, y: number, tt: number): void {
+  c.fillStyle = '#34306d'; c.beginPath(); c.arc(x, y, 18, Math.PI, 0); c.rect(x - 18, y, 36, 8); c.fill();
+  c.strokeStyle = '#34306d'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + 24, y + 8); c.lineTo(x + 24, y - 26); c.stroke();
+  c.fillStyle = Math.sin(tt * 3) > 0 ? '#ff7a59' : '#5a2f6b'; c.beginPath(); c.arc(x + 24, y - 28, 2.5, 0, Math.PI * 2); c.fill();
+}
+
+/** Roca oscura en primer plano (pasa rápido y borrosa, por delante de todo). */
+function fgRock(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  c.fillStyle = 'rgba(10,8,38,.92)'; c.beginPath();
+  c.moveTo(x - w / 2, y); c.lineTo(x - w * 0.35, y - h * 0.7); c.lineTo(x - w * 0.05, y - h); c.lineTo(x + w * 0.3, y - h * 0.75); c.lineTo(x + w / 2, y);
+  c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(160,156,220,.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - w * 0.35, y - h * 0.7); c.lineTo(x - w * 0.05, y - h); c.lineTo(x + w * 0.3, y - h * 0.75); c.stroke();
+}
+
 export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: number; chips: number; onDone(r: RoverResult): void }): MiniGameHandle {
-  const btn = (id: string, label: string, side: string): string => `<button class="mn-btn" data-rv="${id}" aria-label="${label}" style="position:absolute;bottom:16px;${side};min-width:140px;min-height:64px;font-size:20px;touch-action:none">${label}</button>`;
-  const { c, box } = makeCanvas(root, t('probe.roverLabel'), btn('brake', t('probe.brake'), 'left:16px') + btn('jump', t('probe.jump'), 'right:16px'));
+  const btn = (id: string, label: string, side: string): string => `<button class="mn-btn" data-rv="${id}" aria-label="${label}" style="position:absolute;bottom:16px;${side};min-width:170px;min-height:72px;font-size:22px;touch-action:none">${label}</button>`;
+  const { c, box } = makeCanvas(root, t('probe.roverLabel'), btn('pedal', `▶ ${t('probe.pedal')}`, 'left:16px') + btn('jump', `▲ ${t('probe.jump')}`, 'right:16px'));
   const s: RoverState = createRover(opts.batteries, opts.chips, opts.hard);
-  const input = { brake: false, jump: false };
+  const input = { pedal: false, jump: false };
   let hint = hintSeconds(s.chips);
   let tt = 0;
   let lastX = 0;
   let wheel = 0;
+  let camY = terrainY(0) - GROUND_Y;
+  let lastDeaths = 0;
+  let notice = 0;
   const sparkles: { x: number; y: number; t: number }[] = [];
   const dust: { x: number; y: number; vx: number; vy: number; life: number }[] = [];
   const seen = new Set<number>();
-  const keyMap = (k: string): 'brake' | 'jump' | null => (k === 'arrowup' || k === 'w' || k === ' ' ? 'jump' : k === 'arrowdown' || k === 's' || k === 'arrowleft' ? 'brake' : null);
+  const keyMap = (k: string): 'pedal' | 'jump' | null => (k === 'arrowright' || k === 'd' ? 'pedal' : k === 'arrowup' || k === 'w' || k === ' ' ? 'jump' : null);
   const onKey = (down: boolean) => (e: KeyboardEvent): void => {
     const m = keyMap(e.key.toLowerCase());
     if (!m) return;
@@ -487,73 +531,119 @@ export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: 
   const ku = onKey(false);
   window.addEventListener('keydown', kd);
   window.addEventListener('keyup', ku);
-  const bind = (id: 'brake' | 'jump'): void => {
+  const bind = (id: 'pedal' | 'jump'): void => {
     const b = box.querySelector<HTMLElement>(`[data-rv="${id}"]`)!;
-    b.addEventListener('pointerdown', (e) => { input[id] = true; e.preventDefault(); });
-    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { input[id] = false; });
+    b.addEventListener('pointerdown', (e) => { input[id] = true; b.style.filter = 'brightness(1.25)'; e.preventDefault(); });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { input[id] = false; b.style.filter = ''; });
   };
-  bind('brake'); bind('jump');
+  bind('pedal'); bind('jump');
   const craterList = craters(opts.hard);
+  const holes = potholes(opts.hard);
   const draw = (dt: number): void => {
     tt += dt;
-    const cam = s.x - ROVER_X;
+    const camX = s.x - ROVER_X;
+    camY += (terrainY(s.x) - GROUND_Y - camY) * Math.min(1, dt * 5); // la cámara sigue la altura del suelo con suavidad
+    const gy = (wx: number): number => terrainY(wx) - camY;
     const moved = s.x - lastX;
     lastX = s.x;
     wheel += moved / 12;
-    starfield(c, cam * 0.05, '#05031a', '#16124a');
-    earthDisc(c, W - 150, 110, 38);
-    mountains(c, cam, 0.12, 330, 120, '#3b3770', 3);
-    mountains(c, cam, 0.3, 380, 90, '#5a5690', 11);
-    // suelo con cráteres, borde claro y manchas
+    if (s.deaths > lastDeaths) { lastDeaths = s.deaths; notice = 2.2; }
+    notice = Math.max(0, notice - dt);
+
+    // ---- capas de profundidad, de la más lejana a la más cercana
+    starfield(c, camX * 0.02, '#05031a', '#16124a');
+    earthDisc(c, W - 150 - camX * 0.01, 110 - camY * 0.02, 38);
+    ridge(c, camX, camY, 0.05, 0.12, 300, 150, '#25225f', 'rgba(170,166,235,.22)', 3);
+    ridge(c, camX, camY, 0.1, 0.22, 345, 125, '#322e6c', 'rgba(170,166,235,.3)', 11);
+    ridge(c, camX, camY, 0.2, 0.4, 395, 100, '#423e80', 'rgba(190,186,245,.38)', 23);
+    for (let k = 0; k < 3; k++) { // bases lejanas sobre la tercera capa
+      const wx = Math.floor((camX * 0.2) / 1500) * 1500 + k * 1500 + 700;
+      const px = wx - camX * 0.2;
+      if (px > -60 && px < W + 60) farBase(c, px, 405 - camY * 0.4 - 60, tt + k);
+    }
+    ridge(c, camX, camY, 0.4, 0.68, 450, 80, '#55509a', 'rgba(205,200,250,.45)', 37);
+
+    // ---- el suelo: el campo de juego
     const ground = c.createLinearGradient(0, 300, 0, H);
-    ground.addColorStop(0, '#a9a6c9'); ground.addColorStop(1, '#6f6c95');
+    ground.addColorStop(0, '#aeabce'); ground.addColorStop(1, '#6a678f');
     c.fillStyle = ground; c.strokeStyle = INK; c.lineWidth = 3.5;
     c.beginPath(); c.moveTo(0, H);
-    for (let px = 0; px <= W; px += 4) { const wx = cam + px; c.lineTo(px, inCrater(craterList, wx) ? groundY(wx) + 42 : groundY(wx)); }
+    for (let px = 0; px <= W; px += 4) c.lineTo(px, gy(camX + px));
     c.lineTo(W, H); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(60,56,105,.28)'; c.lineWidth = 2; // capas del suelo, para que tenga grosor
+    for (const dy of [26, 62, 110]) { c.beginPath(); for (let px = 0; px <= W; px += 8) (px ? c.lineTo(px, gy(camX + px) + dy) : c.moveTo(px, gy(camX) + dy)); c.stroke(); }
     for (let i = 0; i < 40; i++) { // piedritas que pasan con el suelo
-      const wx = Math.floor(cam / 60) * 60 + i * 60 + hash(i + Math.floor(cam / 60)) * 40;
-      const px = wx - cam;
-      if (px < -10 || px > W + 10 || inCrater(craterList, wx)) continue;
-      c.fillStyle = 'rgba(80,76,115,.7)'; c.beginPath(); c.ellipse(px, groundY(wx) + 14 + hash(wx) * 50, 3 + hash(wx * 2) * 5, 2 + hash(wx * 3) * 2, 0, 0, Math.PI * 2); c.fill();
+      const wx = Math.floor(camX / 60) * 60 + i * 60 + hash(i + Math.floor(camX / 60)) * 40;
+      const px = wx - camX;
+      if (px < -10 || px > W + 10) continue;
+      c.fillStyle = 'rgba(80,76,115,.7)'; c.beginPath(); c.ellipse(px, gy(wx) + 14 + hash(wx) * 50, 3 + hash(wx * 2) * 5, 2 + hash(wx * 3) * 2, 0, 0, Math.PI * 2); c.fill();
     }
-    for (const cr of craterList) { // borde y fondo de los cráteres
-      const px = cr - cam;
-      if (px < -CRATER_W - 20 || px > W + 20) continue;
-      const gy = groundY(cr + CRATER_W / 2);
-      c.fillStyle = 'rgba(40,36,80,.55)'; c.beginPath(); c.ellipse(px + CRATER_W / 2, gy + 34, CRATER_W / 2 + 6, 12, 0, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#d6d4ee'; c.lineWidth = 3;
-      c.beginPath(); c.arc(px - 6, groundY(cr) + 2, 10, Math.PI, Math.PI * 1.8); c.arc(px + CRATER_W + 6, groundY(cr + CRATER_W) + 2, 10, Math.PI * 1.2, Math.PI * 2); c.stroke();
+    for (const cr of craterList) { // sombra dentro del cuenco y borde iluminado
+      const x0 = cr.x - cr.r - camX, x1 = cr.x + cr.r - camX;
+      if (x1 < -20 || x0 > W + 20) continue;
+      c.fillStyle = 'rgba(20,16,64,.28)'; c.beginPath();
+      c.moveTo(x0, gy(cr.x - cr.r));
+      for (let px = Math.max(0, Math.floor(x0)); px <= Math.min(W, x1); px += 4) c.lineTo(px, gy(camX + px));
+      c.lineTo(Math.min(W, x1), gy(cr.x + cr.r)); c.closePath(); c.fill();
+      c.strokeStyle = '#e4e2f8'; c.lineWidth = 3; c.beginPath();
+      for (let px = Math.max(0, Math.floor(cr.x + cr.r * 0.95 - camX)); px <= Math.min(W, cr.x + cr.r * 1.3 - camX); px += 4) (px === Math.max(0, Math.floor(cr.x + cr.r * 0.95 - camX)) ? c.moveTo(px, gy(camX + px) - 2) : c.lineTo(px, gy(camX + px) - 2));
+      c.stroke();
+    }
+    for (const p of holes) { // baches pequeños: hoyo oscuro con borde, y una señal de peligro delante
+      const px = p - camX;
+      if (px < -50 || px > W + 60) continue;
+      const y = gy(p + POTHOLE_W / 2);
+      c.fillStyle = INK; c.beginPath(); c.ellipse(px + POTHOLE_W / 2, y + 2, POTHOLE_W / 2 + 4, 9, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#d9d7f2'; c.lineWidth = 2; c.beginPath(); c.ellipse(px + POTHOLE_W / 2, y + 2, POTHOLE_W / 2 + 4, 9, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+      const sx = px - 34, sy = gy(p - 34);
+      c.fillStyle = '#ffcb47'; c.strokeStyle = INK; c.lineWidth = 2.5; c.beginPath(); c.moveTo(sx, sy - 30); c.lineTo(sx + 12, sy - 6); c.lineTo(sx - 12, sy - 6); c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = INK; c.beginPath(); c.moveTo(sx, sy - 6); c.lineTo(sx, sy); c.stroke();
+      text(c, '!', sx, sy - 10, 14, 'center', INK);
+    }
+    for (const cp of CHECKPOINTS) { // banderas de los puntos de control
+      if (!cp) continue;
+      const px = cp - camX;
+      if (px < -30 || px > W + 30) continue;
+      const y = gy(cp);
+      c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(px, y); c.lineTo(px, y - 46); c.stroke();
+      c.fillStyle = s.x >= cp ? CYAN : '#8d8aa8'; c.beginPath(); c.moveTo(px, y - 46); c.lineTo(px + 26, y - 38 + Math.sin(tt * 4) * 2); c.lineTo(px, y - 28); c.closePath(); c.fill(); c.stroke();
     }
     ROCKS.forEach((rx, i) => {
       if (s.rocks.has(i)) {
-        if (!seen.has(i)) { seen.add(i); sparkles.push({ x: rx, y: groundY(rx) - 14, t: 0 }); }
+        if (!seen.has(i)) { seen.add(i); sparkles.push({ x: rx, y: gy(rx) - 14, t: 0 }); }
         return;
       }
-      if (rx < cam - 30 || rx > cam + W + 30) return;
-      drawCrystal(c, rx - cam, groundY(rx) - 4, tt + i);
+      if (rx < camX - 30 || rx > camX + W + 30) return;
+      drawCrystal(c, rx - camX, gy(rx) - 4, tt + i);
     });
-    for (const sp of sparkles) { // destello al recoger una roca
+    for (const sp of sparkles) { // destello al recoger una roca (sigue la cámara vertical)
       sp.t += dt;
       if (sp.t > 0.8) continue;
-      const px = sp.x - cam;
+      const px = sp.x - camX;
       c.strokeStyle = GOLD; c.lineWidth = 3; c.globalAlpha = 1 - sp.t / 0.8;
-      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; const r0 = 10 + sp.t * 40, r1 = r0 + 12; c.beginPath(); c.moveTo(px + Math.cos(a) * r0, sp.y + Math.sin(a) * r0); c.lineTo(px + Math.cos(a) * r1, sp.y + Math.sin(a) * r1); c.stroke(); }
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; const r0 = 10 + sp.t * 40, r1 = r0 + 12; c.beginPath(); c.moveTo(px + Math.cos(a) * r0, gy(sp.x) - 14 + Math.sin(a) * r0); c.lineTo(px + Math.cos(a) * r1, gy(sp.x) - 14 + Math.sin(a) * r1); c.stroke(); }
       c.globalAlpha = 1;
     }
-    // el rover: sombra al saltar, inclinación con la pendiente y polvo que levantan las ruedas
-    const gy = groundY(s.x);
-    const slope = Math.atan2(groundY(s.x + 20) - groundY(s.x - 20), 40);
+    // ---- el rover: sombra al saltar, inclinación con la pendiente y polvo que levantan las ruedas
+    const gyR = gy(s.x);
+    const slope = Math.atan(slopeAt(s.x));
     const sh = Math.max(0.3, 1 - s.h / 160);
-    c.fillStyle = `rgba(14,11,51,${0.35 * sh})`; c.beginPath(); c.ellipse(ROVER_X, gy + 2, 46 * sh, 7 * sh, 0, 0, Math.PI * 2); c.fill();
-    if (s.h === 0 && moved > 0) {
-      for (let k = 0; k < 2; k++) dust.push({ x: ROVER_X - 40, y: gy - 4, vx: -40 - Math.random() * 60, vy: -30 - Math.random() * 50, life: 0.9 });
+    c.fillStyle = `rgba(14,11,51,${0.35 * sh})`; c.beginPath(); c.ellipse(ROVER_X, gyR + 2, 46 * sh, 7 * sh, 0, 0, Math.PI * 2); c.fill();
+    if (s.h === 0 && s.v > 12 && input.pedal) {
+      for (let k = 0; k < 2; k++) dust.push({ x: ROVER_X - 40, y: gyR - 4, vx: -40 - Math.random() * 60, vy: -30 - Math.random() * 50, life: 0.9 });
     }
     for (const p of dust) { p.life -= dt; p.x += p.vx * dt; p.vy += 60 * dt; p.y += p.vy * dt; } // en la Luna el polvo cae en arcos (sin aire que lo frene)
     for (let i = dust.length - 1; i >= 0; i--) if (dust[i].life <= 0 || dust.length > 80) dust.splice(i, 1);
     for (const p of dust) { c.globalAlpha = Math.max(0, p.life) * 0.7; c.fillStyle = '#d8d6f0'; c.beginPath(); c.arc(p.x, p.y, 3, 0, Math.PI * 2); c.fill(); }
+    c.globalAlpha = s.invuln > 0 && Math.floor(tt * 10) % 2 === 0 ? 0.35 : 1; // parpadea mientras reaparece
+    drawRover(c, ROVER_X, gyR - s.h, s.h > 0 ? slope * 0.3 : slope, wheel, 1.3);
     c.globalAlpha = 1;
-    drawRover(c, ROVER_X, gy - s.h, s.h > 0 ? slope * 0.3 : slope, wheel, 1.3);
+    // ---- primer plano: rocas oscuras que pasan más rápido que todo lo demás
+    for (let k = -1; k < 6; k++) {
+      const idx = Math.floor((camX * 1.7) / 560) + k;
+      const px = idx * 560 + hash(idx) * 260 - camX * 1.7;
+      fgRock(c, px, H + 14 - camY * 0.05, 90 + hash(idx * 3) * 90, 34 + hash(idx * 7) * 40);
+    }
     if (hint > 0) { // pista: flecha hacia la próxima roca (los chips del cinturón dan segundos de pista)
       const next = ROCKS.findIndex((_, i) => !s.rocks.has(i));
       if (next >= 0) {
@@ -562,13 +652,17 @@ export function mountRover(root: HTMLElement, opts: { hard: boolean; batteries: 
       }
     }
     pill(c, 16, 14, 120, 40); text(c, `${Math.max(0, Math.ceil(s.left))} s`, 76, 43, 24, 'center');
+    pill(c, 16, 60, 120, 40); text(c, '♥'.repeat(roverLives(s)) + '♡'.repeat(ROVER_LIVES - roverLives(s)), 76, 90, 22, 'center', '#ff7a59');
     pill(c, W - 156, 14, 140, 40); text(c, `◆ ${s.rocks.size}/${ROCKS.length}`, W - 86, 43, 22, 'center', GOLD);
     c.fillStyle = 'rgba(14,11,51,.72)'; c.beginPath(); c.roundRect(W / 2 - 200, 26, 400, 14, 7); c.fill();
     c.fillStyle = CYAN; c.beginPath(); c.roundRect(W / 2 - 200, 26, 400 * Math.min(1, s.x / ROVER_LEN), 14, 7); c.fill();
+    c.fillStyle = '#fff';
+    for (const cp of CHECKPOINTS) if (cp) c.fillRect(W / 2 - 200 + 400 * (cp / ROVER_LEN) - 1, 24, 2, 18); // marcas de los puntos de control
+    if (notice > 0) { pill(c, W / 2 - 230, 120, 460, 44); text(c, t('probe.pothole'), W / 2, 150, 20, 'center', '#ffcb47'); }
   };
-  const loop = runLoop((dt) => { stepRover(s, dt, { brake: input.brake, jump: input.jump }); hint = Math.max(0, hint - dt); return roverDone(s); }, draw, () =>
-    opts.onDone({ score: roverScore(s), rocks: s.rocks.size, flips: s.flips }));
-  return { nudge: () => undefined, keys: ['↑', '↓'], gesture: 'hold', destroy() { loop.destroy(); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); } };
+  const loop = runLoop((dt) => { stepRover(s, dt, { pedal: input.pedal, jump: input.jump }); hint = Math.max(0, hint - dt); return roverDone(s); }, draw, () =>
+    opts.onDone({ score: roverScore(s), rocks: s.rocks.size, flips: s.deaths }));
+  return { nudge: () => undefined, keys: ['→', '↑'], gesture: 'hold', destroy() { loop.destroy(); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); } };
 }
 
 /**

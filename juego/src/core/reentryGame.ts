@@ -6,6 +6,7 @@
  * Explorador: el juego dibuja el alabeo aconsejado. Ingeniero: sin consejo, con números y unidades.
  * Con `calm`: sin sacudidas, sin partículas y sin ruido animado en el apagón.
  */
+import { mountSolarFx } from './solarFx';
 import {
   LIMITS, MAX_BANK_DEG, TAEM, TARGET_RANGE_KM, adviseBank, clampBank, corridorNow, createEntry, mach, scoreEntry, stepEntry,
   type EntryEnding, type EntryResult, type EntryState, type Level,
@@ -110,6 +111,7 @@ export function mountEntryGame(root: HTMLElement, opts: EntryGameOptions): Entry
   const ctx = canvas.getContext('2d')!;
   const slider = wrap.querySelector<HTMLInputElement>('[data-slider]')!;
   const comms = wrap.querySelector<HTMLElement>('[data-comms]')!;
+  const fx = mountSolarFx(wrap, !!opts.calm); // interferencia (estática breve) al entrar y salir del apagón de radio
   const telemetry = wrap.querySelector<HTMLElement>('[data-telemetry]')!;
   const startBox = wrap.querySelector<HTMLElement>('[data-start]')!;
   const resultBox = wrap.querySelector<HTMLElement>('[data-result]')!;
@@ -185,8 +187,8 @@ export function mountEntryGame(root: HTMLElement, opts: EntryGameOptions): Entry
 
   /** Mensajes de Mando según lo que pasa. En el apagón no hay consejo (la radio no funciona), pero los instrumentos siguen. */
   function coach(): void {
-    if (s.blackout && !wasBlackout) { wasBlackout = true; say('coachBlackout', true); return; }
-    if (!s.blackout && wasBlackout) { wasBlackout = false; say('coachBlackoutEnd', true); return; }
+    if (s.blackout && !wasBlackout) { wasBlackout = true; fx.interfere('severe'); say('coachBlackout', true); return; }
+    if (!s.blackout && wasBlackout) { wasBlackout = false; fx.interfere('moderate'); say('coachBlackoutEnd', true); return; }
     if (s.blackout || !explorer) return;
     if (!s.guiding) return;
     if (coachKey === 'coachIntro') { say('coachGuide', true); return; }
@@ -477,6 +479,7 @@ export function mountEntryGame(root: HTMLElement, opts: EntryGameOptions): Entry
       syncSlider();
     },
     destroy() {
+      fx.destroy();
       cancelAnimationFrame(raf);
       finished = true;
       wrap.removeEventListener('click', onClick);

@@ -1038,3 +1038,19 @@ button, .option, [data-action] { touch-action: manipulation; -webkit-tap-highlig
 .pedal__combo.is-on { animation: mfx-combo .6s ease-out; }
 @keyframes mfx-combo { 0% { opacity: 0; transform: scale(.5); } 25% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .mfx-pop, .mfx-flash, .plant.is-gold, .plant.is-swap, .algae__gauge.is-alert, .pedal__combo.is-on { animation: none; } .mfx-pop { opacity: 1; } }
+
+/* tormenta solar: filtro de color, parpadeo de aviso y estática de interferencia (ver core/solarFx.ts) */
+.sfx { position: absolute; inset: 0; pointer-events: none; z-index: 60; }
+.sfx__tint { position: absolute; inset: 0; opacity: 0; mix-blend-mode: screen; }
+.sfx__tint.is-blink { animation: sfx-blink .5s steps(2, jump-none) 3; }
+.sfx__tint.is-hold { opacity: 1; animation: sfx-pulse 1.6s ease-in-out infinite alternate; }
+.sfx__tint.is-fade { animation: sfx-fade .9s ease-out forwards; }
+.sfx__noise { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: 0; mix-blend-mode: hard-light; }
+@keyframes sfx-blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes sfx-pulse { from { opacity: .65; } to { opacity: 1; } }
+@keyframes sfx-fade { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sfx__tint.is-blink, .sfx__tint.is-hold { animation: none; } .sfx__tint.is-hold { opacity: .8; } }
+
+/* charla diaria con Control Tierra (ver Station.queueTalk) */
+.modal__panel--talk { width: min(820px, 94vw); padding: 0; background: transparent; border: 0; box-shadow: none; }
+.talk { width: 100%; height: 280px; }

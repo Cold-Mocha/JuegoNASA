@@ -53,6 +53,13 @@ export const dnaEfficiencyFor = (d: DnaDesign, s: Strain): number => Math.max(0,
 /** 80 % circuito (0,6 ajuste + 0,4 eficiencia con el costo de la cepa) + 20 % cepa adecuada. Entre 0 y 1. */
 export const dnaScoreFor = (d: DnaDesign, p: DnaProblem, s: Strain): number => 0.8 * (0.6 * dnaFit(d, p) + 0.4 * dnaEfficiencyFor(d, s)) + 0.2 * strainFit(s, p);
 
+/**
+ * Diseño perfecto: sensor y función que resuelven el problema, cepa que lo aguanta e interruptor «solo cuando detecta».
+ * [PROPUESTA] Premia a quien profundiza en la biología sintética con la «cepa legendaria Aurora» (ficción del juego).
+ */
+export const isLegendaryBuild = (d: DnaDesign, p: DnaProblem, s: Strain): boolean =>
+  d.sensor === p.sensor && d.fn === p.fn && s.good === p.sensor && d.sw === 'onDetect';
+
 // ------------------------------------------------------------------ biofirmas: tres pruebas independientes
 export type BioTest = 'spectrum' | 'repeat' | 'control';
 export const BIO_TESTS: readonly BioTest[] = ['spectrum', 'repeat', 'control'];

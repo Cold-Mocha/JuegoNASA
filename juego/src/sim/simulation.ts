@@ -1,6 +1,6 @@
 import {
   ACTIONS, ACTION_COOLDOWN_SEC, ANTENNA_FAULT_CHANCE, ANTENNA_FAULT_FROM_DAY, ANTENNA_FAULT_LEVEL, ANTENNA_REPAIR_MIN, BACKGROUND_RADIATION_PER_DAY, CRITICAL_THRESHOLD,
-  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_RESIDUE, REPAIR_OXYGEN, scoreOf, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_OUTSIDE_HIT, FLARE_WARNING_SEC,
+  BREACH_CHANCE, BREACH_FROM_DAY, BREACH_ROOMS, DUST_MAX_LOSS, DUST_RESIDUE, REPAIR_OXYGEN, scoreOf, DUST_PER_STORM, DUST_STORM_CHANCE, DUST_STORM_MAX_GAP, EARTH_MOON_ROUND_TRIP_SEC, EVA_FACTOR, FLARE_DURATION_SEC, FLARE_MIN_GAP_SEC, LEGENDARY_AT, LEGENDARY_CURE, FLARE_OUTSIDE_HIT, FLARE_WARNING_SEC,
   GREENHOUSE_FLARE_FACTOR, SUIT_EMPTY_HEALTH_LOSS, GREENHOUSE_LIGHT_FACTOR, GROW_LIGHTS_AT_DUSK, HEALTH_DANGER_AT, HEALTH_LOSS_PER_DAY, HEALTH_RADIATION_AT, LIGHT_BY_DAY, LINK_MIN_RADIO,
   NO_ENERGY_EXTRA_OXYGEN_PER_DAY, MAX_PER_DAY, ONCE_PER_DAY, OXYGEN_LEAK_PER_DAY, OXYGEN_REGEN_PER_DAY, PANEL_REGEN_PER_DAY, PASSIVE_PER_DAY, ROOM_ZONE, START_RESOURCES, SHELTER_FACTOR, SHELTER_FACTOR_NO_ENERGY, SHIELD_ENERGY_PER_SEC,
   SUIT_LOW, SUIT_REFILL_PER_SEC, SUIT_RESCUE_OXYGEN, SUIT_SECONDS, clamp,
@@ -154,6 +154,17 @@ export class Simulation {
   }
 
   /** ADN de papel (opcional): guarda la mejor nota del circuito; desde entonces cada cosecha rinde un poco más (ver `dnaBonus`). */
+  /** ¿Tiene la cepa legendaria (premio del Taller de ADN) lista para responder? */
+  legendary = false;
+  /** Gana la cepa legendaria una sola vez por misión: cura la radiación cuando se pone peligrosa. */
+  grantLegendary(): boolean {
+    if (this.legendaryEarned) return false;
+    this.legendaryEarned = true;
+    this.legendary = true;
+    return true;
+  }
+  private legendaryEarned = false;
+
   setDna(score: number): void {
     this.stats.dna = Math.max(this.stats.dna, Math.min(1, Math.max(0, score)));
   }
@@ -262,8 +273,25 @@ export class Simulation {
     return this.pending.some((p) => p.action === action);
   }
 
+  private flareTimes: number[] | null = null;
+
+  /**
+   * Hora (s de misión) de una llamarada. Las fechas reales se respetan, pero se separan: entre el fin de una y el primer aviso
+   * de la siguiente quedan al menos FLARE_MIN_GAP_SEC segundos, para que se pueda leer y reaccionar a cada tormenta.
+   */
   eventTime(e: SolarEvent): number {
-    return (e.day - 1 + e.hour / 24) * this.config.dayLengthSec;
+    if (!this.flareTimes) {
+      const lead = Math.max(FLARE_WARNING_SEC.forecasted, FLARE_WARNING_SEC.unforecasted);
+      const times: number[] = [];
+      for (const ev of this.config.events) {
+        const base = (ev.day - 1 + ev.hour / 24) * this.config.dayLengthSec;
+        const prev = times.length ? times[times.length - 1] + FLARE_DURATION_SEC + FLARE_MIN_GAP_SEC + lead : -Infinity;
+        times.push(Math.max(base, prev));
+      }
+      this.flareTimes = times;
+    }
+    const i = this.config.events.indexOf(e);
+    return i >= 0 ? this.flareTimes[i] : (e.day - 1 + e.hour / 24) * this.config.dayLengthSec;
   }
 
   drainEvents(): SimEvent[] {
@@ -408,6 +436,11 @@ export class Simulation {
     this.updateSuit(dt);
     if (this.ended) return;
     this.updateFlares(dt);
+    if (this.legendary && this.res.radiation >= LEGENDARY_AT) {
+      this.legendary = false;
+      this.res.radiation = clamp(this.res.radiation - LEGENDARY_CURE);
+      this.events.push({ type: 'legendaryUsed', cure: LEGENDARY_CURE });
+    }
     this.resolvePending();
     this.checkDepleted();
     this.checkCritical();

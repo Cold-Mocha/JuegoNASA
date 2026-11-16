@@ -18,7 +18,8 @@ const BASE = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '
 const TIERRA_FACE = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#10243a"/><circle cx="32" cy="34" r="22" fill="#1d5a8a"/><path d="M14 30c4 14 14 22 28 20 0-8-6-18-14-22-5-2-10-1-14 2z" fill="#3a9a5a"/><g transform="rotate(-30 32 34)"><path d="M18 34a14 10 0 0 0 28 0z" fill="#e8eef5"/><path d="M32 34V18" stroke="#e8eef5" stroke-width="2"/><circle cx="32" cy="17" r="2.5" fill="#ffcb47"/></g><path d="M44 12a14 14 0 0 1 8 8M42 6a22 22 0 0 1 14 14" fill="none" stroke="#9fe7c8" stroke-width="2" stroke-linecap="round"/></svg>';
 const FACE: Partial<Record<string, string>> = { MIU: 'tabby', GUINA: 'ocelot', LEO: 'snow', ZIB: 'alien' };
 /** Tono de la «voz» de cada personaje (estilo RPG). */
-const PITCH: Partial<Record<string, number>> = { MIU: 330, GUINA: 440, LEO: 260, ZIB: 560, NEBULA: 200 };
+const PITCH: Partial<Record<string, number>> = { MIU: 330, GUINA: 440, LEO: 260, ZIB: 560, NEBULA: 200, TIERRA_US: 300, TIERRA_CL: 380 };
+const isEarth = (who: string): boolean => who === 'TIERRA' || who === 'TIERRA_US' || who === 'TIERRA_CL';
 const NEBULA = { id: 'miu' as const, name: 'Comandante Nébula', role: '', trait: '', fur: '#f5f5f2', furDark: '#c4c2e0', accent: 'nebula-violet' };
 
 const GLITCH = '▒░#%/·';
@@ -77,10 +78,10 @@ export function mountDialogue(root: HTMLElement, key: SceneKey | ScriptLine[], o
     const meta = WHO_LABEL[line.who];
     who.textContent = meta[lang]; who.style.color = meta.color; who.hidden = !meta[lang];
     const fk = FACE[line.who];
-    face.hidden = !fk && line.who !== 'NEBULA' && line.who !== 'TIERRA';
+    face.hidden = !fk && line.who !== 'NEBULA' && !isEarth(line.who);
     if (fk) face.innerHTML = `<img src="${BASE}prologue/portraits/${fk}.jpg" alt="">`;
     else if (line.who === 'NEBULA') face.innerHTML = michiSvg(NEBULA, tokenCss('nebula-violet'));
-    else if (line.who === 'TIERRA') face.innerHTML = TIERRA_FACE;
+    else if (isEarth(line.who)) face.innerHTML = TIERRA_FACE;
     box.classList.toggle('has-face', !face.hidden);
     if (line.bg) bgEl.innerHTML = `<img src="${BASE}${line.bg}" alt="">`;
     note.hidden = !line.note; note.textContent = line.note ? line.note[lang] : '';

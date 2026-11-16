@@ -61,6 +61,11 @@ export const LINK_MIN_RADIO = 0.6;
 export const EARTH_MOON_ROUND_TRIP_SEC = 2.56;
 
 export const FLARE_DURATION_SEC = 10;
+/** Mínimo de segundos sin llamaradas entre el fin de una y el primer aviso de la siguiente (las reales de DONKI a veces llegan casi juntas). */
+export const FLARE_MIN_GAP_SEC = 20;
+/** Cepa legendaria Aurora (premio del Taller de ADN): cuando la radiación llega a LEGENDARY_AT, responde una sola vez y la baja LEGENDARY_CURE puntos. */
+export const LEGENDARY_AT = 60;
+export const LEGENDARY_CURE = 40;
 /** Aviso antes de cada llamarada (segundos de juego): con pronóstico llega mucho antes. */
 export const FLARE_WARNING_SEC = { forecasted: 25, unforecasted: 10 } as const;
 /** Dentro de la nave las paredes dejan pasar solo esta fracción de la radiación (llamaradas y fondo). */

@@ -69,6 +69,7 @@ export type SimEvent =
   | { type: 'flareWarning'; event: SolarEvent; inSec: number; forecasted: boolean }
   | { type: 'flareStart'; event: SolarEvent; forecasted: boolean }
   | { type: 'flareHit'; dose: number } // la llamarada te encontró afuera: radiación de golpe
+  | { type: 'legendaryUsed'; cure: number } // la cepa legendaria respondió y bajó la radiación
   | { type: 'flareEnd'; event: SolarEvent; dose: number; total: number; exposed: boolean } // total: lo que habría recibido afuera; exposed: te encontró afuera
   | { type: 'actionDone'; action: ActionId; delta: Partial<Resources> }
   | { type: 'actionResolved'; action: ActionId; message: 'linkRestored' }
